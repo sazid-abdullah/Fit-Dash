@@ -1,0 +1,3233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fitness Dashboard</title>
+<style>
+:root {
+  --bg:        #08080e;
+  --surface:   #111118;
+  --card:      #18181f;
+  --card2:     #1e1e28;
+  --border:    #2a2a3c;
+  --border2:   #353548;
+  --red:       #e63946;
+  --red-dim:        #c1121f44;
+  --red-border-low: rgba(230,57,70,0.27);  /* replaces invalid var(--red)44 */
+  --red-border-mid: rgba(230,57,70,0.33);  /* replaces invalid var(--red)55 */
+  --red-border-hi:  rgba(230,57,70,0.40);  /* replaces invalid var(--red)66 */
+  --orange:    #ff6b35;
+  --green:     #4ade80;
+  --blue:      #60a5fa;
+  --yellow:    #fbbf24;
+  --text:      #e8e8f2;
+  --muted:     #7070a0;
+  --muted2:    #9090b0;
+  --radius:    12px;
+  --radius-sm: 8px;
+  --nav-h:     60px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  line-height: 1.5;
+  min-height: 100vh;
+  padding-top: var(--nav-h);
+}
+
+/* ── NAV ─────────────────────────────────────────────────── */
+#nav {
+  position: fixed; top:0; left:0; right:0; z-index:100;
+  height: var(--nav-h);
+  background: rgba(8,8,14,0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 16px;
+  gap: 4px;
+}
+.nav-brand {
+  font-weight: 700; font-size: 16px; letter-spacing: -0.3px;
+  color: var(--red); margin-right: auto;
+  white-space: nowrap;
+}
+.nav-brand span { color: var(--text); }
+.nav-tabs { display: flex; gap: 2px; }
+.nav-tab {
+  background: none; border: none; cursor: pointer;
+  color: var(--muted); font-size: 13px; font-weight: 500;
+  padding: 6px 12px; border-radius: var(--radius-sm);
+  transition: all .15s; white-space: nowrap;
+}
+.nav-tab:hover { color: var(--text); background: var(--card); }
+.nav-tab.active { color: var(--red); background: var(--red-dim); }
+
+/* ── PAGES ───────────────────────────────────────────────── */
+.page { display:none; max-width:900px; margin:0 auto; padding:24px 16px 100px; }
+.page.active { display:block; }
+
+/* ── COMMON ──────────────────────────────────────────────── */
+.section-title {
+  font-size:11px; font-weight:700; letter-spacing:2px;
+  text-transform:uppercase; color:var(--muted); margin-bottom:14px;
+}
+.card {
+  background: var(--card); border:1px solid var(--border);
+  border-radius: var(--radius); padding:20px;
+}
+.card + .card { margin-top:12px; }
+.tag {
+  display:inline-block; font-size:10px; font-weight:700;
+  letter-spacing:1.5px; text-transform:uppercase;
+  padding:3px 8px; border-radius:4px;
+}
+.tag-red   { background:var(--red-dim); color:var(--red); }
+.tag-green { background:#4ade8022; color:var(--green); }
+.tag-blue  { background:#60a5fa22; color:var(--blue); }
+.tag-gray  { background:var(--card2); color:var(--muted2); }
+.pill-btn {
+  display:inline-flex; align-items:center; gap:6px;
+  border: 1px solid var(--border2); border-radius:20px;
+  background: var(--card2); color:var(--muted2);
+  font-size:12px; font-weight:600; padding:6px 14px; cursor:pointer;
+  transition: all .15s;
+}
+.pill-btn:hover, .pill-btn.active {
+  border-color:var(--red); color:var(--red); background:var(--red-dim);
+}
+.btn-red {
+  display:inline-flex; align-items:center; gap:8px;
+  background:var(--red); color:#fff; border:none; cursor:pointer;
+  font-size:14px; font-weight:700; padding:12px 24px;
+  border-radius:var(--radius-sm); transition:all .15s; width:100%;
+  justify-content:center; letter-spacing:.3px;
+}
+.btn-red:hover { background:#c1121f; }
+.btn-ghost {
+  background:var(--card2); border:1px solid var(--border2);
+  color:var(--muted2); cursor:pointer; font-size:13px; font-weight:600;
+  padding:10px 18px; border-radius:var(--radius-sm); transition:all .15s;
+}
+.btn-ghost:hover { border-color:var(--border); color:var(--text); }
+
+/* ── DASHBOARD ───────────────────────────────────────────── */
+.dash-hero {
+  background: linear-gradient(135deg, #18181f 0%, #1a0f12 100%);
+  border:1px solid var(--border); border-radius:var(--radius);
+  padding:28px; margin-bottom:20px;
+}
+.dash-greeting { font-size:22px; font-weight:700; margin-bottom:4px; }
+.dash-date { font-size:13px; color:var(--muted); }
+.dash-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+.dash-grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px; }
+.stat-card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius); padding:16px;
+  display:flex; flex-direction:column; gap:4px;
+}
+.stat-num { font-size:28px; font-weight:800; color:var(--red); letter-spacing:-1px; }
+.stat-label { font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:1px; }
+.dash-section-title {
+  font-size:13px; font-weight:700; color:var(--muted2); margin-bottom:10px;
+  text-transform:uppercase; letter-spacing:1.5px;
+}
+.dash-quick {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius); padding:16px;
+  display:flex; align-items:center; gap:14px; cursor:pointer;
+  transition:border-color .15s;
+}
+.dash-quick:hover { border-color:var(--border2); }
+.dash-quick-icon {
+  width:44px; height:44px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px; flex-shrink:0;
+}
+.dash-quick-icon.red { background:var(--red-dim); }
+.dash-quick-icon.blue { background:#60a5fa22; }
+.dash-quick-icon.green { background:#4ade8022; }
+.dash-quick-body { flex:1; min-width:0; }
+.dash-quick-title { font-size:15px; font-weight:700; }
+.dash-quick-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+.dash-quick-arrow { color:var(--muted); font-size:18px; }
+.checklist-item {
+  display:flex; align-items:center; gap:12px; padding:12px 0;
+  border-bottom:1px solid var(--border);
+}
+.checklist-item:last-child { border-bottom:none; }
+.check-box {
+  width:22px; height:22px; border-radius:6px; border:2px solid var(--border2);
+  cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+  transition:all .15s;
+}
+.check-box.done { background:var(--green); border-color:var(--green); }
+.check-box.done::after { content:'✓'; color:#fff; font-size:13px; font-weight:700; }
+.check-label { font-size:14px; }
+.check-label.done { color:var(--muted); text-decoration:line-through; }
+
+/* ── NUTRITION ────────────────────────────────────────────── */
+.plan-toggle {
+  display:flex; gap:8px; margin-bottom:20px;
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius); padding:6px;
+}
+.plan-btn {
+  flex:1; padding:10px; border:none; cursor:pointer;
+  border-radius:var(--radius-sm); font-size:13px; font-weight:700;
+  transition:all .2s; background:none; color:var(--muted);
+}
+.plan-btn.active {
+  background:var(--red); color:#fff;
+}
+.meal-section { margin-bottom:24px; }
+.meal-header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:12px;
+}
+.meal-title { font-size:16px; font-weight:700; }
+.meal-kcal { font-size:13px; color:var(--red); font-weight:700; }
+.meal-card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius); overflow:hidden; margin-bottom:8px;
+  transition:border-color .15s;
+}
+.meal-card:hover { border-color:var(--border2); }
+.meal-card-header {
+  display:flex; align-items:center; gap:12px; padding:14px 16px;
+  cursor:pointer;
+}
+.meal-icon {
+  width:36px; height:36px; border-radius:8px; background:var(--card2);
+  display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;
+}
+.meal-name { font-size:14px; font-weight:600; flex:1; }
+.meal-cals { font-size:13px; color:var(--muted); white-space:nowrap; }
+.meal-chevron { color:var(--muted); font-size:12px; transition:transform .2s; }
+.meal-card.open .meal-chevron { transform:rotate(180deg); }
+.meal-card-body { display:none; padding:0 16px 14px; border-top:1px solid var(--border); }
+.meal-card.open .meal-card-body { display:block; }
+.meal-desc { font-size:13px; color:var(--muted2); padding-top:12px; line-height:1.6; }
+.snack-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.snack-item {
+  background:var(--card2); border:1px solid var(--border);
+  border-radius:var(--radius-sm); padding:12px;
+  display:flex; align-items:center; gap:10px;
+}
+.snack-emoji { font-size:20px; }
+.snack-name { font-size:12px; font-weight:600; }
+.snack-cal { font-size:11px; color:var(--muted); }
+.diet-tip {
+  background:var(--card2); border:1px solid var(--border);
+  border-radius:var(--radius); padding:16px; margin-bottom:8px;
+  font-size:13px; color:var(--muted2); line-height:1.6;
+}
+.diet-tip strong { color:var(--text); }
+
+/* ── TRAINING ─────────────────────────────────────────────── */
+.training-hero {
+  background:linear-gradient(135deg,#18181f,#1a1026);
+  border:1px solid var(--border); border-radius:var(--radius);
+  padding:24px; margin-bottom:20px; text-align:center;
+}
+.training-hero h1 { font-size:28px; font-weight:800; letter-spacing:-1px; }
+.training-hero h1 span { color:var(--red); }
+.training-meta {
+  display:flex; justify-content:center; gap:20px; margin-top:14px; flex-wrap:wrap;
+}
+.tmeta { font-size:12px; color:var(--muted); display:flex; align-items:center; gap:4px; }
+.set-legend {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(80px,1fr)); gap:8px; margin-bottom:20px;
+}
+.legend-item {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius-sm); padding:12px; text-align:center;
+}
+.legend-num {
+  font-size:10px; font-weight:700; letter-spacing:2px;
+  text-transform:uppercase; margin-bottom:4px;
+}
+.legend-num.s1 { color:var(--blue); }
+.legend-num.s2 { color:var(--yellow); }
+.legend-num.s3 { color:var(--red); }
+.legend-num.s4 { color:var(--orange); }
+.legend-desc { font-size:11px; color:var(--muted); }
+.block-card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius); overflow:hidden; margin-bottom:16px;
+}
+.block-header {
+  padding:18px 20px; display:flex; align-items:center; gap:12px;
+  border-bottom:1px solid var(--border);
+}
+.block-num {
+  width:32px; height:32px; background:var(--red); color:#fff;
+  border-radius:8px; display:flex; align-items:center; justify-content:center;
+  font-size:14px; font-weight:800; flex-shrink:0;
+}
+.block-title { flex:1; }
+.block-name { font-size:16px; font-weight:700; }
+.block-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+.block-type-badge {
+  font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase;
+  padding:4px 8px; border-radius:4px;
+}
+.block-body { padding:16px 20px; }
+.exercises-list { margin-bottom:16px; }
+.exercise-item {
+  display:flex; align-items:center; gap:10px; padding:8px 0;
+  border-bottom:1px solid var(--border);
+}
+.exercise-item:last-child { border-bottom:none; }
+.ex-code {
+  font-size:11px; font-weight:700; color:var(--red); width:24px;
+  font-family:monospace;
+}
+.ex-name { font-size:14px; font-weight:600; flex:1; }
+.sets-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(90px,1fr)); gap:8px; margin-bottom:12px; }
+.set-item {
+  background:var(--card2); border-radius:var(--radius-sm); padding:12px; text-align:center;
+  border:1px solid var(--border);
+}
+.set-num-label { font-size:9px; font-weight:700; letter-spacing:2px; text-transform:uppercase; margin-bottom:4px; }
+.set-num-label.s1 { color:var(--blue); }
+.set-num-label.s2 { color:var(--yellow); }
+.set-num-label.s3 { color:var(--red); }
+.set-num-label.s4 { color:var(--orange); }
+.set-reps { font-size:16px; font-weight:800; margin-bottom:2px; }
+.set-desc-s { font-size:10px; color:var(--muted); }
+.rest-note { font-size:12px; color:var(--muted); text-align:center; padding:8px 0; }
+.log-btn {
+  background:none; border:1px solid var(--border2); color:var(--muted2);
+  border-radius:var(--radius-sm); padding:8px 14px; cursor:pointer;
+  font-size:12px; font-weight:600; transition:all .15s; width:100%;
+}
+.log-btn:hover { border-color:var(--red); color:var(--red); }
+.progression-card {
+  background: linear-gradient(135deg, var(--red-dim), transparent);
+  border:1px solid var(--red-border-low); border-radius:var(--radius); padding:18px;
+  margin-bottom:16px;
+}
+.precard-icon { font-size:24px; margin-bottom:8px; }
+.precard-title { font-size:14px; font-weight:700; margin-bottom:4px; }
+.precard-body { font-size:13px; color:var(--muted2); line-height:1.6; }
+.warmup-card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius); padding:18px; margin-bottom:16px;
+  display:flex; gap:14px; align-items:center;
+}
+.warmup-icon { font-size:28px; flex-shrink:0; }
+.warmup-title { font-size:15px; font-weight:700; }
+.warmup-desc { font-size:13px; color:var(--muted); margin-top:4px; }
+.warmup-dur { font-size:22px; font-weight:800; color:var(--green); margin-top:6px; }
+
+/* ── SESSION LOG MODAL ────────────────────────────────────── */
+.modal-backdrop {
+  display:none; position:fixed; inset:0; z-index:200;
+  background:rgba(0,0,0,.7); backdrop-filter:blur(4px);
+  align-items:center; justify-content:center; padding:16px;
+}
+.modal-backdrop.open { display:flex; }
+.modal {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius); padding:24px; width:100%; max-width:520px;
+  max-height:85vh; overflow-y:auto;
+}
+.modal-title { font-size:18px; font-weight:800; margin-bottom:16px; }
+.form-row { margin-bottom:12px; }
+.form-row label { display:block; font-size:12px; font-weight:700; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:1px; }
+.form-row input, .form-row textarea, .form-row select {
+  width:100%; background:var(--card); border:1px solid var(--border);
+  color:var(--text); border-radius:var(--radius-sm); padding:10px 14px;
+  font-size:14px; font-family:inherit; outline:none; transition:border-color .15s;
+}
+.form-row input:focus, .form-row textarea:focus { border-color:var(--red); }
+.form-row textarea { resize:vertical; min-height:60px; }
+.exercise-log-row {
+  display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;
+  margin-bottom:8px;
+}
+.modal-actions { display:flex; gap:8px; margin-top:20px; }
+.modal-actions button { flex:1; }
+
+/* ── PROGRESS ─────────────────────────────────────────────── */
+.weight-input-row {
+  display:flex; gap:8px; margin-bottom:16px;
+}
+.weight-input-row input {
+  flex:1; background:var(--card); border:1px solid var(--border);
+  color:var(--text); border-radius:var(--radius-sm); padding:10px 14px;
+  font-size:16px; outline:none; transition:border-color .15s;
+}
+.weight-input-row input:focus { border-color:var(--red); }
+.weight-chart-wrap {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius); padding:16px; margin-bottom:16px;
+}
+.chart-title { font-size:12px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1.5px; margin-bottom:12px; }
+canvas { width:100%!important; }
+.history-item {
+  display:flex; align-items:flex-start; gap:14px; padding:14px 0;
+  border-bottom:1px solid var(--border);
+}
+.history-item:last-child { border-bottom:none; }
+.history-date {
+  background:var(--card2); border-radius:var(--radius-sm);
+  padding:8px 10px; text-align:center; min-width:52px; flex-shrink:0;
+}
+.history-day { font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; }
+.history-dd { font-size:20px; font-weight:800; color:var(--red); }
+.history-body { flex:1; }
+.history-title { font-size:14px; font-weight:700; }
+.history-detail { font-size:12px; color:var(--muted); margin-top:2px; }
+.streak-bar {
+  display:flex; gap:4px; margin:16px 0;
+}
+.streak-day {
+  flex:1; height:32px; border-radius:4px; background:var(--card2);
+  border:1px solid var(--border); display:flex; align-items:center;
+  justify-content:center; font-size:10px; color:var(--muted);
+}
+.streak-day.done { background:var(--red-dim); border-color:var(--red); }
+.streak-day.today { border-color:var(--yellow); }
+.export-row { display:flex; gap:8px; margin-top:8px; }
+.pr-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.pr-card {
+  background:var(--card2); border:1px solid var(--border);
+  border-radius:var(--radius-sm); padding:14px;
+}
+.pr-exname { font-size:12px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:1px; }
+.pr-value { font-size:22px; font-weight:800; color:var(--yellow); margin-top:2px; }
+.pr-date { font-size:11px; color:var(--muted); }
+.empty-state {
+  text-align:center; padding:40px 20px; color:var(--muted);
+}
+.empty-state .empty-icon { font-size:40px; margin-bottom:12px; }
+.empty-state p { font-size:14px; }
+.cardio-bar-wrap { margin:8px 0; }
+.cardio-label { display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px; }
+.cardio-bar { height:10px; background:var(--card2); border-radius:5px; overflow:hidden; }
+.cardio-fill { height:100%; background:linear-gradient(90deg,var(--red),var(--orange)); border-radius:5px; transition:width .5s; }
+
+/* ── MOBILE ───────────────────────────────────────────────── */
+/* ── WORKOUT OVERLAY ─────────────────────────────────────── */
+#workout-overlay {
+  display:none; position:fixed; inset:0; z-index:160;
+  background:var(--bg); overflow-y:auto; padding-bottom:60px;
+}
+.wo-header {
+  position:sticky; top:0; background:rgba(8,8,14,.97);
+  backdrop-filter:blur(12px); border-bottom:1px solid var(--border);
+  padding:12px 16px; display:flex; align-items:center; gap:12px; z-index:10;
+}
+.wo-total-time {
+  font-size:26px; font-weight:900; color:var(--red);
+  font-family:monospace; letter-spacing:-1px;
+}
+.wo-end-btn {
+  background:none; border:1px solid var(--border2); color:var(--muted);
+  border-radius:8px; padding:7px 14px; font-size:12px; font-weight:700; cursor:pointer;
+  transition:all .15s; white-space:nowrap;
+}
+.wo-end-btn:hover { border-color:var(--red); color:var(--red); }
+.wo-progress-track {
+  height:5px; background:var(--card2); border-radius:3px; margin-top:6px; width:100px;
+}
+.wo-progress-fill {
+  height:100%; background:linear-gradient(90deg,var(--red),var(--orange));
+  border-radius:3px; transition:width .4s;
+}
+.wo-block-badge {
+  display:inline-flex; align-items:center; gap:8px;
+  background:var(--card2); border:1px solid var(--border);
+  border-radius:var(--radius-sm); padding:8px 14px; margin-bottom:14px;
+}
+.wo-ex-card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius); overflow:hidden; margin-bottom:12px;
+}
+.wo-ex-body { padding:20px 20px 16px; }
+.wo-ex-code {
+  font-size:11px; font-weight:700; color:var(--red);
+  letter-spacing:2px; text-transform:uppercase; margin-bottom:6px;
+}
+.wo-ex-name { font-size:24px; font-weight:900; letter-spacing:-0.5px; margin-bottom:6px; }
+.wo-ex-muscle { font-size:12px; color:var(--muted); }
+.yt-btn {
+  display:inline-flex; align-items:center; gap:8px;
+  background:#ff000018; border:1px solid #ff000044; color:#ff5555;
+  border-radius:8px; padding:9px 16px; font-size:13px; font-weight:700;
+  cursor:pointer; transition:all .15s; margin:0 20px 16px;
+}
+.yt-btn:hover { background:#ff000030; }
+.wo-set-card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--radius); padding:20px; margin-bottom:12px;
+}
+.wo-set-header {
+  display:flex; align-items:center; gap:10px; margin-bottom:16px;
+}
+.wo-set-badge {
+  font-size:10px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase;
+  padding:4px 10px; border-radius:4px;
+}
+.wo-set-badge.s1 { background:#60a5fa22; color:var(--blue); }
+.wo-set-badge.s2 { background:#fbbf2422; color:var(--yellow); }
+.wo-set-badge.s3 { background:var(--red-dim); color:var(--red); }
+.wo-set-badge.s4 { background:#ff6b3522; color:var(--orange); }
+/* ── LEVEL SELECTOR ──────────────────────────────────────── */
+.level-selector { display:flex; gap:8px; justify-content:center; margin:12px 0 18px; flex-wrap:wrap; }
+.level-btn {
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+  padding:10px 14px; border-radius:10px; border:1.5px solid var(--border);
+  background:var(--card2); cursor:pointer; transition:all .2s; min-width:96px;
+  color:var(--text);
+}
+.level-btn:hover { border-color:var(--border2); background:var(--card); }
+.level-btn.active { border-color:var(--red); background:var(--red-dim); }
+.level-btn-icon { font-size:18px; line-height:1; }
+.level-btn-name { font-size:11px; font-weight:800; letter-spacing:.3px; }
+.level-btn.active .level-btn-name { color:var(--red); }
+.level-btn-sub { font-size:10px; color:var(--muted); text-align:center; }
+.wo-set-tip { font-size:12px; color:var(--muted); }
+.wo-inputs {
+  display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;
+}
+.wo-input-wrap label {
+  display:block; font-size:10px; font-weight:700; color:var(--muted);
+  text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;
+}
+.wo-input-wrap input {
+  width:100%; background:var(--card2); border:1px solid var(--border);
+  color:var(--text); border-radius:var(--radius-sm); padding:12px 14px;
+  font-size:22px; font-weight:800; font-family:monospace; outline:none;
+  transition:border-color .15s; text-align:center;
+}
+.wo-input-wrap input:focus { border-color:var(--red); }
+.wo-rest-card {
+  background:linear-gradient(135deg,#1a0f0f,var(--card));
+  border:1px solid var(--red-border-mid); border-radius:var(--radius);
+  padding:28px 20px; margin-bottom:12px; text-align:center;
+}
+.wo-rest-label {
+  font-size:10px; font-weight:800; letter-spacing:2px; text-transform:uppercase;
+  color:var(--muted); margin-bottom:10px;
+}
+.wo-rest-time {
+  font-size:72px; font-weight:900; color:var(--red); font-family:monospace;
+  letter-spacing:-3px; line-height:1; margin-bottom:18px;
+}
+.wo-rest-time.urgent { color:var(--orange); animation:pulse .6s infinite alternate; }
+@keyframes pulse { from{opacity:.7} to{opacity:1} }
+.wo-rest-controls { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:12px; }
+.wo-rest-ctrl {
+  background:var(--card2); border:1px solid var(--border2); color:var(--muted2);
+  border-radius:8px; padding:8px 16px; font-size:13px; font-weight:700; cursor:pointer;
+  transition:all .15s;
+}
+.wo-rest-ctrl:hover { border-color:var(--border); color:var(--text); }
+.wo-skip-btn {
+  background:var(--red); border:none; color:#fff; border-radius:8px;
+  padding:10px 24px; font-size:14px; font-weight:800; cursor:pointer;
+  transition:background .15s;
+}
+.wo-skip-btn:hover { background:#c1121f; }
+/* post-workout stats */
+.pw-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+.pw-stat { background:var(--card2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px; text-align:center; }
+.pw-val { font-size:28px; font-weight:900; letter-spacing:-1px; }
+.pw-key { font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:1px; margin-top:2px; }
+.calorie-breakdown { background:var(--card2); border-radius:var(--radius-sm); padding:14px; margin-bottom:16px; font-size:12px; color:var(--muted2); line-height:1.9; }
+.calorie-breakdown strong { color:var(--text); }
+
+/* ── WORKOUT EXIT PANEL ──────────────────────────────────── */
+.wo-exit-panel {
+  display:none;
+  background: linear-gradient(135deg,#1a0808,#120808);
+  border-bottom: 1px solid var(--red-border-hi);
+  padding: 16px;
+  /* animation moved to .open — on the base class it played once at page load
+     (invisibly, while display:none) and never replayed on subsequent opens */
+}
+.wo-exit-panel.open {
+  display:block;
+  animation: slideDown .18s ease;   /* now fires fresh every time End is tapped */
+}
+@keyframes slideDown {
+  from { opacity:0; transform:translateY(-8px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.wo-exit-title {
+  font-size:13px; font-weight:700; color:var(--muted2);
+  margin-bottom:12px; text-align:center;
+}
+.wo-exit-actions {
+  display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;
+}
+.wo-exit-btn {
+  border:none; border-radius:var(--radius-sm); padding:12px 8px;
+  font-size:12px; font-weight:800; cursor:pointer; transition:all .15s;
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+}
+.wo-exit-btn .btn-icon { font-size:18px; }
+.wo-exit-continue { background:#4ade8022; color:var(--green); border:1px solid #4ade8044; }
+.wo-exit-continue:hover { background:#4ade8033; }
+.wo-exit-discard  { background:var(--red-dim); color:var(--red); border:1px solid var(--red-border-low); }
+.wo-exit-discard:hover  { background:#e6394633; }
+.wo-exit-save     { background:#60a5fa22; color:var(--blue); border:1px solid #60a5fa44; }
+.wo-exit-save:hover     { background:#60a5fa33; }
+@media(max-width:380px){
+  .wo-exit-actions { grid-template-columns:1fr; }
+}
+
+@media(max-width:520px){
+  .dash-grid-3 { grid-template-columns:repeat(3,1fr); }
+  .sets-grid { grid-template-columns:repeat(3,1fr); }
+  .snack-grid { grid-template-columns:1fr; }
+  .nav-tab { font-size:11px; padding:6px 8px; }
+  .plan-btn { font-size:12px; }
+  .dash-grid { grid-template-columns:1fr 1fr; }
+  .exercise-log-row { grid-template-columns:1fr; }
+  .pr-grid { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══ NAV ════════════════════════════════════════════════════ -->
+<nav id="nav">
+  <div class="nav-brand">FIT<span>DASH</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('dashboard')">Dashboard</button>
+    <button class="nav-tab" onclick="showPage('training')">Training</button>
+    <button class="nav-tab" onclick="showPage('nutrition')">Nutrition</button>
+    <button class="nav-tab" onclick="showPage('progress')">Progress</button>
+  </div>
+</nav>
+
+<!-- ══ DASHBOARD ══════════════════════════════════════════════ -->
+<div id="page-dashboard" class="page active">
+
+  <div class="dash-hero">
+    <div class="dash-greeting" id="greeting">Good morning 👋</div>
+    <div class="dash-date" id="today-date"></div>
+    <div style="margin-top:18px">
+      <button class="btn-red" onclick="showPage('training')" style="max-width:280px">
+        ▶ &nbsp;Start Today's Workout
+      </button>
+    </div>
+  </div>
+
+  <div class="dash-grid-3" style="margin-top:4px">
+    <div class="stat-card">
+      <div class="stat-num" id="stat-sessions">0</div>
+      <div class="stat-label">Sessions</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="stat-streak">0</div>
+      <div class="stat-label">Streak</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="stat-weight">—</div>
+      <div class="stat-label">Kg Today</div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:16px">
+    <div class="dash-section-title">Today's Plan</div>
+    <div class="dash-quick" onclick="showPage('training')">
+      <div class="dash-quick-icon red">🏋️</div>
+      <div class="dash-quick-body">
+        <div class="dash-quick-title">Full Body Protocol</div>
+        <div class="dash-quick-sub">3 blocks · ~55–70 min · 2×/week</div>
+      </div>
+      <div class="dash-quick-arrow">›</div>
+    </div>
+    <div class="dash-quick" onclick="showPage('nutrition')" style="margin-top:8px">
+      <div class="dash-quick-icon blue">🍽️</div>
+      <div class="dash-quick-body">
+        <div class="dash-quick-title" id="dash-plan-label">2000 kcal Plan</div>
+        <div class="dash-quick-sub">3 meals + 1–2 snacks</div>
+      </div>
+      <div class="dash-quick-arrow">›</div>
+    </div>
+    <div class="dash-quick" onclick="showPage('progress')" style="margin-top:8px">
+      <div class="dash-quick-icon green">📈</div>
+      <div class="dash-quick-body">
+        <div class="dash-quick-title">Progress & Logs</div>
+        <div class="dash-quick-sub" id="dash-last-session">No sessions logged yet</div>
+      </div>
+      <div class="dash-quick-arrow">›</div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:20px">
+    <div class="dash-section-title">Daily Checklist</div>
+    <div class="card" id="checklist">
+      <!-- filled by JS -->
+    </div>
+  </div>
+
+  <div>
+    <div class="dash-section-title">Cardio Goal</div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <span style="font-size:15px;font-weight:700">Weekly Cardio</span>
+        <span style="font-size:13px;color:var(--muted)">Target: 150–300 min</span>
+      </div>
+      <div class="cardio-bar-wrap">
+        <div class="cardio-label">
+          <span id="cardio-done-label">0 min done</span>
+          <span style="color:var(--muted)">150 min goal</span>
+        </div>
+        <div class="cardio-bar"><div class="cardio-fill" id="cardio-fill" style="width:0%"></div></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <input type="number" id="cardio-add" placeholder="Add minutes" min="1" max="300"
+          style="flex:1;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:9px 12px;font-size:14px;outline:none">
+        <button class="btn-ghost" onclick="addCardio()">+ Log</button>
+        <button class="btn-ghost" onclick="resetCardio()" style="color:var(--muted)">Reset</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ NUTRITION ══════════════════════════════════════════════ -->
+<div id="page-nutrition" class="page">
+  <div style="margin-bottom:4px">
+    <div style="font-size:24px;font-weight:800;letter-spacing:-0.5px;margin-bottom:4px">Nutrition</div>
+    <div style="font-size:13px;color:var(--muted)">Greg Doucette Circle Diet — Low calorie-dense, high protein</div>
+  </div>
+
+  <div style="margin-top:16px;margin-bottom:6px;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">🌍 International Plans</div>
+  <div class="plan-toggle" style="margin-bottom:6px">
+    <button class="plan-btn active" onclick="switchPlan('1500')" id="btn-1500">1500 kcal</button>
+    <button class="plan-btn" onclick="switchPlan('2000')" id="btn-2000">2000 kcal</button>
+    <button class="plan-btn" onclick="switchPlan('2500')" id="btn-2500">2500 kcal</button>
+  </div>
+  <div style="margin-bottom:6px;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">🇧🇩 Bangladesh Plans</div>
+  <div class="plan-toggle" style="margin-bottom:20px">
+    <button class="plan-btn" onclick="switchPlan('bd1500')" id="btn-bd1500">BD 1500 kcal</button>
+    <button class="plan-btn" onclick="switchPlan('bd2000')" id="btn-bd2000">BD 2000 kcal</button>
+    <button class="plan-btn" onclick="switchPlan('bd2500')" id="btn-bd2500">BD 2500 kcal</button>
+  </div>
+
+  <div id="plan-1500">
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;color:var(--muted);background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px">
+        📊 <strong style="color:var(--text)">1300–1700 cal range · 1500 avg</strong> &nbsp;·&nbsp; 3 meals + 1–2 snacks up to 225 cal
+      </div>
+    </div>
+
+    <div class="meal-section">
+      <div class="meal-header">
+        <div class="meal-title">🌅 Breakfast</div>
+        <div class="meal-kcal">400–460 cal</div>
+      </div>
+      <div id="meals-1500-1"></div>
+    </div>
+
+    <div class="meal-section">
+      <div class="meal-header">
+        <div class="meal-title">☀️ Lunch</div>
+        <div class="meal-kcal">400–460 cal</div>
+      </div>
+      <div id="meals-1500-2"></div>
+    </div>
+
+    <div class="meal-section">
+      <div class="meal-header">
+        <div class="meal-title">🌙 Dinner</div>
+        <div class="meal-kcal">400–460 cal</div>
+      </div>
+      <div id="meals-1500-3"></div>
+    </div>
+
+    <div class="meal-section">
+      <div class="meal-header">
+        <div class="meal-title">🍬 Snacks</div>
+        <div class="meal-kcal">up to 225 cal each</div>
+      </div>
+      <div class="snack-grid" id="snacks-1500"></div>
+    </div>
+  </div>
+
+  <div id="plan-2000" style="display:none">
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;color:var(--muted);background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px">
+        📊 <strong style="color:var(--text)">1750–2250 cal range · 2000 avg</strong> &nbsp;·&nbsp; 3 meals + 1–2 snacks up to 250 cal
+      </div>
+    </div>
+
+    <div class="meal-section">
+      <div class="meal-header">
+        <div class="meal-title">🌅 Breakfast</div>
+        <div class="meal-kcal">~585 cal</div>
+      </div>
+      <div id="meals-2000-1"></div>
+    </div>
+
+    <div class="meal-section">
+      <div class="meal-header">
+        <div class="meal-title">☀️ Lunch</div>
+        <div class="meal-kcal">~585 cal</div>
+      </div>
+      <div id="meals-2000-2"></div>
+    </div>
+
+    <div class="meal-section">
+      <div class="meal-header">
+        <div class="meal-title">🌙 Dinner</div>
+        <div class="meal-kcal">~585 cal</div>
+      </div>
+      <div id="meals-2000-3"></div>
+    </div>
+
+    <div class="meal-section">
+      <div class="meal-header">
+        <div class="meal-title">🍬 Snacks</div>
+        <div class="meal-kcal">up to 250 cal each</div>
+      </div>
+      <div class="snack-grid" id="snacks-2000"></div>
+    </div>
+  </div>
+
+  <!-- ── INTERNATIONAL 2500 PLAN ──────────────────────────── -->
+  <div id="plan-2500" style="display:none">
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;color:var(--muted);background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px">
+        📊 <strong style="color:var(--text)">2250–2750 cal range · 2500 avg</strong> &nbsp;·&nbsp; 3 meals + 1–2 snacks up to 300 cal
+      </div>
+    </div>
+
+    <div class="meal-section">
+      <div class="meal-header">
+        <div class="meal-title">🌅 Breakfast</div>
+        <div class="meal-kcal">~750 cal</div>
+      </div>
+      <div id="meals-2500-1"></div>
+    </div>
+
+    <div class="meal-section">
+      <div class="meal-header">
+        <div class="meal-title">☀️ Lunch</div>
+        <div class="meal-kcal">~750 cal</div>
+      </div>
+      <div id="meals-2500-2"></div>
+    </div>
+
+    <div class="meal-section">
+      <div class="meal-header">
+        <div class="meal-title">🌙 Dinner</div>
+        <div class="meal-kcal">~750 cal</div>
+      </div>
+      <div id="meals-2500-3"></div>
+    </div>
+
+    <div class="meal-section">
+      <div class="meal-header">
+        <div class="meal-title">🍬 Snacks</div>
+        <div class="meal-kcal">up to 300 cal each</div>
+      </div>
+      <div class="snack-grid" id="snacks-2500"></div>
+    </div>
+  </div>
+
+  <!-- ── BD 1500 PLAN ──────────────────────────────────────── -->
+  <div id="plan-bd1500" style="display:none">
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;color:var(--muted);background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px">
+        🇧🇩 <strong style="color:var(--text)">1300–1700 cal range · 1500 avg</strong> &nbsp;·&nbsp; Bangladeshi foods · 3 meals + 1–2 snacks up to 200 cal
+      </div>
+    </div>
+    <div style="background:var(--card2);border:1px solid #fbbf2444;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--muted2)">
+      🛒 <strong style="color:var(--yellow)">Where to buy:</strong> Agora · Meena Bazaar · Shwapno · Unimart · local bazar for fish & vegetables
+    </div>
+    <div class="meal-section">
+      <div class="meal-header"><div class="meal-title">🌅 সকালের নাস্তা · Breakfast</div><div class="meal-kcal">400–440 cal</div></div>
+      <div id="meals-bd1500-1"></div>
+    </div>
+    <div class="meal-section">
+      <div class="meal-header"><div class="meal-title">☀️ দুপুরের খাবার · Lunch</div><div class="meal-kcal">420–450 cal</div></div>
+      <div id="meals-bd1500-2"></div>
+    </div>
+    <div class="meal-section">
+      <div class="meal-header"><div class="meal-title">🌙 রাতের খাবার · Dinner</div><div class="meal-kcal">400–440 cal</div></div>
+      <div id="meals-bd1500-3"></div>
+    </div>
+    <div class="meal-section">
+      <div class="meal-header"><div class="meal-title">🍬 নাস্তা · Snacks</div><div class="meal-kcal">up to 200 cal each</div></div>
+      <div class="snack-grid" id="snacks-bd1500"></div>
+    </div>
+  </div>
+
+  <!-- ── BD 2000 PLAN ──────────────────────────────────────── -->
+  <div id="plan-bd2000" style="display:none">
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;color:var(--muted);background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px">
+        🇧🇩 <strong style="color:var(--text)">1750–2250 cal range · 2000 avg</strong> &nbsp;·&nbsp; Bangladeshi foods · 3 meals + 1–2 snacks up to 250 cal
+      </div>
+    </div>
+    <div style="background:var(--card2);border:1px solid #fbbf2444;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--muted2)">
+      🛒 <strong style="color:var(--yellow)">Where to buy:</strong> Agora · Meena Bazaar · Shwapno · Unimart · local bazar for fish & vegetables
+    </div>
+    <div class="meal-section">
+      <div class="meal-header"><div class="meal-title">🌅 সকালের নাস্তা · Breakfast</div><div class="meal-kcal">~570–590 cal</div></div>
+      <div id="meals-bd2000-1"></div>
+    </div>
+    <div class="meal-section">
+      <div class="meal-header"><div class="meal-title">☀️ দুপুরের খাবার · Lunch</div><div class="meal-kcal">~570–590 cal</div></div>
+      <div id="meals-bd2000-2"></div>
+    </div>
+    <div class="meal-section">
+      <div class="meal-header"><div class="meal-title">🌙 রাতের খাবার · Dinner</div><div class="meal-kcal">~570–590 cal</div></div>
+      <div id="meals-bd2000-3"></div>
+    </div>
+    <div class="meal-section">
+      <div class="meal-header"><div class="meal-title">🍬 নাস্তা · Snacks</div><div class="meal-kcal">up to 250 cal each</div></div>
+      <div class="snack-grid" id="snacks-bd2000"></div>
+    </div>
+  </div>
+
+  <!-- ── BD 2500 PLAN ──────────────────────────────────────── -->
+  <div id="plan-bd2500" style="display:none">
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;color:var(--muted);background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px">
+        🇧🇩 <strong style="color:var(--text)">2300–2700 cal range · 2500 avg</strong> &nbsp;·&nbsp; Bangladeshi foods · 3 meals + 1–2 snacks up to 250 cal
+      </div>
+    </div>
+    <div style="background:var(--card2);border:1px solid #fbbf2444;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--muted2)">
+      🛒 <strong style="color:var(--yellow)">Where to buy:</strong> Agora · Meena Bazaar · Shwapno · Unimart · local bazar for fish &amp; vegetables
+    </div>
+    <div class="meal-section">
+      <div class="meal-header"><div class="meal-title">🌅 সকালের নাস্তা · Breakfast</div><div class="meal-kcal">~755–790 cal</div></div>
+      <div id="meals-bd2500-1"></div>
+    </div>
+    <div class="meal-section">
+      <div class="meal-header"><div class="meal-title">☀️ দুপুরের খাবার · Lunch</div><div class="meal-kcal">~755–790 cal</div></div>
+      <div id="meals-bd2500-2"></div>
+    </div>
+    <div class="meal-section">
+      <div class="meal-header"><div class="meal-title">🌙 রাতের খাবার · Dinner</div><div class="meal-kcal">~755–790 cal</div></div>
+      <div id="meals-bd2500-3"></div>
+    </div>
+    <div class="meal-section">
+      <div class="meal-header"><div class="meal-title">🍬 নাস্তা · Snacks</div><div class="meal-kcal">up to 250 cal each</div></div>
+      <div class="snack-grid" id="snacks-bd2500"></div>
+    </div>
+  </div>
+
+  <div style="margin-top:8px">
+    <div class="section-title">Diet Tips</div>
+    <div class="diet-tip"><strong>Weigh yourself 5–7×/week</strong> in the morning. Track the weekly <strong>median</strong> (middle number), not the daily reading. First week may show water weight loss — that's normal.</div>
+    <div class="diet-tip"><strong>On track:</strong> losing 0.25–1% of body weight/week → don't change anything. Losing faster? Eat more. Not losing? Reduce snacks, shrink one meal, or add 50 min cardio/week.</div>
+    <div class="diet-tip"><strong>Off-plan meals:</strong> stay within the calorie budget for that slot. Up to 450 cal (1500 plan), 600 cal (2000 plan) or 750 cal (2500 plan) swap is fine. Bigger meal? Skip the nearest meal and optional snacks.</div>
+    <div class="diet-tip"><strong>🇧🇩 BD low-density hacks:</strong> Plain Arong/Danish doi (unlimited) · boiled fish without oil · steamed vegetables · clear dal soup · cucumber & tomato salad · diet water (plain) · sugar-free Horlicks or Bournvita if craving something sweet.</div>
+  </div>
+</div>
+
+<!-- ══ TRAINING ════════════════════════════════════════════════ -->
+<div id="page-training" class="page">
+  <div class="training-hero">
+    <div class="tag tag-red" style="margin-bottom:10px">Full Body · Home Gym</div>
+    <h1>Full Body <span>Protocol</span></h1>
+    <!-- Level selector -->
+    <div class="level-selector">
+      <button class="level-btn" id="lvl-btn-beginner" onclick="switchLevel('beginner')">
+        <span class="level-btn-icon">🌱</span>
+        <span class="level-btn-name">Butter Starter</span>
+        <span class="level-btn-sub">2 Sets · No Failure</span>
+      </button>
+      <button class="level-btn" id="lvl-btn-amateur" onclick="switchLevel('amateur')">
+        <span class="level-btn-icon">🔥</span>
+        <span class="level-btn-name">Butter Burner</span>
+        <span class="level-btn-sub">3 Sets · Max Effort</span>
+      </button>
+      <button class="level-btn" id="lvl-btn-master" onclick="switchLevel('master')">
+        <span class="level-btn-icon">⚡</span>
+        <span class="level-btn-name">Better Butter Burner</span>
+        <span class="level-btn-sub">4 Sets · Drop Sets</span>
+      </button>
+    </div>
+    <div class="training-meta">
+      <div class="tmeta" id="tmeta-sessions">📅 2× per week</div>
+      <div class="tmeta" id="tmeta-duration">⏱ ~55–70 min</div>
+      <div class="tmeta" id="tmeta-sets">🔋 3 Sets per Block</div>
+    </div>
+    <div style="margin-top:18px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="btn-red" onclick="openPreWorkout()" style="max-width:260px">
+        ▶ &nbsp;Start Training
+      </button>
+      <button class="btn-ghost" onclick="openLogModal()" style="font-size:13px">
+        📋 Log Manual
+      </button>
+    </div>
+  </div>
+
+  <div class="set-legend" id="set-legend-static"><!-- populated by switchLevel() --></div>
+
+  <!-- WARMUP -->
+  <div class="warmup-card">
+    <div class="warmup-icon">🚶</div>
+    <div>
+      <div class="warmup-title">Pre-Workout Warmup</div>
+      <div class="warmup-desc">Brisk walk or light jog in place. Moderate pace — break a light sweat, warm the joints before loading.</div>
+      <div class="warmup-dur">5–10 min</div>
+    </div>
+  </div>
+
+  <!-- BLOCK A -->
+  <div class="block-card">
+    <div class="block-header">
+      <div class="block-num">A</div>
+      <div class="block-title">
+        <div class="block-name">Legs &amp; Calves — Superset</div>
+        <div class="block-sub">A1 → rest → A2 → rest. That's one set. Complete all 3 sets before moving on.</div>
+      </div>
+      <span class="block-type-badge tag tag-blue">Superset</span>
+    </div>
+    <div class="block-body">
+      <div class="exercises-list">
+        <div class="exercise-item"><span class="ex-code">A1</span><span class="ex-name">Dumbbell Goblet Squat</span></div>
+        <div class="exercise-item"><span class="ex-code">A2</span><span class="ex-name">Standing Calf Raises</span></div>
+      </div>
+      <div class="sets-grid" id="sets-grid-A"><!-- populated by switchLevel() --></div>
+      <div class="rest-note" id="rest-note-A"></div>
+    </div>
+  </div>
+
+  <!-- BLOCK B -->
+  <div class="block-card">
+    <div class="block-header">
+      <div class="block-num">B</div>
+      <div class="block-title">
+        <div class="block-name">Back · Chest · Back — Giant Set</div>
+        <div class="block-sub">B1 → B2 → B3 back-to-back with minimal transition. Long rest only after B3.</div>
+      </div>
+      <span class="block-type-badge tag tag-red">Giant Set</span>
+    </div>
+    <div class="block-body">
+      <div class="exercises-list">
+        <div class="exercise-item"><span class="ex-code">B1</span><span class="ex-name">DB Pullover</span></div>
+        <div class="exercise-item"><span class="ex-code">B2</span><span class="ex-name">Barbell Floor Press</span></div>
+        <div class="exercise-item"><span class="ex-code">B3</span><span class="ex-name">DB Bent-Over Row</span></div>
+      </div>
+      <div class="sets-grid" id="sets-grid-B"><!-- populated by switchLevel() --></div>
+      <div class="rest-note" id="rest-note-B"></div>
+    </div>
+  </div>
+
+  <!-- BLOCK C -->
+  <div class="block-card">
+    <div class="block-header">
+      <div class="block-num">C</div>
+      <div class="block-title">
+        <div class="block-name">Full Body Finish — Circuit</div>
+        <div class="block-sub">C1→C2→C3→C4→C5→C6, minimal rest between moves. 3 rounds total.</div>
+      </div>
+      <span class="block-type-badge tag tag-green">Circuit</span>
+    </div>
+    <div class="block-body">
+      <div class="exercises-list">
+        <div class="exercise-item"><span class="ex-code">C1</span><span class="ex-name">BB Overhead Press</span></div>
+        <div class="exercise-item"><span class="ex-code">C2</span><span class="ex-name">DB Lateral Raises</span></div>
+        <div class="exercise-item"><span class="ex-code">C3</span><span class="ex-name">BB Glute Bridges</span></div>
+        <div class="exercise-item"><span class="ex-code">C4</span><span class="ex-name">BB / DB Bicep Curls</span></div>
+        <div class="exercise-item"><span class="ex-code">C5</span><span class="ex-name">DB Floor Skullcrushers</span></div>
+        <div class="exercise-item"><span class="ex-code">C6</span><span class="ex-name">DB Reverse Flyes</span></div>
+      </div>
+      <div class="sets-grid" id="sets-grid-C"><!-- populated by switchLevel() --></div>
+      <div class="rest-note" id="rest-note-C"></div>
+    </div>
+  </div>
+
+  <div class="progression-card">
+    <div class="precard-icon">📈</div>
+    <div class="precard-title">Progression Rule</div>
+    <div class="precard-body">After every session, log weight and reps for Set 2 and Set 3 of each block. Next week: aim for <strong style="color:var(--text)">1 extra rep at the same load</strong>, or <strong style="color:var(--text)">add a small weight increment</strong> at the same reps. Always harder than last time.</div>
+  </div>
+
+  <!-- SESSION HISTORY (training page mirror) -->
+  <div>
+    <div class="section-title">Recent Sessions</div>
+    <div id="training-history"></div>
+  </div>
+</div>
+
+<!-- ══ PROGRESS ═══════════════════════════════════════════════ -->
+<div id="page-progress" class="page">
+
+  <div style="font-size:24px;font-weight:800;letter-spacing:-0.5px;margin-bottom:20px">Progress</div>
+
+  <!-- Stats -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
+    <div class="stat-card">
+      <div class="stat-num" id="p-sessions">0</div>
+      <div class="stat-label">Sessions</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="p-streak">0</div>
+      <div class="stat-label">Streak</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="p-total-cals" style="color:var(--orange)">0</div>
+      <div class="stat-label">Total Cal 🔥</div>
+    </div>
+  </div>
+
+  <!-- Week streak dots -->
+  <div style="margin-bottom:20px">
+    <div class="section-title">This Week</div>
+    <div class="streak-bar" id="streak-bar"></div>
+  </div>
+
+  <!-- Weight tracking -->
+  <div style="margin-bottom:20px">
+    <div class="section-title">Weight Log (kg)</div>
+    <div class="weight-input-row">
+      <input type="number" id="weight-input" placeholder="Enter today's weight (kg)" step="0.1" min="30" max="300">
+      <button class="btn-ghost" onclick="logWeight()">Log</button>
+    </div>
+    <div class="weight-chart-wrap">
+      <div class="chart-title">7-Day Weight Trend</div>
+      <canvas id="weightChart" height="160"></canvas>
+    </div>
+    <!-- Deletable weight entry list — populated by renderWeightHistory() -->
+    <div style="margin-top:4px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)">Logged Entries</span>
+        <span style="font-size:11px;color:var(--muted)">tap × to remove</span>
+      </div>
+      <div id="weight-history-list"></div>
+    </div>
+  </div>
+
+  <!-- PR Tracker -->
+  <div style="margin-bottom:20px">
+    <div class="section-title">Personal Records</div>
+    <div class="pr-grid" id="pr-grid"></div>
+    <div style="margin-top:10px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <select id="pr-exercise" style="flex:1;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;outline:none;min-width:140px">
+          <!-- Values must exactly match EXERCISES[] so manual and guided-workout PRs share one key -->
+          <option value="">Select exercise...</option>
+          <option>Goblet Squat (A1)</option>
+          <option>Calf Raises (A2)</option>
+          <option>DB Pullover (B1)</option>
+          <option>Floor Press (B2)</option>
+          <option>Bent-Over Row (B3)</option>
+          <option>Overhead Press (C1)</option>
+          <option>Lateral Raises (C2)</option>
+          <option>Glute Bridges (C3)</option>
+          <option>Bicep Curls (C4)</option>
+          <option>Skullcrushers (C5)</option>
+          <option>Reverse Flyes (C6)</option>
+        </select>
+        <input id="pr-weight" type="number" placeholder="Weight (kg)" min="0" step="0.5"
+          style="width:110px;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;outline:none">
+        <button class="btn-ghost" onclick="savePR()">Save PR</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Session History -->
+  <div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="section-title" style="margin-bottom:0">Workout History</div>
+      <div class="export-row">
+        <button class="btn-ghost" style="font-size:11px;padding:6px 10px" onclick="exportCSV()">⬇ CSV</button>
+        <button class="btn-ghost" style="font-size:11px;padding:6px 10px;color:var(--muted)" onclick="clearHistory()">🗑 Clear</button>
+      </div>
+    </div>
+    <div id="history-list">
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <p>No sessions yet.<br>Log your first workout on the Training page.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PRE-WORKOUT SETUP MODAL ════════════════════════════════ -->
+<div id="preworkout-modal" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-title">⚡ Start Training</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:18px">Fill in your details for an accurate calorie estimate. All fields are saved for next time.</p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-row" style="margin-bottom:0">
+        <label>Height (cm) <span style="color:var(--red)">*</span></label>
+        <input type="number" id="setup-height" placeholder="e.g. 175" min="100" max="250">
+      </div>
+      <div class="form-row" style="margin-bottom:0">
+        <label>Weight (kg) <span style="color:var(--muted)">(optional)</span></label>
+        <input type="number" id="setup-weight" placeholder="e.g. 72" min="30" max="300" step="0.5">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div class="form-row" style="margin-bottom:0">
+        <label>Age <span style="color:var(--red)">*</span></label>
+        <input type="number" id="setup-age" placeholder="e.g. 25" min="10" max="100">
+      </div>
+      <div class="form-row" style="margin-bottom:0">
+        <label>Gender</label>
+        <select id="setup-gender">
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:10px">
+      <label>Daily Activity Level (outside workouts)</label>
+      <select id="setup-activity">
+        <option value="sedentary">Sedentary — desk job, minimal movement</option>
+        <option value="light">Lightly Active — some walking or light work</option>
+        <option value="moderate" selected>Moderately Active — active job or daily walks</option>
+        <option value="active">Very Active — physical job or daily sport</option>
+        <option value="veryActive">Extra Active — athlete or 2× daily training</option>
+      </select>
+    </div>
+
+    <div id="setup-weight-note" style="background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--muted2);display:none">
+      ⚖️ <strong style="color:var(--yellow)">No weight entered</strong> — calorie burn will be estimated from your height using a healthy BMI reference. Enter your weight for a more accurate number.
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closePreWorkout()">Cancel</button>
+      <button class="btn-red" onclick="beginWorkout()">▶ &nbsp;Begin Workout</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ACTIVE WORKOUT OVERLAY ═════════════════════════════════ -->
+<div id="workout-overlay">
+  <!-- Sticky header -->
+  <div class="wo-header">
+    <div style="flex:1">
+      <div style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:1.5px;text-transform:uppercase">In Progress</div>
+      <div class="wo-total-time" id="wo-total-time">00:00</div>
+    </div>
+    <div style="text-align:center">
+      <div id="wo-step-label" style="font-size:11px;color:var(--muted);white-space:nowrap">Block A · Ex 1 · Set 1/3</div>
+      <div class="wo-progress-track"><div class="wo-progress-fill" id="wo-prog-fill" style="width:0%"></div></div>
+    </div>
+    <button class="wo-end-btn" id="wo-end-btn" onclick="toggleExitPanel()">End ✕</button>
+  </div>
+
+  <!-- Exit panel — slides down when End is tapped -->
+  <div class="wo-exit-panel" id="wo-exit-panel">
+    <div class="wo-exit-title">What would you like to do?</div>
+    <div class="wo-exit-actions">
+      <button class="wo-exit-btn wo-exit-continue" onclick="toggleExitPanel()">
+        <span class="btn-icon">▶</span>Continue
+      </button>
+      <button class="wo-exit-btn wo-exit-discard" onclick="discardAndExit()">
+        <span class="btn-icon">✕</span>Exit Now
+      </button>
+      <button class="wo-exit-btn wo-exit-save" onclick="saveAndExit()">
+        <span class="btn-icon">💾</span>Save &amp; Exit
+      </button>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div style="max-width:600px;margin:0 auto;padding:18px 16px">
+
+    <!-- Block badge -->
+    <div class="wo-block-badge" id="wo-block-badge">
+      <span id="wo-block-num" style="background:var(--red);color:#fff;width:28px;height:28px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:800">A</span>
+      <div>
+        <div id="wo-block-name" style="font-size:13px;font-weight:700">Legs & Calves</div>
+        <div id="wo-block-type" style="font-size:11px;color:var(--muted)">Superset</div>
+      </div>
+      <div style="margin-left:auto;font-size:11px;color:var(--muted)" id="wo-block-info"></div>
+    </div>
+
+    <!-- Exercise card -->
+    <div class="wo-ex-card" id="wo-ex-card">
+      <div class="wo-ex-body">
+        <div class="wo-ex-code" id="wo-ex-code">A1</div>
+        <div class="wo-ex-name" id="wo-ex-name">Goblet Squat</div>
+        <div class="wo-ex-muscle" id="wo-ex-muscle">🎯 Quads · Glutes · Core</div>
+      </div>
+      <button class="yt-btn" id="wo-yt-btn" onclick="openYouTubeDemo()">
+        <span style="font-size:16px">▶</span> Watch Demo on YouTube
+      </button>
+    </div>
+
+    <!-- Current set card -->
+    <div class="wo-set-card" id="wo-set-card">
+      <div class="wo-set-header">
+        <span class="wo-set-badge s1" id="wo-set-badge">Set 1 — Warmup</span>
+        <span class="wo-set-tip" id="wo-set-tip">Light load · high reps</span>
+      </div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:14px">
+        Target: <strong id="wo-set-reps" style="color:var(--text)">20–25 reps</strong>
+      </div>
+      <div class="wo-inputs">
+        <div class="wo-input-wrap">
+          <label>Weight (kg)</label>
+          <input type="number" id="wo-weight" placeholder="0" step="0.5" min="0">
+        </div>
+        <div class="wo-input-wrap">
+          <label>Reps Done</label>
+          <input type="number" id="wo-reps" placeholder="0" min="0">
+        </div>
+      </div>
+      <button class="btn-red" id="wo-done-btn" onclick="completeSet()">
+        ✓ &nbsp;Set Done — Start Rest
+      </button>
+    </div>
+
+    <!-- Rest timer (hidden until set done) -->
+    <div class="wo-rest-card" id="wo-rest-card" style="display:none">
+      <div class="wo-rest-label">Rest Timer</div>
+      <div class="wo-rest-time" id="wo-rest-time">01:30</div>
+      <div class="wo-rest-controls">
+        <button class="wo-rest-ctrl" onclick="adjustRest(-15)">−15s</button>
+        <button class="wo-rest-ctrl" onclick="adjustRest(30)">+30s</button>
+      </div>
+      <button class="wo-skip-btn" onclick="skipRest()">Skip Rest →</button>
+      <div id="wo-next-hint" style="margin-top:14px;font-size:12px;color:var(--muted)"></div>
+    </div>
+
+    <!-- Bottom nav -->
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn-ghost" onclick="woPrev()" id="wo-prev-btn" style="flex:1">← Back</button>
+      <button class="btn-ghost" onclick="woSkipEx()" style="flex:1;color:var(--muted)">Skip Exercise</button>
+    </div>
+
+    <!-- Completed sets log -->
+    <div id="wo-log-preview" style="margin-top:20px"></div>
+  </div>
+</div>
+
+<!-- ══ POST WORKOUT MODAL ═════════════════════════════════════ -->
+<div id="postworkout-modal" class="modal-backdrop">
+  <div class="modal">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:48px;margin-bottom:8px">🏆</div>
+      <div class="modal-title" style="text-align:center;font-size:22px">Workout Complete!</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px">Here's your session summary</div>
+    </div>
+    <div class="pw-grid">
+      <div class="pw-stat"><div class="pw-val" id="pw-duration" style="color:var(--red)">--</div><div class="pw-key">Duration</div></div>
+      <div class="pw-stat"><div class="pw-val" id="pw-cals" style="color:var(--orange)">--</div><div class="pw-key">Cal Burned</div></div>
+      <div class="pw-stat"><div class="pw-val" id="pw-sets" style="color:var(--blue)">--</div><div class="pw-key">Sets Done</div></div>
+      <div class="pw-stat"><div class="pw-val" id="pw-volume" style="color:var(--green)">--</div><div class="pw-key">Volume kg</div></div>
+    </div>
+    <div class="calorie-breakdown" id="pw-breakdown"></div>
+    <div class="form-row">
+      <label>Session Notes</label>
+      <textarea id="pw-notes" rows="2" placeholder="PRs? How did it feel? Energy level?"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="discardWorkout()">Discard</button>
+      <button class="btn-red" onclick="saveWorkoutSummary()">💾 &nbsp;Save Session</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LOG MODAL ══════════════════════════════════════════════ -->
+<div id="modal" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-title">📋 Log Session</div>
+    <div class="form-row">
+      <label>Date</label>
+      <input type="date" id="log-date">
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">Sets — Weight &amp; Reps</label>
+      <div id="log-exercises"></div>
+    </div>
+    <div class="form-row">
+      <label>Notes</label>
+      <textarea id="log-notes" rows="2" placeholder="How did it feel? Any PRs?"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn-red" onclick="saveSession()" style="font-size:13px;padding:10px">Save Session</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ DATA ═════════════════════════════════════════════════════
+
+const MEALS_1500 = {
+  breakfast: [
+    { name:"Anabolic French Toast + Greek Yogurt + Fruit", kcal:500, emoji:"🍞", desc:"1 serving Anabolic French Toast (270) + ¾ cup 0% plain Greek yogurt (100) + 1 serving fruit of choice (100) + low-calorie syrup (30)" },
+    { name:"French Toast Blueberry Pancake + Yogurt + Syrup", kcal:460, emoji:"🥞", desc:"1 serving French Toast Blueberry Pancake (330) + ¾ cup fat-free no-sugar-added Greek yogurt (100) + low-calorie syrup (30)" },
+    { name:"Banana 'No'tella French Toast Roll-Ups + Yogurt", kcal:430, emoji:"🍌", desc:"1 serving Banana Notella French Toast Roll-Ups (340) + ¾ cup fat-free Greek yogurt (100)" },
+    { name:"Egg White Avocado Rice Cake + Fruit", kcal:440, emoji:"🥑", desc:"1 serving Egg White Avocado Rice Cake (390) + ½ serving fruit of choice (50)" },
+    { name:"Ham & Cheese Omelette + Yogurt + Fruit", kcal:445, emoji:"🍳", desc:"1 serving Ham & Cheese Omelette (295) + ⅓ cup fat-free Greek yogurt (50) + 1 serving fruit of choice (100)" },
+    { name:"Oatmeal + Protein + Greek Yogurt", kcal:445, emoji:"🥣", desc:"½ cup (45g) Cream of Wheat or Oatmeal (165) + 1½ servings HTLT Whey+Casein Protein (180) + ¾ cup fat-free Greek yogurt (100)" },
+    { name:"Toast + Egg Whites + Protein of Choice", kcal:430, emoji:"🍞", desc:"2 slices bread/toast (160) + 1.5 cups egg whites (180) + 90 cal of guacamole/avocado/turkey bacon/protein (90)" },
+    { name:"Smoked Salmon Rice Cake Sandwich + Fruit", kcal:460, emoji:"🍣", desc:"3 servings Smoked Salmon Rice Cake Sandwich (360) + 1 serving fruit of choice (100)" },
+  ],
+  lunch: [
+    { name:"Beef Burger (Extra Lean)", kcal:410, emoji:"🍔", desc:"120g extra lean ground beef (210) + 1 bread/bun (150) + lettuce/pickles/veggies (20) + sugar-free condiments (30)" },
+    { name:"Anabolic Pizza Pockets + Fruit", kcal:410, emoji:"🍕", desc:"2 servings Anabolic Pizza Pockets (360) + ½ serving fruit or veggies of choice (50)" },
+    { name:"Sloppy Greg Open-Faced + Fruit + Yogurt", kcal:425, emoji:"🥩", desc:"½ serving Sloppy Greg Open Faced (275) + 1 serving fruit or veggies (100) + ⅓ cup fat-free Greek yogurt (50)" },
+    { name:"FlatOut Pizza with Bison + Fruit", kcal:410, emoji:"🍕", desc:"1 serving FlatOut Pizza with Bison (310) + 1 serving fruit or veggies of choice (100)" },
+    { name:"Chicken/Turkey on Joseph's Lavash Wrap + Fruit", kcal:440, emoji:"🌯", desc:"1 serving Chicken or Turkey on Joseph's Lavash Wrap (290) + 1½ servings fruit or veggies (150)" },
+    { name:"Spicy Shredded Chicken on Rice Cakes + Fruit", kcal:425, emoji:"🍗", desc:"1 serving Spicy Shredded Chicken on Rice Cakes (375) + ½ serving fruit or veggies (50)" },
+    { name:"Smoked Salmon Pinwheels + Fruit", kcal:450, emoji:"🍣", desc:"2 servings Smoked Salmon Pinwheels (400) + ½ serving fruit or veggies of choice (50)" },
+  ],
+  dinner: [
+    { name:"Chicken Cacciatore + Cauliflower Mash", kcal:405, emoji:"🍲", desc:"1 serving Chicken Cacciatore (255) + 1 serving Cauliflower Mashed Potatoes or ¾ cup rice (150)" },
+    { name:"Lean Protein + Rice/Potato + Veggies", kcal:450, emoji:"🥩", desc:"90g salmon / 120g smoked salmon / 100g extra lean steak / 120g extra lean turkey / 140g chicken + ½ cup rice or 110g potato or 125g sweet potato + 1.5 servings veggies + condiments" },
+    { name:"Anabolic Meat Lasagna + Fruit/Veggies", kcal:445, emoji:"🍝", desc:"1 serving Anabolic Meat Lasagna (345) + 1 serving fruit or veggies of choice (100)" },
+    { name:"Citrus Tilapia, Shrimp & Veggies + Fruit", kcal:430, emoji:"🐟", desc:"1 serving Citrus Tilapia, Shrimp & Veggies (380) + ½ serving fruit or veggies of choice (50)" },
+    { name:"Pedon MORE THAN Pasta + Fruit", kcal:440, emoji:"🍝", desc:"1 serving Pedon MORE THAN Pasta with Chicken & Tomato Sauce / small (290) + 1½ serving fruit of choice (150)" },
+    { name:"Spicy Pork Chili Stew + Cauliflower Mash + Fruit", kcal:450, emoji:"🍲", desc:"1 serving Spicy Pork Chili Stew (250) + 1 serving Cauliflower Mashed Potatoes (150) + ½ serving fruit or veggies (50)" },
+    { name:"Large Salad with Lean Protein", kcal:440, emoji:"🥗", desc:"200g chicken/turkey / 150g extra lean steak / 260g haddock or shrimp / 130g salmon + up to 450g spinach + Walden Farms toppings + 2 tbsp light dressing" },
+  ],
+  snacks: [
+    { name:"Blueberry Protein Muffin", kcal:160, emoji:"🫐" },
+    { name:"SKOR Protein Bar (Medium)", kcal:164, emoji:"🍫" },
+    { name:"Smart Pop Popcorn", kcal:200, emoji:"🍿" },
+    { name:"Jelly Filled Pronut", kcal:160, emoji:"🍩" },
+    { name:"Chocolate Strawberry Proteinsicles", kcal:200, emoji:"🍓" },
+    { name:"Chocolate PB Protein Ice Cream (small)", kcal:190, emoji:"🍦" },
+    { name:"Chocolate Protein Mug Cake", kcal:200, emoji:"🍰" },
+  ]
+};
+
+const MEALS_2000 = {
+  breakfast: [
+    { name:"2× Anabolic French Toast + Syrup", kcal:585, emoji:"🍞", desc:"2 servings Anabolic French Toast (540) + up to 45 cal low-calorie syrup (45)" },
+    { name:"French Toast Blueberry Pancake + Yogurt + Fruit + Syrup", kcal:560, emoji:"🥞", desc:"1 serving French Toast Blueberry Pancake (330) + ¾ cup fat-free Greek yogurt (100) + 1 serving fruit of choice (100) + low-calorie syrup (30)" },
+    { name:"Banana 'No'tella Roll-Ups + Yogurt + Fruit + Syrup", kcal:570, emoji:"🍌", desc:"1 serving Banana Notella French Toast Roll-Ups (340) + ¾ cup fat-free Greek yogurt (100) + 1 serving fruit (100) + low-calorie syrup (30)" },
+    { name:"Egg White Avocado Rice Cake + Yogurt + Fruit", kcal:590, emoji:"🥑", desc:"1 serving Egg White Avocado Rice Cake (390) + ¾ cup fat-free Greek yogurt (100) + 1 serving fruit of choice (100)" },
+    { name:"2× Ham & Cheese Omelette", kcal:590, emoji:"🍳", desc:"2 servings Ham & Cheese Omelette (590). No additions needed — this is a full 590-cal breakfast on its own!" },
+    { name:"Oatmeal + Protein + Yogurt + Syrup", kcal:590, emoji:"🥣", desc:"1 cup (90g) Cream of Wheat or Oatmeal (330) + 1½ servings HTLT Whey+Casein Protein (180) + ⅓ cup fat-free Greek yogurt (50) + low-calorie syrup (30)" },
+    { name:"Toast + Egg Whites + Protein of Choice", kcal:585, emoji:"🍳", desc:"2 slices bread/toast (160) + 3 cups egg whites (360) + 65 cal of guacamole/avocado/turkey bacon/protein (65)" },
+  ],
+  lunch: [
+    { name:"Beef Burger + Fruit", kcal:580, emoji:"🍔", desc:"140g extra lean ground beef (280) + 1 bread/bun (150) + lettuce/pickles/veggies (20) + sugar-free condiments (30) + 1 serving fruit or veggies (100)" },
+    { name:"3× Anabolic Pizza Pockets", kcal:585, emoji:"🍕", desc:"3 servings Anabolic Pizza Pockets (585). Simple, filling, and hits the target!" },
+    { name:"Sloppy Greg + Fruit", kcal:600, emoji:"🥩", desc:"1 serving Sloppy Greg Open Faced (550) + ½ serving fruit or veggies of choice (50)" },
+    { name:"FlatOut Pizza + Yogurt + Fruit", kcal:560, emoji:"🍕", desc:"1 serving FlatOut Pizza with Bison (310) + ¾ cup fat-free Greek yogurt (100) + ½ serving fruit or veggies (50)" },
+    { name:"2× Joseph's Lavash Wrap", kcal:580, emoji:"🌯", desc:"2 servings Chicken or Turkey on Joseph's Lavash Wrap (580)" },
+    { name:"Spicy Shredded Chicken + Yogurt + Fruit", kcal:575, emoji:"🍗", desc:"1 serving Spicy Shredded Chicken on Rice Cakes (375) + ¾ cup fat-free Greek yogurt (100) + 1 serving fruit or veggies (100)" },
+    { name:"3× Smoked Salmon Pinwheels", kcal:600, emoji:"🍣", desc:"3 servings Smoked Salmon Pinwheels (600)" },
+  ],
+  dinner: [
+    { name:"2× Chicken Cacciatore + Veggies", kcal:585, emoji:"🍲", desc:"2 servings Chicken Cacciatore (510) + ¾ serving fruit or veggies of choice (75)" },
+    { name:"Larger Lean Protein + Rice/Potato + Veggies", kcal:580, emoji:"🥩", desc:"115g salmon / 145g smoked salmon / 130g extra lean steak / 155g extra lean ground turkey / 180g chicken / 230g haddock or shrimp / 200g tilapia + 1 cup rice or 225g potato + 1 serving veggies + condiments" },
+    { name:"Anabolic Meat Lasagna + Yogurt + Fruit", kcal:595, emoji:"🍝", desc:"1 serving Anabolic Meat Lasagna (345) + ¾ cup fat-free Greek yogurt (100) + 1½ servings fruit or veggies (150)" },
+    { name:"Citrus Tilapia + Yogurt + Fruit", kcal:580, emoji:"🐟", desc:"1 serving Citrus Tilapia, Shrimp & Veggies (380) + ¾ cup fat-free Greek yogurt (100) + 1 serving fruit or veggies (100)" },
+    { name:"Pedon Pasta (Large) + Fruit", kcal:595, emoji:"🍝", desc:"1 serving Pedon MORE THAN Pasta with Chicken & Tomato Sauce — Large (545) + ½ serving fruit of choice (50)" },
+    { name:"2× Spicy Pork Chili Stew + Fruit", kcal:600, emoji:"🍲", desc:"2 servings Spicy Pork Chili Stew (500) + 1 serving fruit or veggies of choice (100)" },
+    { name:"Whitefish Coleslaw Tacos + Yogurt + Fruit", kcal:570, emoji:"🌮", desc:"1 serving Whitefish with Coleslaw Tacos (420) + ¾ cup fat-free Greek yogurt (100) + ½ serving fruit or veggies (50)" },
+  ],
+  snacks: [
+    { name:"Blueberry Protein Muffin", kcal:160, emoji:"🫐" },
+    { name:"SKOR Protein Bar (Medium)", kcal:164, emoji:"🍫" },
+    { name:"Smart Pop Popcorn", kcal:200, emoji:"🍿" },
+    { name:"Jelly Filled Pronut", kcal:160, emoji:"🍩" },
+    { name:"Chocolate Strawberry Proteinsicles", kcal:200, emoji:"🍓" },
+    { name:"Chocolate PB Protein Ice Cream (small)", kcal:190, emoji:"🍦" },
+    { name:"Chocolate Protein Mug Cake", kcal:200, emoji:"🍰" },
+  ]
+};
+
+const MEALS_2500 = {
+  breakfast: [
+    { name:"2× Anabolic French Toast + Fruit + Greek Yogurt + Syrup", kcal:785, emoji:"🍞",
+      desc:"2 servings Anabolic French Toast (540) + 1 serving fruit of choice (100) + ¾ cup fat-free no-sugar-added Greek yogurt (100) + up to 45 cal low-calorie syrup (45)" },
+    { name:"2× French Toast Blueberry Pancake + Fruit + Syrup", kcal:740, emoji:"🥞",
+      desc:"2 servings French Toast Blueberry Pancake (660) + ½ serving fruit of choice (50) + low-calorie syrup (30)" },
+    { name:"2× Banana 'No'tella French Toast Roll-Ups + Fruit + Syrup", kcal:760, emoji:"🍌",
+      desc:"2 servings Banana Notella French Toast Roll-Ups (680) + ½ serving fruit of choice (50) + low-calorie syrup (30)" },
+    { name:"2× Egg White Avocado Rice Cake", kcal:780, emoji:"🥑",
+      desc:"2 servings Egg White Avocado Rice Cake (780). A complete, filling breakfast on its own — no additions needed!" },
+    { name:"2× Ham & Cheese Omelette + Fruit", kcal:740, emoji:"🍳",
+      desc:"2 servings Ham & Cheese Omelette (590) + 1½ servings fruit of choice (150)" },
+    { name:"XL Oatmeal + Protein + Greek Yogurt + Fruit + Syrup", kcal:740, emoji:"🥣",
+      desc:"1 cup (90g) Cream of Wheat or Oatmeal (330) + 1½ servings HTLT Whey+Casein Protein (180) + ¾ cup fat-free no-sugar-added Greek yogurt (100) + 1 serving fruit of choice (100) + low-calorie syrup (30)" },
+    { name:"Toast + 3 Cups Egg Whites + Protein + Yogurt + Fruit", kcal:785, emoji:"🍳",
+      desc:"2 slices bread/toast (160) + 3 cups egg whites (360) + 65 cal of guacamole/avocado/turkey bacon/protein of choice (65) + ¾ cup fat-free Greek yogurt (100) + 1 serving fruit of choice (100)" },
+  ],
+  lunch: [
+    { name:"Beef Burger + Fruit + Smart Pop Popcorn", kcal:780, emoji:"🍔",
+      desc:"140g extra lean ground beef (280) + 1 bread/bun (150) + lettuce/pickles/veggies (20) + sugar-free condiments (30) + 1 serving fruit or veggies of choice (100) + 1 bag Smart Pop Popcorn (200)" },
+    { name:"4× Anabolic Pizza Pockets", kcal:780, emoji:"🍕",
+      desc:"4 servings Anabolic Pizza Pockets (780). Simple, filling, and hits the target perfectly on its own!" },
+    { name:"Sloppy Greg Open-Faced + Greek Yogurt + Fruit", kcal:750, emoji:"🥩",
+      desc:"1 serving Sloppy Greg Open-Faced (550) + ¾ cup fat-free no-sugar-added Greek yogurt (100) + 1 serving fruit of choice (100)" },
+    { name:"2× FlatOut Pizza with Bison + Yogurt + Fruit", kcal:770, emoji:"🍕",
+      desc:"2 servings FlatOut Pizza with Bison (620) + ¾ cup fat-free no-sugar-added Greek yogurt (100) + ½ serving fruit or veggies of choice (50)" },
+    { name:"Joseph's Lavash Wrap + Greek Yogurt + Fruit", kcal:610, emoji:"🌯",
+      desc:"1 serving Chicken or Turkey on Joseph's Lavash Wrap (410) + ¾ cup fat-free no-sugar-added Greek yogurt (100) + 1 serving fruit or veggies of choice (100) · Lower end of the range — pair with an optional snack if still hungry" },
+    { name:"2× Spicy Shredded Chicken on Rice Cakes", kcal:750, emoji:"🍗",
+      desc:"2 servings Spicy Shredded Chicken on Rice Cakes (750). High-volume, high-protein — very filling!" },
+    { name:"4× Smoked Salmon Pinwheels", kcal:800, emoji:"🍣",
+      desc:"4 servings Smoked Salmon Pinwheels (800). Easy to prep ahead and take anywhere!" },
+  ],
+  dinner: [
+    { name:"3× Chicken Cacciatore", kcal:765, emoji:"🍲",
+      desc:"3 servings Chicken Cacciatore (765). Make a big batch on Sunday and portion out for the week!" },
+    { name:"Large Lean Protein + 2 Cups Rice/Potato + Veggies", kcal:760, emoji:"🥩",
+      desc:"180g chicken/turkey OR 240g haddock/cod/shrimp OR 220g YVES Veggie Ground Round OR 120g salmon OR 135g extra lean steak/bison OR 155g extra lean ground turkey (240) + 2 cups rice OR 1¾ cups Cauliflower Mashed Potato OR 450g any potato (400) + 1 serving veggies (100) + condiments (20)" },
+    { name:"2× Anabolic Meat Lasagna + Fruit/Veggies", kcal:790, emoji:"🍝",
+      desc:"2 servings Anabolic Meat Lasagna (690) + 1 serving fruit or veggies of choice (100)" },
+    { name:"2× Citrus Tilapia, Shrimp & Veggies", kcal:760, emoji:"🐟",
+      desc:"2 servings Citrus Tilapia, Shrimp & Veggies (760). Huge, flavorful, and almost zero calorie density from all the vegetables!" },
+    { name:"Pedon MORE THAN Pasta (Large) + Fruit + Greek Yogurt", kcal:745, emoji:"🍝",
+      desc:"1 serving Pedon MORE THAN Pasta with Chicken & Tomato Sauce — Large (545) + 1 serving fruit of choice (100) + ¾ cup fat-free no-sugar-added Greek yogurt (100)" },
+    { name:"3× Spicy Pork Chili Stew", kcal:750, emoji:"🍲",
+      desc:"3 servings Spicy Pork Chili Stew (750). Prep the full batch — each serving is only 250 cal and packed with lean protein!" },
+    { name:"Whitefish with Coleslaw Tacos + Smart Pop + Fruit", kcal:770, emoji:"🌮",
+      desc:"1 serving Whitefish with Coleslaw Tacos (420) + 1 bag Smart Pop Popcorn (200) + 1½ servings fruit or veggies of choice (150)" },
+  ],
+  snacks: [
+    { name:"Blueberry Protein Muffin or Carrot Apple Muffin", kcal:160, emoji:"🫐" },
+    { name:"SKOR Protein Bar (Medium) or CICO Bar", kcal:164, emoji:"🍫" },
+    { name:"Smart Pop Popcorn (1 bag)", kcal:200, emoji:"🍿" },
+    { name:"Jelly Filled Pronut", kcal:160, emoji:"🍩" },
+    { name:"Chocolate Strawberry Almond Proteinsicles", kcal:200, emoji:"🍓" },
+    { name:"Chocolate PB Protein Ice Cream (small)", kcal:190, emoji:"🍦" },
+    { name:"Chocolate Protein Mug Cake", kcal:200, emoji:"🍰" },
+  ]
+};
+
+const MEALS_BD1500 = {
+  breakfast: [
+    { name:"Dim er Bhurji + Brown Bread + Doi (Egg Scramble)", kcal:400, emoji:"🍳",
+      desc:"7 egg whites scrambled with onion, tomato, green chili & turmeric (~120 cal) + 2 slices Westin/Olympic brown bread (160 cal) + ½ cup Arong/Danish plain doi (80 cal) + 1 tsp mustard oil in cooking only · Brand tip: Olympic or Westin brown bread from Agora/Meena Bazaar" },
+    { name:"Quaker Oats + Milk + Banana + Doi", kcal:420, emoji:"🥣",
+      desc:"½ cup Quaker/Saffola oats cooked with 100ml Milk Vita/Danish toned milk (165 cal) + 5 egg whites scrambled (85 cal) + 1 medium banana (90 cal) + ½ cup Arong plain doi (80 cal) · Brand tip: Quaker oats & Saffola oats both available at Agora, Meena Bazaar, Shwapno" },
+    { name:"Chira (Flattened Rice) + Doi + Seasonal Fruits", kcal:389, emoji:"🌾",
+      desc:"70g dry chira (flattened/beaten rice) soaked in water then drained (245 cal) + 1 cup Arong/Farm Fresh plain doi (80 cal) + 1 medium guava/peyara (37 cal) + ½ cup papaya/pepe (27 cal) · Very filling, zero cooking needed — a classic Bangladeshi high-protein light breakfast" },
+    { name:"Atta Roti + Egg & Vegetable Omelette", kcal:400, emoji:"🫓",
+      desc:"2 whole wheat atta rotis (180 cal) + 6 egg whites + 1 whole egg omelette (170 cal) with onion, tomato, green chili, capsicum (50 cal) · Minimal oil, non-stick pan. Atta flour available everywhere; use ACI or PRAN brand for consistency" },
+    { name:"Suji (Semolina) Porridge + Egg Whites + Fruit", kcal:375, emoji:"🫕",
+      desc:"50g suji porridge cooked with 150ml Danish/Milk Vita toned milk, no sugar (200 cal) + 5 egg whites scrambled with chili & onion (85 cal) + 1 medium banana (90 cal) · Add a little salt and green chili to the suji for a savory twist instead of sweet" },
+    { name:"Moong Dal Omelette Roll (Dal Pitha style)", kcal:405, emoji:"🥙",
+      desc:"30g moong dal boiled & lightly spiced (105 cal) + 5 egg whites omelette with vegetables (85 cal + 40 cal) + 1 whole wheat roti (90 cal) + ½ cup Arong plain doi (80 cal) · Moong dal from local bazar; this is high-fiber, high-protein and very filling" },
+    { name:"Brown Rice + Masoor Dal + Egg Whites Plate", kcal:328, emoji:"🍚",
+      desc:"½ cup cooked brown rice — Miniket brown or Nazirshail (108 cal) + ½ cup cooked masoor dal/red lentils (115 cal) + 5 egg whites scrambled with vegetables (85 cal) + cucumber salad (20 cal) · Brown rice from Agora/Meena Bazaar; masoor dal from any local bazar" },
+  ],
+  lunch: [
+    { name:"Rui/Katla Macher Jhol + Rice + Dal + Vegetables", kcal:435, emoji:"🐟",
+      desc:"120g rui or katla fish piece in light onion-tomato-turmeric curry, minimal oil (120 cal) + ¾ cup cooked white rice (146 cal) + ½ cup masoor/moong dal (115 cal) + 1 serving vegetable bhaji — lau/jhinga/shim (50 cal) · The classic Bangladeshi plate; just use minimal oil and rinse the fish before cooking" },
+    { name:"Chicken Breast Curry + Rice + Dal + Veg Bhaji", kcal:440, emoji:"🍗",
+      desc:"100g skinless chicken breast in light onion-garlic-ginger curry, minimal oil (165 cal) + ¾ cup cooked rice (146 cal) + ½ cup moong dal (80 cal) + mixed vegetable bhaji — ful kopi/cabbage/beans (50 cal) · Ask your butcher for 'boner chara murgi' — boneless skinless chicken" },
+    { name:"Tilapia/Pangash Tawa Fry + Dal + Rice", kcal:440, emoji:"🐠",
+      desc:"130g tilapia or pangash fillet, lightly pan-fried with minimal oil, turmeric & chili (130 cal) + ¾ cup rice (146 cal) + ½ cup masoor dal (115 cal) + 1 serving salad/vegetable (50 cal) · Tilapia and pangash are very lean fish — affordable and widely available at any bazar" },
+    { name:"Chingri (Shrimp) Curry + Rice + Dal", kcal:396, emoji:"🦐",
+      desc:"120g small/medium shrimp in light tomato-onion curry, minimal oil (120 cal) + ¾ cup rice (146 cal) + ½ cup dal (100 cal) + salad (30 cal) · Golda or bagda chingri are higher calorie — use smaller chingri (chhoto chingri) for a leaner meal" },
+    { name:"Grilled Chicken Breast Roti Wrap + Doi", kcal:465, emoji:"🌯",
+      desc:"100g grilled/boiled chicken breast (165 cal) shredded + 2 whole wheat atta rotis (180 cal) + cucumber, tomato, onion, green chili salad (40 cal) + ½ cup Arong doi (80 cal) · Shred the boiled chicken, mix with chili sauce — makes a satisfying wrap" },
+    { name:"Boiled Egg + Egg White Curry + Rice + Dal", kcal:435, emoji:"🥚",
+      desc:"2 hard-boiled whole eggs in light curry (140 cal) + 3 egg whites added to same curry (51 cal) + ¾ cup rice (146 cal) + ½ cup dal (80 cal) + vegetable (20 cal) · One pot, cheap, high protein — a classic Bangladeshi budget-friendly option" },
+    { name:"Canned Tuna Salad + Atta Roti", kcal:415, emoji:"🥗",
+      desc:"1 can (185g) tuna in water, drained — Century Tuna or similar (170 cal) + mixed salad with tomato, cucumber, onion, lemon juice (50 cal) + 2 whole wheat atta rotis (180 cal) · Canned tuna available at Agora, Meena Bazaar, Unimart — no cooking required" },
+  ],
+  dinner: [
+    { name:"Grilled Chicken Breast + Vegetable Bhaji + Roti", kcal:425, emoji:"🍗",
+      desc:"120g grilled or boiled chicken breast (198 cal) + mixed vegetable bhaji — band kopi, shim, gazar, ful kopi with minimal oil (80 cal) + 1 whole wheat roti (90 cal) + cucumber-tomato salad (20 cal) · Dinner goal: lean protein + fiber-rich veg, minimal rice or bread" },
+    { name:"Steamed/Boiled Tilapia + Dal Soup + Rice", kcal:405, emoji:"🐟",
+      desc:"140g tilapia or pangash steamed/boiled with ginger, garlic, green chili (140 cal) + ½ cup thin masoor dal soup (115 cal) + ½ cup cooked rice (97 cal) + 1 serving salad (20 cal) · Steaming removes all added fat — maximum protein for minimum calories" },
+    { name:"Chicken Clear Soup + Vegetables + Roti", kcal:417, emoji:"🍲",
+      desc:"150g chicken breast in clear broth soup with lau, cauliflower, carrot, beans — minimal oil (247+80 = 327 cal) + 1 atta roti (90 cal) · High volume, very filling, almost zero fat. Add ginger and green chili for flavor without calories" },
+    { name:"Egg White Curry + Brown Rice + Dal", kcal:410, emoji:"🥚",
+      desc:"8 egg whites in light onion-tomato curry, minimal oil (136 cal) + ½ cup cooked brown rice (108 cal) + ½ cup masoor dal (115 cal) + cucumber salad (20 cal) · 8 egg whites = ~28g protein. This is a powerhouse low-calorie high-protein dinner" },
+    { name:"Chingri (Shrimp) Vegetable Stir-fry + Rice + Dal", kcal:420, emoji:"🦐",
+      desc:"120g shrimp stir-fried with mixed vegetables — ful kopi, capsicum, beans, onion — minimal oil (175 cal) + ½ cup rice (97 cal) + ½ cup dal (100 cal) + salad (20 cal) · High protein, colorful, quick to make. Use 1 tsp oil maximum" },
+    { name:"Boiled Rui + Moong Dal Soup + Rice", kcal:400, emoji:"🍚",
+      desc:"150g boiled rui fish with turmeric and salt (150 cal) + ½ cup thin moong dal soup (100 cal) + ½ cup cooked rice (97 cal) + green chili & lemon (10 cal) · The simplest possible clean meal. Boiling the fish removes all fat and keeps it very lean" },
+    { name:"Boiled Chicken + Steamed Veg + Brown Rice", kcal:430, emoji:"🥦",
+      desc:"150g boiled skinless chicken breast (247 cal) + steamed cauliflower, cabbage, carrot, green beans (80 cal) + ½ cup brown rice (108 cal) · Prep all three in one pot. Season with salt, ginger, green chili, lemon juice — zero added oil needed" },
+  ],
+  snacks: [
+    { name:"Arong/Danish Plain Doi + Guava", kcal:117, emoji:"🍶" },
+    { name:"2 Boiled Eggs + Cucumber", kcal:150, emoji:"🥚" },
+    { name:"Roasted Chana (Bengal Gram) 50g", kcal:170, emoji:"🫘" },
+    { name:"Egg White Omelette + 1 Roti", kcal:165, emoji:"🍳" },
+    { name:"Mixed Fruit Chaat (papaya/guava/watermelon)", kcal:180, emoji:"🍉" },
+    { name:"PRAN Flavored Yogurt Cup + Guava", kcal:160, emoji:"🥛", approx:true },
+    { name:"Canned Tuna (90g) + 3 Olympic Crackers", kcal:165, emoji:"🐟", approx:true },
+  ]
+};
+
+const MEALS_BD2000 = {
+  breakfast: [
+    { name:"Large Egg White Bhurji + 3 Brown Bread Slices + Doi", kcal:520, emoji:"🍳",
+      desc:"10 egg whites scrambled with onion, tomato, green chili & turmeric (~170 cal) + 3 slices Westin/Olympic brown bread (240 cal) + 1 cup Arong/Danish plain doi (80 cal) + ½ cup papaya on the side (30 cal) · Brand tip: Olympic brown bread from Agora/Shwapno; keep egg whites in bulk — buy 2 dozen eggs at once" },
+    { name:"Large Oats Bowl + Eggs + Doi + 2 Bananas", kcal:580, emoji:"🥣",
+      desc:"¾ cup Quaker/Saffola oats cooked with 150ml Danish toned milk (220 cal) + 6 egg whites scrambled (102 cal) + 2 medium bananas (180 cal) + ½ cup Arong plain doi (80 cal) · Prep the oats with milk for creaminess; the dual banana gives natural sweetness — no sugar needed" },
+    { name:"Chira + Doi + Full Fruit Plate", kcal:565, emoji:"🌾",
+      desc:"90g dry chira (flattened rice) soaked and drained (315 cal) + 1 cup Arong/Farm Fresh plain doi (80 cal) + 1 medium banana (90 cal) + 1 medium guava (37 cal) + ½ cup papaya (27 cal) · Great for rest days when you want something light to digest but still filling enough to hit your target" },
+    { name:"3 Atta Rotis + Large Egg & Veg Omelette + Doi", kcal:580, emoji:"🫓",
+      desc:"3 whole wheat rotis (270 cal) + 8 egg whites + 1 whole egg omelette (190 cal) with mixed vegetables (50 cal) + ½ cup Arong doi (80 cal) · This is a hearty Bangladeshi-style breakfast that will keep you full through a long workout" },
+    { name:"Large Suji Porridge + Egg Whites + 2 Bananas", kcal:575, emoji:"🫕",
+      desc:"70g suji cooked with 200ml Danish/Milk Vita low-fat milk, no sugar (280 cal) + 7 egg whites scrambled (119 cal) + 1 medium banana (90 cal) + ½ cup Arong doi (80 cal) · Savory suji with egg whites is a surprisingly satisfying combo — add turmeric and green chili for flavor" },
+    { name:"Dal Omelette Roll + 2 Rotis + Doi + Fruit", kcal:570, emoji:"🥙",
+      desc:"40g moong dal boiled & spiced (140 cal) + 7 egg whites omelette with vegetables (120+50 cal) + 2 whole wheat rotis (180 cal) + ½ cup Arong doi (80 cal) · This meal is incredibly protein-dense — the moong dal + egg whites combination gives ~40g protein" },
+    { name:"Larger Brown Rice + Dal + Egg Whites Plate", kcal:523, emoji:"🍚",
+      desc:"¾ cup cooked brown rice (162 cal) + ¾ cup cooked masoor dal (172 cal) + 7 egg whites scrambled with vegetables (119+50 = 169 cal) + cucumber-tomato salad (20 cal) · Solid all-day energy. Brown rice available at Agora — look for Miniket brown or BRAC brown rice" },
+  ],
+  lunch: [
+    { name:"Larger Rui/Katla Jhol + Rice + Dal + Vegetables", kcal:580, emoji:"🐟",
+      desc:"170g rui or katla fish in light curry, minimal oil (170 cal) + 1 cup cooked rice (195 cal) + ½ cup dal (115 cal) + 1 serving vegetable bhaji (60 cal) · This is the ultimate clean Bangladeshi bulk meal — affordable, high protein, and satisfying. Rinse the fish curry and skim oil off the top" },
+    { name:"150g Chicken Breast Curry + Rice + Dal + Veg", kcal:585, emoji:"🍗",
+      desc:"150g skinless chicken breast curry (247 cal) + 1 cup cooked rice (195 cal) + ½ cup moong dal (80 cal) + mixed vegetable bhaji (60 cal) · Increase protein by adding 3 egg whites to the curry before serving — adds ~51 cal and ~10g protein" },
+    { name:"Large Tilapia Tawa Fry + Dal + Rice + Veg", kcal:575, emoji:"🐠",
+      desc:"180g tilapia fillet pan-fried with minimal oil (180 cal) + 1 cup rice (195 cal) + ½ cup masoor dal (115 cal) + 1 serving vegetables (60 cal) + salad (20 cal) · Tilapia is one of the highest protein-per-taka fish in Bangladesh — buy fresh from any wet market" },
+    { name:"Larger Chingri Curry + Rice + Dal + Veg", kcal:575, emoji:"🦐",
+      desc:"170g shrimp in light curry (170 cal) + 1 cup rice (195 cal) + ½ cup dal (115 cal) + mixed vegetable bhaji (60 cal) + salad (20 cal) · Use small chingri (chhoto chingri) — leaner and cheaper than golda chingri while providing even more protein per 100g" },
+    { name:"Chicken Breast Roti Wrap × 3 + Doi", kcal:580, emoji:"🌯",
+      desc:"130g grilled/boiled chicken breast shredded (215 cal) + 3 whole wheat atta rotis (270 cal) + cucumber, tomato, onion salad (50 cal) + ½ cup Arong doi (80 cal) · Pack this as lunch-to-go in a tiffin box — no reheating needed, stays fresh for hours" },
+    { name:"Larger Egg Curry + Rice + Dal + Vegetables", kcal:580, emoji:"🥚",
+      desc:"3 whole eggs + 4 egg whites in light curry (210+68 = 278 cal) + 1 cup rice (195 cal) + ½ cup dal (80 cal) + vegetable bhaji (50 cal) · Budget-friendly high-protein lunch — add ginger-garlic paste and tomato for a rich curry without heavy oil" },
+    { name:"Full Can Tuna + Large Salad + 3 Atta Rotis + Doi", kcal:585, emoji:"🥗",
+      desc:"1 full can (185g) tuna in water drained (170 cal) + large mixed salad — tomato, cucumber, onion, lettuce, lemon (60 cal) + 3 whole wheat rotis (270 cal) + ½ cup Arong doi (80 cal) · Century Tuna (brine) available at Agora and Meena Bazaar. Fastest high-protein lunch with zero cooking" },
+  ],
+  dinner: [
+    { name:"Larger Chicken Breast + Vegetable Bhaji + 2 Rotis + Doi", kcal:580, emoji:"🍗",
+      desc:"170g grilled/boiled chicken breast (280 cal) + large mixed vegetable bhaji — band kopi, shim, gazar, ful kopi (100 cal) + 2 whole wheat rotis (180 cal) + ½ cup Arong doi (80 cal) · This dinner has ~55g protein. Prep the chicken by boiling in salted water with ginger — simple and clean" },
+    { name:"Steamed Fish + Dal Soup + Brown Rice + Veg", kcal:575, emoji:"🐟",
+      desc:"190g tilapia/pangash steamed with ginger & chili (190 cal) + ¾ cup thin masoor dal soup (172 cal) + ½ cup brown rice (108 cal) + vegetable salad (40 cal) · Steaming is the gold standard cooking method for fish — zero added fat, maximum protein retained" },
+    { name:"Larger Chicken Soup + Vegetables + 2 Rotis + Doi", kcal:575, emoji:"🍲",
+      desc:"200g chicken breast in clear vegetable broth — lau, ful kopi, gazar, beans (330+80 = 410 cal) + 2 atta rotis (180 cal) + ½ cup Arong doi (80 cal) · Make a big batch on Sunday — this soup reheats perfectly all week. Season with ginger, turmeric, green chili, salt" },
+    { name:"Larger Egg White Curry + Brown Rice + Dal + Salad", kcal:514, emoji:"🥚",
+      desc:"12 egg whites in light onion-tomato curry (204 cal) + ½ cup brown rice (108 cal) + ¾ cup masoor dal (172 cal) + salad (30 cal) · 12 egg whites = ~42g protein at only 204 cal. This is Greg Doucette-level efficiency applied to Bangladeshi cooking" },
+    { name:"Larger Chingri Stir-fry + Rice + Dal + Doi", kcal:575, emoji:"🦐",
+      desc:"170g shrimp stir-fried with mixed colorful vegetables, 1 tsp oil (200 cal) + ¾ cup rice (146 cal) + ½ cup dal (115 cal) + ½ cup Arong doi (80 cal) · High volume, colorful, genuinely satisfying. Add plenty of garlic, ginger, and green chili for zero-calorie flavor" },
+    { name:"Boiled Rui + Moong Dal Soup + Brown Rice + Doi", kcal:570, emoji:"🍚",
+      desc:"200g boiled rui fish with turmeric, salt, green chili (200 cal) + ¾ cup moong dal soup (172 cal) + ½ cup brown rice (108 cal) + ½ cup Arong doi (80 cal) · The cleanest possible Bangladeshi dinner. No oil required — the fish steams in its own moisture with a splash of water" },
+    { name:"Boiled Chicken + Steamed Veg + Brown Rice + Doi", kcal:575, emoji:"🥦",
+      desc:"200g boiled chicken breast (330 cal) + steamed cauliflower, cabbage, carrots, shim (80 cal) + ½ cup brown rice (108 cal) + ½ cup Arong doi (80 cal) · Meal prep this on training days — cook a large batch of chicken and rice, portion into containers for the week" },
+  ],
+  snacks: [
+    { name:"Arong Doi + 2 Fruits (banana + guava)", kcal:207, emoji:"🍶" },
+    { name:"3 Boiled Eggs", kcal:210, emoji:"🥚" },
+    { name:"Roasted Chana 60g + Cucumber", kcal:215, emoji:"🫘" },
+    { name:"2× Egg White Omelette (5 whites each)", kcal:170, emoji:"🍳" },
+    { name:"Large Mixed Fruit Chaat", kcal:200, emoji:"🍉" },
+    { name:"2× PRAN Flavored Yogurt Cups", kcal:220, emoji:"🥛", approx:true },
+    { name:"Full Can Tuna + 4 Olympic Crackers", kcal:230, emoji:"🐟", approx:true },
+  ]
+};
+
+const MEALS_BD2500 = {
+  breakfast: [
+    { name:"Giant Egg White Bhurji + 3 Brown Bread + Doi + 2 Bananas", kcal:766, emoji:"🍳",
+      desc:"12 egg whites scrambled with onion, tomato, green chili & turmeric (204+60=264 cal) + 3 slices Olympic/Westin brown bread (240 cal) + 1 cup Arong/Danish plain doi (120 cal) + 2 medium bananas (180 cal) · This meal delivers ~45g protein. Prep the bhurji on a non-stick pan with cooking spray. Brown bread available at Agora & Shwapno — look for Olympic Whole Wheat" },
+    { name:"XXL Oats Bowl + Egg Whites + 2 Bananas + Large Doi", kcal:762, emoji:"🥣",
+      desc:"1 cup (90g) Quaker/Saffola oats cooked with 200ml Danish toned milk (330+70=400 cal) + 8 egg whites scrambled (136 cal) + 2 medium bananas (180 cal) + ½ cup Arong plain doi (80 cal) · The biggest, most filling breakfast on the plan. Cook oats thick with milk — no sugar needed when you have ripe bananas. Meal-prep the oats in 5 min the night before" },
+    { name:"Large Chira Bowl + Egg Whites + Doi + 2 Bananas + Guava", kcal:757, emoji:"🌾",
+      desc:"100g dry chira (flattened rice) soaked & drained (350 cal) + 8 egg whites scrambled (136 cal) + ½ cup Arong/Farm Fresh plain doi (80 cal) + 1 banana (90 cal) + 1 guava (37 cal) + ½ cup papaya (27 cal) · Great no-cook chira base — soaking for 10 min makes it soft and fluffy. Zero cooking needed for the chira; scramble the whites separately" },
+    { name:"Dal-Egg Omelette Roll + 4 Atta Rotis + Doi + Banana", kcal:773, emoji:"🥙",
+      desc:"40g moong dal boiled & spiced (140 cal) + 8 egg whites omelette with mixed veg (136+60=196 cal) + 4 whole wheat atta rotis (360 cal) + ½ cup Arong doi (80 cal) · Moong dal + egg whites = ~40g protein in the omelette alone. Make the dal paste the night before; assemble in 5 min. Atta from ACI or PRAN brand — consistent rotis every time" },
+    { name:"Large Suji + 10 Egg Whites + 2 Bananas + Doi", kcal:760, emoji:"🫕",
+      desc:"100g suji cooked with 200ml Danish/Milk Vita low-fat milk, no sugar (350+70=420 cal) + 10 egg whites scrambled with green chili & turmeric (170 cal) + 1 banana (90 cal) + ½ cup Arong doi (80 cal) · Savory suji is surprisingly satisfying at high calories. Add turmeric, green chili, and a pinch of salt for a desi-style porridge that beats sweet versions" },
+    { name:"3 Atta Rotis + XXL Egg & Veg Omelette + Doi + 2 Fruits", kcal:779, emoji:"🫓",
+      desc:"3 whole wheat rotis (270 cal) + 12 egg whites + 1 whole egg omelette (204+17+60=281 cal) with onion, capsicum, tomato + 1 cup Arong doi (120 cal) + guava + ½ cup papaya (37+27=64 cal) · Classic Bangladeshi desi breakfast scaled up. The whole egg adds richness without major calories. Use a large non-stick pan to cook the giant omelette in one go" },
+    { name:"Brown Rice + Dal + XXL Egg White Bhurji + Doi + Fruit", kcal:786, emoji:"🍚",
+      desc:"1 cup cooked brown rice (216 cal) + ¾ cup masoor dal (172 cal) + 10 egg whites bhurji with veg (170+60=230 cal) + ½ cup Arong doi (80 cal) + 1 banana (90 cal) · Solid all-day energy fuel. Brown rice from Agora (Miniket brown or BRAC brown). Breakfast rice is common in BD — this version is lean, high-protein, and genuinely filling at 2500 cal" },
+  ],
+  lunch: [
+    { name:"Large Rui/Katla Jhol + 1.5 cup Rice + Dal + Veg + Salad", kcal:765, emoji:"🐟",
+      desc:"200g rui or katla fish in light onion-tomato-turmeric curry, minimal oil (200 cal) + 1.5 cups cooked rice (293 cal) + ¾ cup masoor dal (172 cal) + mixed vegetable bhaji (80 cal) + cucumber-tomato salad (20 cal) · The king of Bangladeshi clean bulk meals — high protein, affordable, satisfying. Skim oil off the jhol surface before serving. Rinse the fish before cooking" },
+    { name:"180g Chicken Breast Curry + Rice + Dal + Veg Bhaji + Doi", kcal:767, emoji:"🍗",
+      desc:"180g skinless chicken breast curry, minimal oil (297 cal) + 1 cup cooked rice (195 cal) + ½ cup moong dal (115 cal) + mixed veg bhaji — ful kopi, shim, gazar (80 cal) + ½ cup Arong doi (80 cal) · Ask your butcher for 'boner chara murgi'  (boneless skinless). Add 3 egg whites to the curry just before serving — boosts protein by ~10g for only 51 extra cal" },
+    { name:"220g Tilapia Jhol + 1.5 cup Rice + Dal + Veg", kcal:760, emoji:"🐠",
+      desc:"220g tilapia fillet in light jhol, minimal oil (220 cal) + 1.5 cups cooked rice (293 cal) + ¾ cup masoor dal (172 cal) + mixed vegetable bhaji (80 cal) · Tilapia is one of the highest protein-per-taka fish in Bangladesh — lean, widely available, fast to cook. Buy fresh from any wet market. Minimal oil = maximum calorie efficiency" },
+    { name:"200g Chingri Curry + 1.5 cup Rice + Dal + Veg + Doi", kcal:770, emoji:"🦐",
+      desc:"200g small/medium shrimp in light curry, minimal oil (200 cal) + 1.5 cups cooked rice (293 cal) + ½ cup dal (115 cal) + vegetable bhaji (80 cal) + ½ cup Arong doi (80 cal) · Use chhoto chingri (small shrimp) — leaner than golda or bagda, and cheaper. High protein, colorful, and quick to cook. Add plenty of garlic, ginger, and green chili for zero-calorie flavor" },
+    { name:"Chicken Roti Wrap ×4 + Doi + Banana", kcal:774, emoji:"🌯",
+      desc:"150g boiled/grilled chicken breast shredded (247 cal) + 4 whole wheat atta rotis (360 cal) + cucumber, tomato, onion, green chili salad (50 cal) + ½ cup Arong doi (80 cal) + ½ banana (45 cal) · The ultimate lunchbox meal — pack in a tiffin box, stays fresh for hours, zero reheating. Season the chicken with mustard, lemon juice, and chili for flavor without calories" },
+    { name:"Large Egg Curry + 1.5 cup Rice + Dal + Veg Bhaji", kcal:762, emoji:"🥚",
+      desc:"2 whole eggs + 6 egg whites in light onion-tomato curry (140+102+60=302 cal) + 1.5 cups cooked rice (293 cal) + ½ cup dal (115 cal) + vegetable bhaji (80 cal) · Budget-friendly high-protein lunch. The 6 extra egg whites in the curry add protein without the fat of yolks. One pot, cheap, and makes excellent leftovers for the next day" },
+    { name:"Full Can Tuna + 4 Atta Rotis + Large Salad + Doi + Banana", kcal:760, emoji:"🥗",
+      desc:"185g can tuna in brine, drained — Century Tuna or similar (170 cal) + 4 whole wheat atta rotis (360 cal) + large mixed salad — tomato, cucumber, onion, lettuce, lemon (60 cal) + ½ cup Arong doi (80 cal) + ½ banana (45 cal) · Fastest high-protein lunch on the plan — zero cooking required. Century Tuna in brine at Agora and Meena Bazaar. Canned tuna is ~37g protein per 185g can" },
+  ],
+  dinner: [
+    { name:"170g Chicken Breast + Large Veg Bhaji + 3 Rotis + Doi + Fruit", kcal:767, emoji:"🍗",
+      desc:"170g boiled/grilled skinless chicken breast (280 cal) + large mixed vegetable bhaji — band kopi, shim, gazar, ful kopi with minimal oil (100 cal) + 3 atta rotis (270 cal) + ½ cup Arong doi (80 cal) + 1 guava (37 cal) · ~55g protein dinner. Boil the chicken in salted water with ginger for maximum flavor without fat. Prep on Sunday for the whole week" },
+    { name:"250g Steamed Tilapia + Dal Soup + Brown Rice + Doi + Veg", kcal:762, emoji:"🐟",
+      desc:"250g tilapia/pangash steamed with ginger, garlic & green chili (250 cal) + 1 cup thin masoor dal soup (230 cal) + ½ cup cooked brown rice (108 cal) + ½ cup Arong doi (80 cal) + salad (40 cal) · Steaming is the gold standard — zero added fat, maximum protein retained. Make the dal soup very thin (almost broth-like) so it's high-volume and filling" },
+    { name:"180g Chicken Soup + Vegetables + ½ cup Brown Rice + 2 Rotis + Doi", kcal:765, emoji:"🍲",
+      desc:"180g chicken breast in clear veg broth — lau, ful kopi, gazar, beans (297+100=397 cal) + ½ cup brown rice (108 cal) + 2 atta rotis (180 cal) + ½ cup Arong doi (80 cal) · Batch-cook this soup on Sunday — reheats perfectly all week. Season with ginger, turmeric, green chili, salt. The broth tricks your brain into feeling fuller than the calories suggest" },
+    { name:"15 Egg Whites Curry + 1 cup Brown Rice + Dal + Doi + Salad", kcal:757, emoji:"🥚",
+      desc:"15 egg whites in light onion-tomato-ginger curry, minimal oil (255+60=315 cal) + 1 cup cooked brown rice (216 cal) + ½ cup masoor dal (115 cal) + ½ cup Arong doi (80 cal) + salad (30 cal) · 15 egg whites = ~52g protein at only 255 cal. This is Greg Doucette MAINGAIN philosophy applied to Bangladeshi cooking. The high volume of whites makes this dinner enormously filling" },
+    { name:"200g Chingri Stir-fry + Veg + 1 cup Rice + Dal + Doi + Salad", kcal:765, emoji:"🦐",
+      desc:"200g shrimp stir-fried with colorful mixed vegetables — capsicum, beans, ful kopi, onion, 1 tsp oil (200+80+45=325 cal) + 1 cup cooked rice (195 cal) + ½ cup dal (115 cal) + ½ cup Arong doi (80 cal) + salad (30 cal) · High volume, colorful, genuinely satisfying. Use chhoto chingri for a leaner stir-fry. This dish looks and tastes more decadent than the calorie count suggests" },
+    { name:"260g Boiled Rui + Brown Rice + Dal + Doi + Veg + Salad", kcal:755, emoji:"🍚",
+      desc:"260g boiled rui fish with turmeric, salt & green chili (260 cal) + 1 cup cooked brown rice (216 cal) + ½ cup moong dal (115 cal) + ½ cup Arong doi (80 cal) + mixed veg (60 cal) + salad (20 cal) · The cleanest possible Bangladeshi dinner, scaled up for 2500 cal. No oil required — the rui steams in its own moisture with a splash of water, turmeric & green chili" },
+    { name:"200g Boiled Chicken + Steamed Veg + Brown Rice + Doi + Banana", kcal:762, emoji:"🥦",
+      desc:"200g boiled skinless chicken breast (330 cal) + large steamed vegetable plate — cauliflower, cabbage, carrot, shim, beans (100 cal) + ½ cup brown rice (108 cal) + ½ cup Arong doi (80 cal) + ½ banana (45 cal) · Meal-prep this on training days — cook a large batch of chicken and rice, portion into containers. Season with salt, ginger, green chili, lemon juice — zero oil needed" },
+  ],
+  snacks: [
+    { name:"Large Arong Doi + Banana + Guava", kcal:247, emoji:"🍶" },
+    { name:"3 Boiled Eggs + Cucumber + Tomato", kcal:225, emoji:"🥚" },
+    { name:"Roasted Chana (Bengal Gram) 65g", kcal:221, emoji:"🫘" },
+    { name:"2× Egg White Omelette (6 whites each)", kcal:204, emoji:"🍳" },
+    { name:"Large Fruit Chaat (papaya+guava+banana+watermelon)", kcal:220, emoji:"🍉" },
+    { name:"2× PRAN Flavored Yogurt Cups + Guava", kcal:240, emoji:"🥛", approx:true },
+    { name:"Full Can Tuna (185g) + 4 Olympic Crackers", kcal:230, emoji:"🐟", approx:true },
+  ]
+};
+
+const EXERCISES = [
+  "Goblet Squat (A1)", "Calf Raises (A2)",
+  "DB Pullover (B1)", "Floor Press (B2)", "Bent-Over Row (B3)",
+  "Overhead Press (C1)", "Lateral Raises (C2)", "Glute Bridges (C3)",
+  "Bicep Curls (C4)", "Skullcrushers (C5)", "Reverse Flyes (C6)"
+];
+
+const CHECKLIST_ITEMS = [
+  { id:"workout", label:"Complete workout" },
+  { id:"protein", label:"Hit protein goal" },
+  { id:"water",   label:"Drink enough water" },
+  { id:"cardio",  label:"Do cardio session" },
+  { id:"sleep",   label:"Plan for 7–8h sleep" },
+  { id:"vitamins",label:"Take vitamins / supplements" },
+];
+
+// ══ STATE ════════════════════════════════════════════════════
+// safeLoad wraps JSON.parse so that corrupted localStorage data (manual edits,
+// browser bugs, version mismatches) never white-screens the app — it falls back
+// to the supplied default and clears the broken key so future saves work cleanly.
+function safeLoad(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if(raw === null) return fallback;
+    return JSON.parse(raw);
+  } catch(e) {
+    console.warn('fitdash: corrupted localStorage key "' + key + '", resetting to default.', e);
+    try { localStorage.removeItem(key); } catch(_) {}
+    return fallback;
+  }
+}
+
+let sessions    = safeLoad('fitdash_sessions', []);
+let weights     = safeLoad('fitdash_weights',  []);
+let prs         = safeLoad('fitdash_prs',      {});
+let checklist   = safeLoad('fitdash_check',    {});
+let cardioMins  = parseFloat(localStorage.getItem('fitdash_cardio') || '0');  // parseFloat not parseInt — preserves e.g. 15.5 min
+if(isNaN(cardioMins)) cardioMins = 0;  // corrupted value guard: parseFloat('bad') = NaN, NaN += x stays NaN forever
+let lastCardioReset = localStorage.getItem('fitdash_cardio_week') || '';
+let activePlan  = localStorage.getItem('fitdash_plan') || '1500';
+
+// save() wraps setItem so a full localStorage (QuotaExceededError) is surfaced
+// to the user rather than silently dropped. This is the single write path for
+// all fitdash data — every other caller goes through here.
+function save(key, val) {
+  try {
+    localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val));
+  } catch(e) {
+    if(e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+      alert('Storage full — your device has no space left for new data.\nTry exporting your history (Progress → Export CSV) then clearing old sessions.');
+    } else {
+      console.error('fitdash: localStorage write failed for key "' + key + '"', e);
+    }
+  }
+}
+
+/**
+ * Parse a stored YYYY-MM-DD date string in LOCAL time instead of UTC.
+ * new Date("2026-07-30") is treated as UTC midnight, which shifts the date
+ * backward one day for users in timezones behind UTC (e.g. the Americas, Bangladesh).
+ * Using new Date(y, m-1, d) always constructs a local-midnight date.
+ */
+function parseLocalDate(str) {
+  if(!str) return new Date();
+  const parts = str.split('-');
+  if(parts.length !== 3) return new Date(str);
+  const [y, m, d] = parts.map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/**
+ * Returns a YYYY-MM-DD string in LOCAL time.
+ * new Date().toISOString().split('T')[0] returns the UTC date — which for
+ * UTC+6 (Bangladesh) can be one calendar day behind the local date during
+ * morning hours, mis-filing sessions and breaking the streak tracker.
+ */
+function getLocalDateStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ══ NAV ══════════════════════════════════════════════════════
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  const tabs = document.querySelectorAll('.nav-tab');
+  const map = { dashboard:0, training:1, nutrition:2, progress:3 };
+  tabs[map[id]].classList.add('active');
+  if(id === 'progress') { renderProgress(); }
+  if(id === 'training') { renderTrainingHistory(); }
+  window.scrollTo(0,0);
+}
+
+// ══ NUTRITION RENDER ═════════════════════════════════════════
+function renderMeals(data, prefix) {
+  ['breakfast','lunch','dinner'].forEach((slot,i) => {
+    const el = document.getElementById(`meals-${prefix}-${i+1}`);
+    if(!el) return;
+    el.innerHTML = data[slot].map((m,idx) => `
+      <div class="meal-card" id="mc-${prefix}-${slot}-${idx}">
+        <div class="meal-card-header" onclick="toggleMeal('mc-${prefix}-${slot}-${idx}')">
+          <div class="meal-icon">${m.emoji}</div>
+          <div class="meal-name">${m.name}</div>
+          <div class="meal-cals">${m.kcal} cal</div>
+          <div class="meal-chevron">▼</div>
+        </div>
+        <div class="meal-card-body">
+          <div class="meal-desc">${m.desc}</div>
+        </div>
+      </div>`).join('');
+  });
+  const snackEl = document.getElementById(`snacks-${prefix}`);
+  if(snackEl) {
+    snackEl.innerHTML = data.snacks.map(s => `
+      <div class="snack-item">
+        <div class="snack-emoji">${s.emoji}</div>
+        <div>
+          <div class="snack-name">${s.name}</div>
+          <div class="snack-cal">${s.approx ? '≈' : ''}${s.kcal} cal</div>
+        </div>
+      </div>`).join('');
+  }
+}
+
+function toggleMeal(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
+const PLAN_LABELS = {
+  '1500':   '1500 kcal Plan',
+  '2000':   '2000 kcal Plan',
+  '2500':   '2500 kcal Plan',
+  'bd1500': '🇧🇩 BD 1500 kcal Plan',
+  'bd2000': '🇧🇩 BD 2000 kcal Plan',
+  'bd2500': '🇧🇩 BD 2500 kcal Plan',
+};
+
+// applyPlan updates the UI only — no localStorage write.
+// Called by renderDashboard() (which runs on every interaction) to avoid
+// writing the same plan value to localStorage dozens of times per session.
+function applyPlan(p) {
+  ['1500','2000','2500','bd1500','bd2000','bd2500'].forEach(id => {
+    const planEl = document.getElementById('plan-'+id);
+    const btnEl  = document.getElementById('btn-'+id);
+    if(planEl) planEl.style.display = id === p ? '' : 'none';
+    if(btnEl)  btnEl.classList.toggle('active', id === p);
+  });
+  const dashLabel = document.getElementById('dash-plan-label');
+  if(dashLabel) dashLabel.textContent = PLAN_LABELS[p] || p;
+}
+
+// switchPlan is called by the user tapping a plan button — it saves AND updates UI.
+function switchPlan(p) {
+  activePlan = p;
+  save('fitdash_plan', p);
+  applyPlan(p);
+}
+
+// ══ CHECKLIST ════════════════════════════════════════════════
+function renderChecklist() {
+  const today = getLocalDateStr();   // ISO local — avoids toDateString() locale variance
+  if(checklist._date !== today) { checklist = { _date: today }; save('fitdash_check', checklist); }
+  const el = document.getElementById('checklist');
+  if(!el) return;
+  el.innerHTML = CHECKLIST_ITEMS.map(item => `
+    <div class="checklist-item">
+      <div class="check-box ${checklist[item.id]?'done':''}" onclick="toggleCheck('${item.id}')"></div>
+      <div class="check-label ${checklist[item.id]?'done':''}">${item.label}</div>
+    </div>`).join('');
+}
+
+function toggleCheck(id) {
+  checklist[id] = !checklist[id];
+  save('fitdash_check', checklist);
+  renderChecklist();
+}
+
+// ══ CARDIO ═══════════════════════════════════════════════════
+function getWeekKey() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);                        // normalise to midnight — without this,
+                                                  // (d - jan1)/86400000 is fractional and
+                                                  // Math.ceil rolls the week 24 hrs early
+  const jan1 = new Date(d.getFullYear(), 0, 1);
+  return d.getFullYear() + '-W' + Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7);
+}
+
+function addCardio() {
+  const mins = Number(document.getElementById('cardio-add').value);
+  // Number() rejects "10abc" that parseInt would accept as 10
+  if(!Number.isFinite(mins) || mins <= 0) {
+    alert('Please enter a positive number of minutes.');
+    return;
+  }
+  if(mins > 300) {
+    alert('Please enter a realistic session duration (1–300 min).');
+    return;
+  }
+  const wk = getWeekKey();
+  if(lastCardioReset !== wk) { cardioMins=0; lastCardioReset=wk; }
+  cardioMins += mins;
+  save('fitdash_cardio', cardioMins);
+  save('fitdash_cardio_week', lastCardioReset);
+  document.getElementById('cardio-add').value = '';
+  renderCardio();
+}
+
+function resetCardio() {
+  cardioMins = 0;
+  lastCardioReset = getWeekKey();          // sync week key so auto-reset logic stays consistent
+  save('fitdash_cardio', 0);
+  save('fitdash_cardio_week', lastCardioReset);
+  renderCardio();
+}
+
+function renderCardio() {
+  // ── Week-reset check (was only in addCardio before this fix) ──────────────
+  // If the user opens the dashboard in a new week without logging cardio,
+  // the UI must still clear last week's minutes automatically.
+  const wk = getWeekKey();
+  if (lastCardioReset !== wk) {
+    cardioMins      = 0;
+    lastCardioReset = wk;
+    save('fitdash_cardio',      0);
+    save('fitdash_cardio_week', lastCardioReset);
+  }
+  const target = 150;
+  const pct = Math.min(100, Math.round(cardioMins / target * 100));
+  document.getElementById('cardio-fill').style.width = pct + '%';
+  document.getElementById('cardio-done-label').textContent = cardioMins + ' min done';
+}
+
+// ══ DASHBOARD ════════════════════════════════════════════════
+function renderDashboard() {
+  const now = new Date();
+  const h = now.getHours();
+  const greeting = h<12?'Good morning 🌅':h<17?'Good afternoon ☀️':'Good evening 🌙';
+  document.getElementById('greeting').textContent = greeting;
+  document.getElementById('today-date').textContent = now.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+  const sessionCount = sessions.length;
+  document.getElementById('stat-sessions').textContent = sessionCount;
+  document.getElementById('p-sessions').textContent    = sessionCount;
+
+  // Streak
+  const streak = calcStreak();
+  document.getElementById('stat-streak').textContent = streak;
+  document.getElementById('p-streak').textContent    = streak;
+
+  // Total cals (progress page)
+  const pCalEl = document.getElementById('p-total-cals');
+  if(pCalEl) {
+    const tc = totalCalsBurned();
+    pCalEl.textContent = tc >= 1000 ? (tc/1000).toFixed(1)+'k' : tc;
+  }
+
+  // Today's weight — use local ISO date to match how weights are stored
+  const todayW = weights.find(w => w.date === getLocalDateStr());
+  document.getElementById('stat-weight').textContent = todayW ? todayW.val : '—';
+
+  // Last session
+  const lastSes = sessions[sessions.length-1];
+  const dashLS = document.getElementById('dash-last-session');
+  if(dashLS) dashLS.textContent = lastSes ? 'Last session: '+parseLocalDate(lastSes.date).toLocaleDateString() : 'No sessions yet';
+
+  renderChecklist();
+  renderCardio();
+  applyPlan(activePlan); // applyPlan = UI only; switchPlan also saves — don't write localStorage on every render
+}
+
+/**
+ * Return a stable YYYY-MM-DD string from a Date object.
+ * toDateString() output varies by browser locale (e.g. "Wed Aug 01 2026" vs "01/08/2026"),
+ * which breaks Set lookups across locales. This always produces a consistent ISO format.
+ */
+function dateToStableStr(date) {
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+}
+
+function calcStreak() {
+  if(!sessions.length) return 0;
+  // Use parseLocalDate so YYYY-MM-DD strings are not shifted back one day in UTC-behind timezones.
+  // Use dateToStableStr instead of toDateString() to avoid locale-dependent output format.
+  const daysWithSession = new Set(sessions.map(s => dateToStableStr(parseLocalDate(s.date))));
+  let streak=0, d = new Date();
+  d.setHours(0,0,0,0);
+  // If today not logged, start from yesterday
+  if(!daysWithSession.has(dateToStableStr(d))) d.setDate(d.getDate()-1);
+  while(daysWithSession.has(dateToStableStr(d))) { streak++; d.setDate(d.getDate()-1); }
+  return streak;
+}
+
+// ══ WEIGHT CHART ══════════════════════════════════════════════
+let weightChart = null;
+
+function renderWeightChart() {
+  // Sort chronologically before slicing — both write paths keep the array in order
+  // for fresh data, but localStorage loaded from an older/imported history may not be.
+  // localeCompare on ISO dates (YYYY-MM-DD) is equivalent to date-order comparison.
+  const last7 = [...weights].sort((a,b) => a.date.localeCompare(b.date)).slice(-7);
+  // parseLocalDate() avoids new Date("YYYY-MM-DD") treating the string as UTC midnight,
+  // which shifts the displayed date back one day for users in UTC+ timezones.
+  const labels = last7.map(w => parseLocalDate(w.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+  const data   = last7.map(w => w.val);
+  const canvas = document.getElementById('weightChart');
+  const ctx = canvas.getContext('2d');
+
+  // weightChart stays null — this chart uses custom canvas drawing, not Chart.js.
+  // Canvas is redrawn fresh each call via clearRect(); no destroy() needed.
+
+  if(!data.length) {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = '#7070a0';
+    ctx.font = '14px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('No weight data yet', canvas.width/2, 70);
+    return;
+  }
+
+  const W = canvas.offsetWidth || 600;
+  const H = 160;
+  canvas.width = W; canvas.height = H;
+  ctx.clearRect(0,0,W,H);
+
+  const pad = {l:40,r:20,t:20,b:30};
+  const minV = Math.min(...data)-2;
+  const maxV = Math.max(...data)+2;
+  const range = maxV - minV || 1;
+  const toX = i => pad.l + (W-pad.l-pad.r)*i/(Math.max(data.length-1,1));
+  const toY = v => pad.t + (H-pad.t-pad.b)*(1-(v-minV)/range);
+
+  // Grid lines
+  ctx.strokeStyle = '#2a2a3c'; ctx.lineWidth=1;
+  [0,.25,.5,.75,1].forEach(f => {
+    const y = pad.t + (H-pad.t-pad.b)*f;
+    ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y); ctx.stroke();
+    const val = (maxV - (maxV-minV)*f).toFixed(1);
+    ctx.fillStyle='#7070a0'; ctx.font='10px system-ui'; ctx.textAlign='right';
+    ctx.fillText(val, pad.l-4, y+4);
+  });
+
+  // X labels
+  ctx.fillStyle='#7070a0'; ctx.font='10px system-ui'; ctx.textAlign='center';
+  labels.forEach((l,i) => ctx.fillText(l, toX(i), H-4));
+
+  // Gradient fill
+  const grad = ctx.createLinearGradient(0,pad.t,0,H-pad.b);
+  grad.addColorStop(0,'rgba(230,57,70,0.3)'); grad.addColorStop(1,'rgba(230,57,70,0)');
+  ctx.beginPath();
+  ctx.moveTo(toX(0), H-pad.b);
+  data.forEach((_,i) => ctx.lineTo(toX(i), toY(data[i])));
+  ctx.lineTo(toX(data.length-1), H-pad.b);
+  ctx.closePath(); ctx.fillStyle=grad; ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  data.forEach((v,i) => i===0 ? ctx.moveTo(toX(i),toY(v)) : ctx.lineTo(toX(i),toY(v)));
+  ctx.strokeStyle='#e63946'; ctx.lineWidth=2.5; ctx.lineJoin='round'; ctx.stroke();
+
+  // Dots
+  data.forEach((v,i) => {
+    ctx.beginPath(); ctx.arc(toX(i),toY(v),4,0,Math.PI*2);
+    ctx.fillStyle='#e63946'; ctx.fill();
+    ctx.strokeStyle='#08080e'; ctx.lineWidth=2; ctx.stroke();
+  });
+}
+
+function logWeight() {
+  const val = parseFloat(document.getElementById('weight-input').value);
+  if(isNaN(val)) {
+    alert('Please enter a valid weight number.');
+    return;
+  }
+  if(val < 30 || val > 300) {
+    alert('Weight must be between 30 and 300 kg.');
+    return;
+  }
+  const today = getLocalDateStr();
+  weights = weights.filter(w => w.date !== today);
+  weights.push({date:today, val});
+  save('fitdash_weights', weights);
+  document.getElementById('weight-input').value = '';
+  document.getElementById('stat-weight').textContent = val;
+  renderProgress();
+}
+
+function deleteWeight(date) {
+  if(!confirm(`Delete weight entry for ${date}?`)) return;
+  weights = weights.filter(w => w.date !== date);
+  save('fitdash_weights', weights);
+  // Refresh the dashboard kg stat in case today's entry was removed
+  const todayW = weights.find(w => w.date === getLocalDateStr());
+  const statEl = document.getElementById('stat-weight');
+  if(statEl) statEl.textContent = todayW ? todayW.val : '—';
+  renderProgress();
+}
+
+function renderWeightHistory() {
+  const el = document.getElementById('weight-history-list');
+  if(!el) return;
+  if(!weights.length) { el.innerHTML = ''; return; }
+  // Show up to 10 most recent entries, newest first
+  const sorted = [...weights].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
+  el.innerHTML = sorted.map(w => `
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px;color:var(--muted)">${w.date}</span>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-size:15px;font-weight:700;color:var(--text)">${w.val} kg</span>
+        <button onclick="deleteWeight('${w.date}')"
+          title="Delete this entry"
+          style="background:none;border:1px solid var(--border2);color:var(--muted);
+                 cursor:pointer;font-size:13px;font-weight:700;width:24px;height:24px;
+                 border-radius:6px;display:inline-flex;align-items:center;justify-content:center;
+                 transition:all .15s;line-height:1;padding:0"
+          onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'"
+          onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--muted)'">×</button>
+      </div>
+    </div>`).join('');
+}
+
+// ══ PR TRACKER ════════════════════════════════════════════════
+function savePR() {
+  const ex = document.getElementById('pr-exercise').value.trim();
+  const wt = parseFloat(document.getElementById('pr-weight').value);
+  if(!ex) {
+    alert('Please enter an exercise name.');
+    return;
+  }
+  if(isNaN(wt) || wt <= 0) {
+    alert('Please enter a valid weight greater than 0 kg.');
+    return;
+  }
+  // Require strictly higher weight — equal weight doesn't set a new personal record.
+  // The previous condition (wt < prs[ex].weight) let equal weight through, updating
+  // the PR date silently even though the user tied rather than beat their record.
+  if(prs[ex] && wt <= prs[ex].weight) {
+    alert(`Your current PR for "${ex}" is ${prs[ex].weight} kg — enter a higher weight to update it.`);
+    return;
+  }
+  prs[ex] = { weight:wt, date:getLocalDateStr() };
+  save('fitdash_prs', prs);
+  document.getElementById('pr-exercise').value = '';
+  document.getElementById('pr-weight').value   = '';
+  renderProgress();
+}
+
+function deletePR(key) {
+  if(!confirm(`Delete PR for "${key}"?`)) return;
+  delete prs[key];
+  save('fitdash_prs', prs);
+  renderPRs();
+}
+
+function renderPRs() {
+  const el = document.getElementById('pr-grid');
+  const keys = Object.keys(prs);
+  if(!keys.length) {
+    el.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">🏆</div><p>No PRs logged yet.<br>Set your first personal record!</p></div>';
+    return;
+  }
+  // Use btoa() to encode exercise names as data attributes — avoids inline onclick breakage
+  // from special characters (apostrophes, backticks, quotes) in exercise names.
+  el.innerHTML = keys.map(k => `
+    <div class="pr-card" style="position:relative" data-pr-key="${btoa(unescape(encodeURIComponent(k)))}">
+      <button class="pr-delete-btn"
+        title="Delete this PR"
+        style="position:absolute;top:8px;right:8px;background:none;border:1px solid var(--border2);
+               color:var(--muted);cursor:pointer;font-size:13px;font-weight:700;width:22px;height:22px;
+               border-radius:5px;display:inline-flex;align-items:center;justify-content:center;
+               transition:all .15s;line-height:1;padding:0"
+        onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'"
+        onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--muted)'">×</button>
+      <div class="pr-exname" style="padding-right:22px">${k}</div>
+      <div class="pr-value">${prs[k].weight} kg</div>
+      <div class="pr-date">${prs[k].date}</div>
+    </div>`).join('');
+
+  // Delegated handler assigned via .onclick (not addEventListener) so repeated
+  // renderPRs() calls overwrite the previous handler instead of stacking a new
+  // copy on top. addEventListener accumulates — after 10 renders, one click
+  // would fire 10 confirm() dialogs in sequence.
+  el.onclick = e => {
+    if(e.target.classList.contains('pr-delete-btn')) {
+      const card = e.target.closest('[data-pr-key]');
+      if(!card) return;
+      const key = decodeURIComponent(escape(atob(card.dataset.prKey)));
+      deletePR(key);
+    }
+  };
+}
+
+/**
+ * Return the number of sets in a session.
+ * Guided sessions store setsCompleted directly.
+ * Manual sessions store exercises → { set1, set2, set3 } objects, so we must
+ * sum the filled-in set values — not just count the exercise keys.
+ */
+function countSets(s) {
+  if(s.setsCompleted) return s.setsCompleted;
+  return Object.values(s.exercises || {})
+    .reduce((total, sets) => total + Object.keys(sets).length, 0);
+}
+
+// ══ SESSION LOG ════════════════════════════════════════════════
+function openLogModal() {
+  const today = getLocalDateStr();   // toISOString() was UTC — wrong calendar day for UTC+6 mornings
+  document.getElementById('log-date').value = today;
+  const el = document.getElementById('log-exercises');
+  el.innerHTML = EXERCISES.map(ex => `
+    <div style="margin-bottom:10px">
+      <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px">${ex}</div>
+      <div class="exercise-log-row">
+        <input placeholder="Set 1 wt" style="background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 10px;font-size:13px;outline:none" data-ex="${ex}" data-set="1">
+        <input placeholder="Set 2 wt×reps" style="background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 10px;font-size:13px;outline:none" data-ex="${ex}" data-set="2">
+        <input placeholder="Set 3 wt×reps" style="background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:8px 10px;font-size:13px;outline:none" data-ex="${ex}" data-set="3">
+      </div>
+    </div>`).join('');
+  document.getElementById('modal').classList.add('open');
+  document.body.style.overflow = 'hidden';   // ← prevent background scroll
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  document.body.style.overflow = '';          // ← restore scroll
+}
+
+/**
+ * Extract the leading weight number from a manual set string.
+ * Handles common user formats: "100x10", "80 × 12", "100", "80kg×10".
+ * Returns null if no leading number is found.
+ */
+function parseWeightFromSetStr(str) {
+  const m = String(str).match(/^(\d+(?:\.\d+)?)/);
+  return m ? parseFloat(m[1]) : null;
+}
+
+/**
+ * Auto-detect PRs from a manually logged session.
+ * autoDetectPRs() only runs inside guided workout completion (saveWorkoutSummary).
+ * Manual sessions were silently ignored — a PR logged manually was never recorded.
+ * This function mirrors that logic for the free-text set strings in manual logs.
+ */
+function detectManualSessionPRs(exercises) {
+  let changed = false;
+  Object.entries(exercises).forEach(([exName, sets]) => {
+    Object.values(sets).forEach(setStr => {
+      const w = parseWeightFromSetStr(setStr);
+      if(!w) return;
+      if(!prs[exName] || w > prs[exName].weight) {
+        prs[exName] = { weight: w, date: getLocalDateStr() };
+        changed = true;
+      }
+    });
+  });
+  if(changed) save('fitdash_prs', prs);
+}
+
+function saveSession() {
+  const date = document.getElementById('log-date').value;
+  const notes = document.getElementById('log-notes').value;
+  const exData = {};
+  document.querySelectorAll('#log-exercises input').forEach(inp => {
+    if(!inp.value.trim()) return;
+    const ex = inp.dataset.ex;
+    if(!exData[ex]) exData[ex] = {};
+    exData[ex]['set'+inp.dataset.set] = inp.value.trim();
+  });
+  // Guard: don't save a ghost session with nothing logged at all.
+  // exData is empty when every input was left blank; notes may also be empty.
+  if(!Object.keys(exData).length && !notes.trim()) {
+    alert('Please log at least one set or add a session note before saving.');
+    return;
+  }
+  const session = { date, notes, exercises: exData, id: Date.now() };
+  sessions.push(session);
+  save('fitdash_sessions', sessions);
+  detectManualSessionPRs(exData);   // ← was never called for manual logs; PRs were silently dropped
+  document.getElementById('log-notes').value = '';
+  closeModal();
+  renderDashboard();
+  renderTrainingHistory();
+  if(document.getElementById('page-progress').classList.contains('active')) renderProgress();
+}
+
+function renderTrainingHistory() {
+  const el = document.getElementById('training-history');
+  if(!el) return;
+  const last5 = sessions.slice(-5).reverse();
+  if(!last5.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><p>No sessions yet. Log your first workout!</p></div>';
+    return;
+  }
+  el.innerHTML = last5.map(s => {
+    const d        = parseLocalDate(s.date);
+    const exCount  = Object.keys(s.exercises||{}).length;
+    const durLabel = s.durationSecs
+      ? `⏱ ${String(Math.floor(s.durationSecs/60)).padStart(2,'0')}:${String(s.durationSecs%60).padStart(2,'0')}`
+      : '';
+    const calLabel = s.caloriesBurned ? `🔥 ${s.caloriesBurned} cal` : '';
+    const volLabel = s.volumeKg       ? `📦 ${s.volumeKg} kg vol`    : `${countSets(s)} sets logged`;
+    const chips    = [durLabel, calLabel, volLabel].filter(Boolean).join(' · ');
+    return `<div class="history-item">
+      <div class="history-date">
+        <div class="history-day">${d.toLocaleDateString('en-US',{weekday:'short'})}</div>
+        <div class="history-dd">${d.getDate()}</div>
+      </div>
+      <div class="history-body">
+        <div class="history-title">Full Body Session</div>
+        <div class="history-detail" style="color:var(--muted2)">${chips}</div>
+        ${s.notes?`<div class="history-detail" style="margin-top:3px;color:var(--muted)">${s.notes.slice(0,70)}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══ PROGRESS PAGE ════════════════════════════════════════════
+function renderProgress() {
+  renderDashboard();
+  renderWeekStreak();
+  renderWeightChart();
+  renderWeightHistory();
+  renderPRs();
+  renderHistoryList();
+}
+
+function renderWeekStreak() {
+  const el = document.getElementById('streak-bar');
+  if(!el) return;
+  const days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const today = new Date();
+  const todayDay = (today.getDay()+6)%7; // 0=Mon
+  // dateToStableStr avoids locale-dependent toDateString() output (e.g. "Wed Aug 01" varies by locale)
+  const daysWithSession = new Set(sessions.map(s=>dateToStableStr(parseLocalDate(s.date))));
+  el.innerHTML = days.map((d,i) => {
+    const dt = new Date(today);
+    dt.setDate(today.getDate()-(todayDay-i));
+    const done = daysWithSession.has(dateToStableStr(dt));
+    const isToday = i === todayDay;
+    return `<div class="streak-day ${done?'done':''} ${isToday?'today':''}">${d}</div>`;
+  }).join('');
+}
+
+function renderHistoryList() {
+  const el = document.getElementById('history-list');
+  if(!el) return;
+  if(!sessions.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><p>No sessions yet.<br>Log your first workout on the Training page.</p></div>';
+    return;
+  }
+  const sorted = [...sessions].reverse().slice(0,20);
+  el.innerHTML = sorted.map(s => {
+    const d        = parseLocalDate(s.date);
+    const dateStr  = d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    const durLabel = s.durationSecs
+      ? `⏱ ${String(Math.floor(s.durationSecs/60)).padStart(2,'0')}:${String(s.durationSecs%60).padStart(2,'0')}`
+      : '';
+    const calLabel = s.caloriesBurned ? `🔥 ${s.caloriesBurned} cal` : '';
+    const volLabel = s.volumeKg       ? `📦 ${s.volumeKg} kg` : `${countSets(s)} sets`;
+    const chips    = [dateStr, durLabel, calLabel, volLabel].filter(Boolean).join(' · ');
+    return `<div class="history-item">
+      <div class="history-date">
+        <div class="history-day">${d.toLocaleDateString('en-US',{weekday:'short'})}</div>
+        <div class="history-dd">${d.getDate()}</div>
+      </div>
+      <div class="history-body">
+        <div class="history-title">Full Body Session</div>
+        <div class="history-detail" style="color:var(--muted2);font-size:11px">${chips}</div>
+        ${s.notes?`<div class="history-detail" style="margin-top:3px;color:var(--muted)">${s.notes.slice(0,80)}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function exportCSV() {
+  if(!sessions.length) {
+    alert('No sessions to export yet. Log a workout first.');
+    return;
+  }
+  const header = 'Date,Duration(min),Calories,Volume(kg),Sets,Notes';
+  const rows   = sessions.map(s => {
+    const dur = s.durationSecs ? (s.durationSecs/60).toFixed(1) : '';
+    return [
+      s.date,
+      dur,
+      s.caloriesBurned || '',
+      s.volumeKg       || '',
+      countSets(s),
+      `"${(s.notes||'').replace(/"/g,'""')}"`
+    ].join(',');
+  });
+  const csv = [header, ...rows].join('\n');
+  // data: URIs have strict browser length limits and silently fail on large histories.
+  // Blob + createObjectURL works for any size and is revoked immediately after click.
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'workout-log.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function clearHistory() {
+  if(!confirm('Clear all session history? This cannot be undone.')) return;
+  sessions=[];
+  save('fitdash_sessions', sessions);
+  renderDashboard();           // ← streak, session count, last session label were left stale without this
+  renderTrainingHistory();     // ← history list on Training tab also stale without this
+  renderProgress();
+}
+
+// ══ INIT ════════════════════════════════════════════════════
+renderMeals(MEALS_1500,   '1500');
+renderMeals(MEALS_2000,   '2000');
+renderMeals(MEALS_2500,   '2500');
+renderMeals(MEALS_BD1500, 'bd1500');
+renderMeals(MEALS_BD2000, 'bd2000');
+renderMeals(MEALS_BD2500, 'bd2500');
+renderDashboard();
+
+// ══ WORKOUT ENGINE ══════════════════════════════════════════
+
+const WORKOUT_PLAN = [
+  { id:'A', name:'Legs & Calves', type:'Superset',
+    info:'A1 → rest → A2 → rest. 3 full rounds before Block B.',
+    exercises:[
+      { code:'A1', name:'Dumbbell Goblet Squat',
+        muscle:'🎯 Quads · Glutes · Core',
+        tips:'Keep chest tall, elbows inside knees at bottom. Drive through heels.',
+        ytQuery:'goblet squat dumbbell full tutorial form' },
+      { code:'A2', name:'Standing Calf Raises',
+        muscle:'🎯 Gastrocnemius · Soleus',
+        tips:'Full range — heel below platform on stretch, full rise on toes. Pause at top.',
+        ytQuery:'standing calf raise proper form dumbbell' },
+    ]
+  },
+  { id:'B', name:'Back · Chest · Back', type:'Giant Set',
+    info:'B1 → B2 → B3 back-to-back. Long rest only after B3.',
+    exercises:[
+      { code:'B1', name:'DB Pullover',
+        muscle:'🎯 Lats · Serratus · Long-head Tricep',
+        tips:'Slight elbow bend. Feel the stretch at bottom, squeeze lats at top. Do NOT flare ribs.',
+        ytQuery:'dumbbell pullover lat technique tutorial' },
+      { code:'B2', name:'Barbell Floor Press',
+        muscle:'🎯 Chest · Triceps · Front Delt',
+        tips:'Touch triceps to floor each rep — full stop removes stretch reflex. Tuck elbows slightly.',
+        ytQuery:'barbell floor press chest exercise tutorial' },
+      { code:'B3', name:'DB Bent-Over Row',
+        muscle:'🎯 Mid Back · Rhomboids · Biceps',
+        tips:'Hinge to ~45°. Drive elbows back — not up. Squeeze for 1s at top. Neutral spine.',
+        ytQuery:'dumbbell bent over row back form tutorial' },
+    ]
+  },
+  { id:'C', name:'Full Body Finish', type:'Circuit',
+    info:'C1→C2→C3→C4→C5→C6 minimal rest between moves. 3 rounds.',
+    exercises:[
+      { code:'C1', name:'BB Overhead Press',
+        muscle:'🎯 Shoulders · Triceps · Upper Traps',
+        tips:'Bar path slightly back over skull at top. Don\'t lean back. Lock out fully overhead.',
+        ytQuery:'overhead press barbell technique form tutorial' },
+      { code:'C2', name:'DB Lateral Raises',
+        muscle:'🎯 Lateral Deltoid',
+        tips:'Lead with elbows, not wrists. Slight forward lean. Stop at shoulder height — don\'t shrug.',
+        ytQuery:'dumbbell lateral raise side delt form tutorial' },
+      { code:'C3', name:'BB Glute Bridges',
+        muscle:'🎯 Glutes · Hamstrings',
+        tips:'Drive hips to ceiling. Squeeze glutes HARD at top for 1 sec. Bar across hip crease.',
+        ytQuery:'barbell glute bridge hip thrust proper form' },
+      { code:'C4', name:'BB / DB Bicep Curls',
+        muscle:'🎯 Biceps · Brachialis',
+        tips:'Elbows pinned to sides. Supinate wrist at top. Full extension at bottom — no cheating.',
+        ytQuery:'barbell bicep curl perfect form tutorial' },
+      { code:'C5', name:'DB Floor Skullcrushers',
+        muscle:'🎯 Long Head Tricep',
+        tips:'Upper arms vertical, only forearms move. Lower until DBs touch temples — full stretch.',
+        ytQuery:'dumbbell floor skullcrusher tricep tutorial form' },
+      { code:'C6', name:'DB Reverse Flyes',
+        muscle:'🎯 Rear Delts · Mid Traps · Rhomboids',
+        tips:'Hinge forward, slight elbow bend. Arc arms out to sides — feel rear delt squeeze at top.',
+        ytQuery:'dumbbell reverse fly rear delt proper form tutorial' },
+    ]
+  }
+];
+
+/**
+ * Maps each WORKOUT_PLAN exercise name → the matching EXERCISES dropdown label.
+ * Without this, autoDetectPRs would store "Dumbbell Goblet Squat" while the manual
+ * PR form stores "Goblet Squat (A1)", creating two separate PR records for the same lift.
+ */
+const PR_KEY_MAP = (() => {
+  const map = {};
+  WORKOUT_PLAN.forEach(block => {
+    block.exercises.forEach(ex => {
+      // Find the EXERCISES entry whose code suffix matches, e.g. "(A1)"
+      const match = EXERCISES.find(e => e.endsWith(`(${ex.code})`));
+      map[ex.name] = match || ex.name;  // fall back to full name if no match
+    });
+  });
+  return map;
+})();
+
+// ── Level system (based on Greg Doucette's training plan) ─────
+const LEVEL_CONFIG = {
+  beginner: {
+    sessionsPerWeek:'2×', duration:'~40 min', setsLabel:'2 Sets per Block',
+    sets:[
+      { label:'Set 1 — Easy Warmup', badge:'s1', reps:'20–25', restSec:60,
+        tip:'Very light load. Go easy — just learn the movement. No grinding. You should feel almost nothing.' },
+      { label:'Set 2 — Working Set', badge:'s2', reps:'10–15', restSec:120,
+        tip:'Add weight. Work hard but stay 2–5 reps from failure. Form always beats weight.' },
+    ],
+    legendHTML:`
+      <div class="legend-item"><div class="legend-num s1">Set 1</div><div class="legend-desc">Easy Warmup<br>20–25 reps · light</div></div>
+      <div class="legend-item"><div class="legend-num s2">Set 2</div><div class="legend-desc">Working Set<br>10–15 reps</div></div>`,
+    gridHTML:(isCircuit)=>`
+      <div class="set-item">
+        <div class="set-num-label s1">${isCircuit?'Round 1':'Set 1'} · Warmup</div>
+        <div class="set-reps">20–25</div>
+        <div class="set-desc-s">reps · very light</div>
+        <div class="set-desc-s" style="margin-top:4px;color:var(--blue)">Rest 1 min</div>
+      </div>
+      <div class="set-item">
+        <div class="set-num-label s2">${isCircuit?'Round 2':'Set 2'} · Working</div>
+        <div class="set-reps">10–15</div>
+        <div class="set-desc-s">reps · controlled</div>
+        <div class="set-desc-s" style="margin-top:4px;color:var(--yellow)">Rest 2 min</div>
+      </div>`,
+    note:(id)=>id==='A'
+      ?'🌱 Butter Starter — 2 sets only. Learn the movement pattern. Form over everything.'
+      :'🌱 Take your time. Build the habit. No failure sets — stay 2–5 reps shy of your limit.'
+  },
+  amateur: {
+    sessionsPerWeek:'2–3×', duration:'~55–70 min', setsLabel:'3 Sets per Block',
+    sets:[
+      { label:'Set 1 — Warmup',      badge:'s1', reps:'20–25', restSec:90,
+        tip:'Very light load — full range of motion focus. Could you do 50 reps? Good.' },
+      { label:'Set 2 — Form & TUT',   badge:'s2', reps:'12–15', restSec:90,
+        tip:'Tempo 3-1-1. 3s down, 1s hold at peak contraction, 1s up. Feel every rep.' },
+      { label:'Set 3 — Max Effort',   badge:'s3', reps:'To failure + partials', restSec:180,
+        tip:'Heaviest load you can handle. Go to full failure, then squeeze out partial reps.' },
+    ],
+    legendHTML:`
+      <div class="legend-item"><div class="legend-num s1">Set 1</div><div class="legend-desc">Warmup<br>High reps · light</div></div>
+      <div class="legend-item"><div class="legend-num s2">Set 2</div><div class="legend-desc">Form + TUT<br>Tempo 3-1-1</div></div>
+      <div class="legend-item"><div class="legend-num s3">Set 3</div><div class="legend-desc">Max Effort<br>Failure + partials</div></div>`,
+    gridHTML:(isCircuit)=>`
+      <div class="set-item">
+        <div class="set-num-label s1">${isCircuit?'Round 1':'Set 1'} · Warmup</div>
+        <div class="set-reps">20–25</div>
+        <div class="set-desc-s">reps · light load</div>
+        <div class="set-desc-s" style="margin-top:4px;color:var(--blue)">Rest 1–2 min</div>
+      </div>
+      <div class="set-item">
+        <div class="set-num-label s2">${isCircuit?'Round 2':'Set 2'} · Form</div>
+        <div class="set-reps">12–15</div>
+        <div class="set-desc-s">reps · tempo 3-1-1</div>
+        <div class="set-desc-s" style="margin-top:4px;color:var(--yellow)">~55s TUT · 1–2 min</div>
+      </div>
+      <div class="set-item">
+        <div class="set-num-label s3">${isCircuit?'Round 3':'Set 3'} · Max</div>
+        <div class="set-reps">Failure</div>
+        <div class="set-desc-s">+ partials · heaviest</div>
+        <div class="set-desc-s" style="margin-top:4px;color:var(--red)">Rest 2–3 min</div>
+      </div>`,
+    note:(id)=>id==='A'
+      ?'💡 Move smoothly through full range. Light enough that you could do 50 reps on Set 1 — that\'s the point.'
+      :'💡 Squeeze the target muscle. 1-second hold at peak contraction on Set 2.'
+  },
+  master: {
+    sessionsPerWeek:'3×', duration:'~70–90 min', setsLabel:'4 Sets per Block',
+    sets:[
+      { label:'Set 1 — Warmup',         badge:'s1', reps:'20–25', restSec:90,
+        tip:'Light weight. 20–25 reps — could do 50. Warmup only. Full range of motion.' },
+      { label:'Set 2 — Hard Warm Up',   badge:'s2', reps:'15–20', restSec:90,
+        tip:'15–20 reps leaving 5–10 in the tank. Tempo 3-1-1. Feel every rep.' },
+      { label:'Set 3 — Working Set',    badge:'s3', reps:'10–15', restSec:120,
+        tip:'Add 20% more weight. 0–2 reps from failure. Squeeze at peak contraction.' },
+      { label:'Set 4 — Advanced Set 🔥',badge:'s4', reps:'5–8 + Drop Set', restSec:180,
+        tip:'Same weight as Set 3. Go to full failure, then drop 20–30% for partials. TRAIN HARDER THAN LAST TIME!' },
+    ],
+    legendHTML:`
+      <div class="legend-item"><div class="legend-num s1">Set 1</div><div class="legend-desc">Warmup<br>20–25 reps</div></div>
+      <div class="legend-item"><div class="legend-num s2">Set 2</div><div class="legend-desc">Hard Warm Up<br>15–20 reps</div></div>
+      <div class="legend-item"><div class="legend-num s3">Set 3</div><div class="legend-desc">Working Set<br>10–15 reps</div></div>
+      <div class="legend-item"><div class="legend-num s4">Set 4 🔥</div><div class="legend-desc">Advanced<br>5–8 + Drop Set</div></div>`,
+    gridHTML:(isCircuit)=>`
+      <div class="set-item">
+        <div class="set-num-label s1">${isCircuit?'Round 1':'Set 1'} · Warmup</div>
+        <div class="set-reps">20–25</div>
+        <div class="set-desc-s">reps · very light</div>
+        <div class="set-desc-s" style="margin-top:4px;color:var(--blue)">Rest 1–2 min</div>
+      </div>
+      <div class="set-item">
+        <div class="set-num-label s2">${isCircuit?'Round 2':'Set 2'} · Hard WU</div>
+        <div class="set-reps">15–20</div>
+        <div class="set-desc-s">5–10 in tank</div>
+        <div class="set-desc-s" style="margin-top:4px;color:var(--yellow)">Tempo 3-1-1 · 1–2 min</div>
+      </div>
+      <div class="set-item">
+        <div class="set-num-label s3">${isCircuit?'Round 3':'Set 3'} · Working</div>
+        <div class="set-reps">10–15</div>
+        <div class="set-desc-s">0–2 from failure</div>
+        <div class="set-desc-s" style="margin-top:4px;color:var(--red)">Rest 2–3 min</div>
+      </div>
+      <div class="set-item" style="border-color:var(--orange)">
+        <div class="set-num-label s4">${isCircuit?'Round 4':'Set 4'} 🔥 Adv</div>
+        <div class="set-reps" style="font-size:13px">5–8 + Drop</div>
+        <div class="set-desc-s">failure + partials</div>
+        <div class="set-desc-s" style="margin-top:4px;color:var(--orange)">Rest 2–3 min</div>
+      </div>`,
+    note:(id)=>'⚡ TRAIN HARDER THAN LAST TIME. Set 4: full failure → drop 20–30% → partial reps to absolute failure.'
+  }
+};
+
+// Validate against the known level set — an unrecognised value (corruption, old
+// version, manual localStorage edit) would make LEVEL_CONFIG[trainingLevel]
+// undefined, causing getSetConfig() to throw TypeError and crash the workout engine.
+const VALID_LEVELS = ['beginner', 'amateur', 'master'];
+let trainingLevel = (() => {
+  const v = localStorage.getItem('fitdash_level');
+  return VALID_LEVELS.includes(v) ? v : 'amateur';
+})();
+function getSetConfig() { return LEVEL_CONFIG[trainingLevel].sets; }
+
+// WO_FLAT / WO_TOTAL_STEPS are computed live so level switches mid-session still work
+function computeWoFlat() {
+  const n = getSetConfig().length;
+  return WORKOUT_PLAN.flatMap(b =>
+    b.exercises.flatMap(e => Array.from({length:n},(_,s)=>({b,e,s})))
+  );
+}
+
+let wo = {
+  active:false, startTime:null,
+  totalInterval:null, restInterval:null,
+  restSecsLeft:0, totalSecs:0,
+  blockIdx:0, exIdx:0, setIdx:0,
+  log:{},          // "A-A1-0" → {weight, reps}
+  setup:{},        // height, age, gender, activity
+  finishedData:null,
+};
+
+// ── Pre-workout modal ─────────────────────────────────────
+function openPreWorkout() {
+  // restore saved profile
+  const saved = safeLoad('fitdash_profile', {});
+  if(saved.height)   document.getElementById('setup-height').value   = saved.height;
+  if(saved.age)      document.getElementById('setup-age').value      = saved.age;
+  if(saved.gender)   document.getElementById('setup-gender').value   = saved.gender;
+  if(saved.activity) document.getElementById('setup-activity').value = saved.activity;
+
+  // pre-fill weight: today's log first, then last saved profile weight
+  // use getLocalDateStr() — toDateString() format would miss entries stored in ISO format
+  const todayW = weights.find(w => w.date === getLocalDateStr());
+  const prefillW = todayW ? todayW.val : (saved.weight || '');
+  document.getElementById('setup-weight').value = prefillW;
+
+  // show/hide the estimation note based on whether weight is filled
+  // listener attached once at init (bottom of file) — NOT here, to prevent stacking
+  // duplicate listeners every time the modal opens
+  updateWeightNote();
+
+  document.getElementById('preworkout-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function updateWeightNote() {
+  const w   = document.getElementById('setup-weight').value;
+  const note = document.getElementById('setup-weight-note');
+  note.style.display = (!w || parseFloat(w) <= 0) ? '' : 'none';
+}
+function closePreWorkout() {
+  document.getElementById('preworkout-modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function beginWorkout() {
+  // Guard: prevent double-start from rapid clicks or duplicate call paths
+  if(wo.active) return;
+
+  const height    = parseFloat(document.getElementById('setup-height').value);
+  const age       = parseInt(document.getElementById('setup-age').value);
+  const gender    = document.getElementById('setup-gender').value;
+  const activity  = document.getElementById('setup-activity').value;
+  const weightRaw = parseFloat(document.getElementById('setup-weight').value);
+  const weightKg  = (!isNaN(weightRaw) && weightRaw >= 30 && weightRaw <= 300)
+                    ? weightRaw : null;
+
+  if(!height || height < 100 || height > 250) {
+    alert('Please enter a valid height (100–250 cm).'); return;
+  }
+  if(!age || age < 10 || age > 100) {
+    alert('Please enter a valid age.'); return;
+  }
+
+  // if weight provided, write it back to today's weight log + dashboard stat
+  if(weightKg) {
+    const today = getLocalDateStr();   // was toDateString() — inconsistent with ISO format used everywhere else
+    weights = weights.filter(w => w.date !== today);
+    weights.push({ date: today, val: weightKg });
+    save('fitdash_weights', weights);
+    const swEl = document.getElementById('stat-weight');
+    if(swEl) swEl.textContent = weightKg;
+  }
+
+  wo.setup = { height, age, gender, activity, weightKg };
+  save('fitdash_profile', { height, age, gender, activity, weight: weightKg });
+  closePreWorkout();
+  startWorkoutSession();
+}
+
+// ── Start session ─────────────────────────────────────────
+function startWorkoutSession() {
+  wo = { ...wo, active:true, startTime:Date.now(), totalSecs:0,
+    blockIdx:0, exIdx:0, setIdx:0, log:{}, finishedData:null,
+    totalInterval:null, restInterval:null, restSecsLeft:0 };
+  document.getElementById('workout-overlay').style.display = 'block';
+  document.getElementById('wo-exit-panel').classList.remove('open');
+  document.getElementById('wo-end-btn').textContent  = 'End ✕';
+  document.getElementById('wo-end-btn').style.color  = '';
+  document.getElementById('wo-end-btn').style.borderColor = '';
+  document.body.style.overflow = 'hidden';
+
+  // overall timer
+  wo.totalInterval = setInterval(() => {
+    wo.totalSecs++;
+    const m = String(Math.floor(wo.totalSecs/60)).padStart(2,'0');
+    const s = String(wo.totalSecs%60).padStart(2,'0');
+    document.getElementById('wo-total-time').textContent = m+':'+s;
+  }, 1000);
+
+  renderWorkoutStep();
+}
+
+// ── Render current step ───────────────────────────────────
+function renderWorkoutStep() {
+  const block   = WORKOUT_PLAN[wo.blockIdx];
+  const ex      = block.exercises[wo.exIdx];
+  const cfg     = getSetConfig();
+  const set     = cfg[wo.setIdx];
+  const woFlat  = computeWoFlat();
+
+  // header progress
+  const flatIdx = woFlat.findIndex(f =>
+    f.b.id===block.id && f.e.code===ex.code && f.s===wo.setIdx);
+  const pct = flatIdx>=0 ? Math.round((flatIdx/woFlat.length)*100) : 0;
+  document.getElementById('wo-prog-fill').style.width = pct+'%';
+  document.getElementById('wo-step-label').textContent =
+    `Block ${block.id} · Ex ${wo.exIdx+1}/${block.exercises.length} · Set ${wo.setIdx+1}/${cfg.length}`;
+
+  // block badge
+  document.getElementById('wo-block-num').textContent = block.id;
+  document.getElementById('wo-block-name').textContent = block.name;
+  document.getElementById('wo-block-type').textContent = block.type;
+  document.getElementById('wo-block-info').textContent = block.info.split('.')[0];
+
+  // exercise card
+  document.getElementById('wo-ex-code').textContent   = ex.code;
+  document.getElementById('wo-ex-name').textContent   = ex.name;
+  document.getElementById('wo-ex-muscle').textContent = ex.muscle;
+  document.getElementById('wo-yt-btn').dataset.query  = ex.ytQuery;
+
+  // tips pill — add/update below muscle line
+  let tipsEl = document.getElementById('wo-tips-pill');
+  if(!tipsEl) {
+    tipsEl = document.createElement('div');
+    tipsEl.id = 'wo-tips-pill';
+    tipsEl.style.cssText =
+      'margin-top:10px;background:var(--card2);border:1px solid var(--border);' +
+      'border-radius:var(--radius-sm);padding:8px 12px;font-size:12px;color:var(--muted2);line-height:1.5';
+    document.getElementById('wo-ex-code').closest('.wo-ex-body').appendChild(tipsEl);
+  }
+  tipsEl.innerHTML = `💡 <strong style="color:var(--text)">Cue:</strong> ${ex.tips}`;
+
+  // set card
+  const badge = document.getElementById('wo-set-badge');
+  badge.textContent  = set.label;
+  badge.className    = `wo-set-badge ${set.badge}`;
+  document.getElementById('wo-set-tip').textContent  = set.tip;
+  document.getElementById('wo-set-reps').textContent = set.reps;
+
+  // pre-fill last logged weight for this exercise if available
+  const prevKey = logKey(block.id, ex.code, wo.setIdx);
+  const prev = wo.log[prevKey];
+  document.getElementById('wo-weight').value = prev ? prev.weight : '';
+  document.getElementById('wo-reps').value   = prev ? prev.reps   : '';
+
+  // show set card, hide rest
+  document.getElementById('wo-set-card').style.display  = '';
+  document.getElementById('wo-rest-card').style.display = 'none';
+  document.getElementById('wo-done-btn').disabled = false;
+  document.getElementById('wo-done-btn').textContent = '✓  Set Done — Start Rest';
+
+  // prev button
+  document.getElementById('wo-prev-btn').disabled =
+    wo.blockIdx===0 && wo.exIdx===0 && wo.setIdx===0;
+
+  // completed log preview
+  renderLogPreview();
+}
+
+function logKey(bId, exCode, setIdx) { return `${bId}-${exCode}-${setIdx}`; }
+
+// ── Complete a set ────────────────────────────────────────
+function completeSet() {
+  const wt   = parseFloat(document.getElementById('wo-weight').value) || 0;
+  const reps = parseInt(document.getElementById('wo-reps').value)    || 0;
+  const block = WORKOUT_PLAN[wo.blockIdx];
+  const ex    = block.exercises[wo.exIdx];
+  const key   = logKey(block.id, ex.code, wo.setIdx);
+  wo.log[key] = { weight:wt, reps, exName:ex.name, setLabel:getSetConfig()[wo.setIdx].label };
+
+  document.getElementById('wo-done-btn').disabled = true;
+  document.getElementById('wo-done-btn').textContent = '✓ Logged';
+
+  const restSecs = getSetConfig()[wo.setIdx].restSec;
+  beginRest(restSecs);
+}
+
+// ── Rest timer ────────────────────────────────────────────
+function beginRest(secs) {
+  wo.restSecsLeft = secs;
+  document.getElementById('wo-set-card').style.display  = 'none';
+  document.getElementById('wo-rest-card').style.display = '';
+  updateRestDisplay();
+  buildNextHint();
+
+  if(wo.restInterval) clearInterval(wo.restInterval);
+  wo.restInterval = setInterval(() => {
+    wo.restSecsLeft--;
+    if(wo.restSecsLeft <= 0) { skipRest(); return; }
+    updateRestDisplay();
+  }, 1000);
+}
+
+function updateRestDisplay() {
+  const m = String(Math.floor(wo.restSecsLeft/60)).padStart(2,'0');
+  const s = String(wo.restSecsLeft%60).padStart(2,'0');
+  const el = document.getElementById('wo-rest-time');
+  el.textContent = m+':'+s;
+  el.className = 'wo-rest-time' + (wo.restSecsLeft<=10 ? ' urgent' : '');
+}
+
+function adjustRest(delta) {
+  wo.restSecsLeft = Math.max(5, wo.restSecsLeft + delta);
+  updateRestDisplay();
+}
+
+function skipRest() {
+  if(wo.restInterval) { clearInterval(wo.restInterval); wo.restInterval=null; }
+  advanceStep();
+}
+
+function buildNextHint() {
+  const el = document.getElementById('wo-next-hint');
+  const nextStep = peekNextStep();
+  if(!nextStep) { el.textContent = '🏁 Last set! Finish strong.'; return; }
+  if(nextStep.type==='set') {
+    el.textContent = `Next → ${nextStep.label} of ${nextStep.exName}`;
+  } else if(nextStep.type==='block') {
+    el.textContent = `Next → Block ${nextStep.blockId}: ${nextStep.blockName}`;
+  } else {
+    el.textContent = '🏁 Final set — almost done!';
+  }
+}
+
+function peekNextStep() {
+  const block   = WORKOUT_PLAN[wo.blockIdx];
+  const cfg     = getSetConfig();
+  const nextSet = wo.setIdx + 1;
+  if(nextSet < cfg.length) {
+    return { type:'set', label:cfg[nextSet].label,
+             exName:block.exercises[wo.exIdx].name };
+  }
+  const nextEx = wo.exIdx + 1;
+  if(nextEx < block.exercises.length) {
+    return { type:'set', label:'Set 1 — Warmup',
+             exName:block.exercises[nextEx].name };
+  }
+  const nextBlock = wo.blockIdx + 1;
+  if(nextBlock < WORKOUT_PLAN.length) {
+    return { type:'block', blockId:WORKOUT_PLAN[nextBlock].id,
+             blockName:WORKOUT_PLAN[nextBlock].name };
+  }
+  return null;
+}
+
+// ── Advance to next step ──────────────────────────────────
+function advanceStep() {
+  const block = WORKOUT_PLAN[wo.blockIdx];
+
+  // try next set
+  if(wo.setIdx < getSetConfig().length - 1) { wo.setIdx++; renderWorkoutStep(); return; }
+
+  // try next exercise in block
+  if(wo.exIdx < block.exercises.length - 1) {
+    wo.exIdx++; wo.setIdx = 0; renderWorkoutStep(); return;
+  }
+
+  // try next block
+  if(wo.blockIdx < WORKOUT_PLAN.length - 1) {
+    wo.blockIdx++; wo.exIdx = 0; wo.setIdx = 0; renderWorkoutStep(); return;
+  }
+
+  // all done
+  finishWorkout();
+}
+
+function woPrev() {
+  if(wo.restInterval) { clearInterval(wo.restInterval); wo.restInterval=null; }
+  const lastSet = getSetConfig().length - 1;
+  if(wo.setIdx > 0) { wo.setIdx--; }
+  else if(wo.exIdx > 0) { wo.exIdx--; wo.setIdx=lastSet; }
+  else if(wo.blockIdx > 0) { wo.blockIdx--; wo.exIdx=WORKOUT_PLAN[wo.blockIdx].exercises.length-1; wo.setIdx=lastSet; }
+  renderWorkoutStep();
+}
+
+function woSkipEx() {
+  if(wo.restInterval) { clearInterval(wo.restInterval); wo.restInterval=null; }
+  const block = WORKOUT_PLAN[wo.blockIdx];
+  if(wo.exIdx < block.exercises.length-1) { wo.exIdx++; wo.setIdx=0; }
+  else if(wo.blockIdx < WORKOUT_PLAN.length-1) { wo.blockIdx++; wo.exIdx=0; wo.setIdx=0; }
+  else { finishWorkout(); return; }
+  renderWorkoutStep();
+}
+
+// ── YouTube demo ──────────────────────────────────────────
+// sp=CAI%3D sorts results by view count → most-watched (famous) tutorial appears first
+function openYouTubeDemo() {
+  const q = document.getElementById('wo-yt-btn').dataset.query || '';
+  window.open(
+    'https://www.youtube.com/results?search_query=' + encodeURIComponent(q) + '&sp=CAI%3D',
+    '_blank'
+  );
+}
+
+// ── Log preview inside workout ────────────────────────────
+function renderLogPreview() {
+  const el = document.getElementById('wo-log-preview');
+  const keys = Object.keys(wo.log);
+  if(!keys.length) { el.innerHTML=''; return; }
+  el.innerHTML = `
+    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px">Logged Sets</div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
+      ${keys.map(k => {
+        const d = wo.log[k];
+        const vol = d.weight && d.reps ? `${d.weight}kg × ${d.reps}` : '—';
+        return `<div style="display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);gap:10px">
+          <span style="font-size:10px;color:var(--muted);font-family:monospace;width:60px">${k}</span>
+          <span style="font-size:13px;font-weight:600;flex:1">${d.exName}</span>
+          <span style="font-size:13px;font-weight:700;color:var(--green)">${vol}</span>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ── Exit panel controls ───────────────────────────────────
+function toggleExitPanel() {
+  const panel = document.getElementById('wo-exit-panel');
+  const btn   = document.getElementById('wo-end-btn');
+  const open  = panel.classList.toggle('open');
+  btn.textContent = open ? 'Cancel' : 'End ✕';
+  btn.style.color = open ? 'var(--green)' : '';
+  btn.style.borderColor = open ? 'var(--green)' : '';
+}
+
+function discardAndExit() {
+  // Immediately stop everything, no summary, no data saved
+  if(wo.totalInterval) { clearInterval(wo.totalInterval); wo.totalInterval=null; }
+  if(wo.restInterval)  { clearInterval(wo.restInterval);  wo.restInterval=null; }
+  document.getElementById('wo-exit-panel').classList.remove('open');
+  document.getElementById('workout-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+  wo.active = false;
+}
+
+function saveAndExit() {
+  document.getElementById('wo-exit-panel').classList.remove('open');
+  finishWorkout();
+}
+
+// ── Finish & calorie calc ─────────────────────────────────
+
+function finishWorkout() {
+  if(wo.totalInterval) { clearInterval(wo.totalInterval); wo.totalInterval=null; }
+  if(wo.restInterval)  { clearInterval(wo.restInterval);  wo.restInterval=null; }
+  document.getElementById('workout-overlay').style.display = 'none';
+  // NOTE: body.overflow stays 'hidden' here — the post-workout modal is about to open
+  // and needs the background locked. It is released in closePostWorkout() instead.
+
+  const durationSecs = wo.totalSecs;
+  const durationMins = durationSecs / 60;
+
+  // collect stats
+  const logEntries = Object.values(wo.log);
+  const setsCount  = logEntries.length;
+  let totalVolume  = 0;
+  logEntries.forEach(e => { totalVolume += (e.weight||0) * (e.reps||0); });
+
+  // calorie calculation
+  const calData = calcWorkoutCalories(durationMins, setsCount);
+
+  // format duration
+  const mm = String(Math.floor(durationSecs/60)).padStart(2,'0');
+  const ss = String(durationSecs%60).padStart(2,'0');
+
+  // fill post-workout modal
+  document.getElementById('pw-duration').textContent = mm+':'+ss;
+  document.getElementById('pw-cals').textContent     = calData.total;
+  document.getElementById('pw-sets').textContent     = setsCount;
+  document.getElementById('pw-volume').textContent   = Math.round(totalVolume);
+  document.getElementById('pw-breakdown').innerHTML  = calData.breakdown;
+  document.getElementById('pw-notes').value          = '';
+
+  wo.finishedData = { durationSecs, setsCount, totalVolume, calData, durationMins };
+  document.getElementById('postworkout-modal').classList.add('open');
+}
+
+// ── Calorie Algorithm ─────────────────────────────────────
+function calcWorkoutCalories(durationMins, setsCompleted) {
+  const { height, age, gender, activity, weightKg: setupWeight } = wo.setup;
+
+  // ── Weight resolution (3-tier priority) ──────────────────
+  // 1. Weight entered in pre-workout form this session
+  // 2. Today's entry in the Progress weight log
+  // 3. Estimate from height using healthy BMI reference
+  let weightKg, weightSource;
+
+  // Find the most recent weight log entry (any date, not just today).
+  // The previous code used weights.find(w => w.date === getLocalDateStr()) which
+  // ignored all historically logged weights and fell back to a BMI estimate the
+  // moment the user skipped logging weight on workout day.
+  const latestW = weights.length
+    ? weights.reduce((best, w) => (!best || w.date > best.date) ? w : best, null)
+    : null;
+
+  if(setupWeight) {
+    weightKg     = setupWeight;
+    weightSource = `${weightKg} kg (entered today)`;
+  } else if(latestW) {
+    weightKg     = latestW.val;
+    const isToday  = latestW.date === getLocalDateStr();
+    const daysAgo  = Math.round((Date.now() - new Date(latestW.date + 'T00:00:00').getTime()) / 86400000);
+    const ageLabel = isToday ? 'today' : `${daysAgo}d ago`;
+    weightSource   = `${weightKg} kg (from Progress log — logged ${ageLabel})`;
+  } else {
+    // Healthy BMI estimate: male → 22.5, female → 21.0
+    const bmiRef = (gender === 'male') ? 22.5 : 21.0;
+    weightKg     = Math.round(bmiRef * Math.pow(height / 100, 2) * 10) / 10;
+    weightSource = `~${weightKg} kg (estimated from height — enter weight for accuracy)`;
+  }
+
+  // ── Mifflin–St Jeor BMR ───────────────────────────────────
+  let bmr = (10 * weightKg) + (6.25 * height) - (5 * age);
+  bmr += (gender === 'male') ? 5 : -161;
+
+  // ── TDEE ─────────────────────────────────────────────────
+  const actMap  = { sedentary:1.2, light:1.375, moderate:1.55, active:1.725, veryActive:1.9 };
+  const actLabel= { sedentary:'Sedentary', light:'Light', moderate:'Moderate',
+                    active:'Active', veryActive:'Very Active' };
+  const tdee    = bmr * (actMap[activity] || 1.55);
+
+  // ── MET (scales 3.5–6.5 by completion %) ─────────────────
+  const completionPct = setsCompleted / computeWoFlat().length;
+  let met = 3.5;
+  if     (completionPct >= 0.8)  met = 6.5;
+  else if(completionPct >= 0.5)  met = 5.5;
+  else if(completionPct >= 0.25) met = 4.5;
+
+  // ── Gross & net calories ──────────────────────────────────
+  const grossCals   = met * weightKg * (durationMins / 60);
+  const restingCals = (bmr / 1440) * durationMins;
+  const netCals     = Math.max(0, grossCals - restingCals);
+
+  // ── Volume load bonus (capped +15%) ──────────────────────
+  const totalVol  = Object.values(wo.log)
+                      .reduce((s,e) => s + (e.weight||0) * (e.reps||0), 0);
+  const volBonus  = Math.min(0.15, (totalVol / 100000) * 0.5);
+  const finalCals = Math.round(grossCals * (1 + volBonus));
+
+  // ── Breakdown panel ──────────────────────────────────────
+  const weightWarning = !setupWeight && !latestW
+    ? `<br><span style="color:var(--yellow)">⚠️ Weight estimated from height — add your weight next time for a better reading.</span>`
+    : '';
+
+  // ── TDEE double-dipping note ──────────────────────────────
+  // TDEE already includes workout calories via the activity multiplier.
+  // "Net above rest" should only be added to a SEDENTARY baseline, not to an active TDEE.
+  const tdeeNote = activity !== 'sedentary'
+    ? `<br><span style="color:var(--muted);font-size:11px">ℹ️ Your TDEE already accounts for exercise (${actLabel[activity]||activity} multiplier). Add net calories only to a <em>sedentary</em> baseline (~${Math.round(bmr*1.2)} cal) — not to TDEE — or you'll double-count workout calories.</span>`
+    : '';
+
+  const breakdown = `
+    <strong>Weight:</strong> ${weightSource}<br>
+    <strong>Height / Age / Gender:</strong> ${height} cm · ${age} yrs · ${gender}<br>
+    <strong>Activity level:</strong> ${actLabel[activity]||activity}<br>
+    <strong>BMR:</strong> ${Math.round(bmr)} cal/day &nbsp;·&nbsp;
+    <strong>TDEE:</strong> ${Math.round(tdee)} cal/day<br>
+    <strong>MET:</strong> ${met} &nbsp;(${Math.round(completionPct*100)}% of workout done)<br>
+    <strong>Gross burn:</strong> ${Math.round(grossCals)} cal &nbsp;·&nbsp;
+    <strong>Net above rest:</strong> ${Math.round(netCals)} cal<br>
+    <strong>Volume load:</strong> ${Math.round(totalVol)} kg &nbsp;·&nbsp;
+    <strong>Volume bonus:</strong> +${Math.round(volBonus*100)}%
+    ${tdeeNote}${weightWarning}`;
+
+  return { total:finalCals, net:Math.round(netCals),
+           bmr:Math.round(bmr), tdee:Math.round(tdee), breakdown };
+}
+
+// ── Save / discard ────────────────────────────────────────
+function discardWorkout() {
+  // A guided session represents 55-70 min of effort — require explicit confirmation
+  // before discarding, consistent with deletePR / deleteWeight / clearHistory.
+  if(!confirm('Discard this workout? Your sets, volume, and calorie data will not be saved.')) return;
+  closePostWorkout();
+}
+
+function closePostWorkout() {
+  document.getElementById('postworkout-modal').classList.remove('open');
+  document.body.style.overflow = '';   // ← restore scroll now that ALL overlays are gone
+  wo.active = false;
+}
+
+// close log modal on backdrop click (was missing — pre/post workout had this but #modal did not)
+document.getElementById('modal').addEventListener('click', e => {
+  if(e.target===document.getElementById('modal')) closeModal();
+});
+
+// close pre-workout on backdrop click
+document.getElementById('preworkout-modal').addEventListener('click', e => {
+  if(e.target===document.getElementById('preworkout-modal')) closePreWorkout();
+});
+
+// close post-workout on backdrop click
+document.getElementById('postworkout-modal').addEventListener('click', e => {
+  if(e.target===document.getElementById('postworkout-modal')) closePostWorkout();
+});
+
+// ── Total calories burned across all sessions (Progress page) ──
+function totalCalsBurned() {
+  return sessions.reduce((sum, s) => sum + (s.caloriesBurned||0), 0);
+}
+
+// ── Auto-detect PRs from workout log entries ──────────────────
+function autoDetectPRs() {
+  Object.values(wo.log).forEach(entry => {
+    if(!entry.weight || !entry.reps || !entry.exName) return;
+    // Normalise to the same key used by the manual PR form (EXERCISES display names)
+    const exKey = PR_KEY_MAP[entry.exName] || entry.exName;
+    if(!prs[exKey] || entry.weight > prs[exKey].weight) {
+      prs[exKey] = { weight: entry.weight, date: getLocalDateStr() };
+    }
+  });
+  save('fitdash_prs', prs);
+}
+
+// ── Save / discard ────────────────────────────────────────
+// saveWorkoutSummary auto-detects PRs then persists the session.
+function saveWorkoutSummary() {
+  autoDetectPRs();
+  const notes = document.getElementById('pw-notes').value;
+  const fd    = wo.finishedData;
+  if(!fd) { closePostWorkout(); return; }
+  const session = {
+    date          : getLocalDateStr(),   // toISOString() was UTC — wrong day for UTC+6 morning sessions
+    notes,
+    durationSecs  : fd.durationSecs,
+    caloriesBurned: fd.calData.total,
+    setsCompleted : fd.setsCount,
+    volumeKg      : Math.round(fd.totalVolume),
+    exercises     : wo.log,
+    id            : Date.now()
+  };
+  sessions.push(session);
+  save('fitdash_sessions', sessions);
+  closePostWorkout();
+  renderDashboard();
+  renderTrainingHistory();
+  if(document.getElementById('page-progress').classList.contains('active')) renderProgress();
+}
+
+// ── Weight chart resize handler ───────────────────────────────
+// CSS forces canvas { width:100%!important }, so the element stretches to fill
+// its container on any window resize or orientation change — but the canvas's
+// internal resolution (canvas.width / canvas.height) is only set inside
+// renderWeightChart(). Without a resize listener the bitmap stays stale and
+// the chart looks blurry/stretched until the user navigates away and back.
+let _chartResizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(_chartResizeTimer);
+  _chartResizeTimer = setTimeout(() => {
+    if(document.getElementById('page-progress').classList.contains('active')) {
+      renderWeightChart();
+    }
+  }, 150);   // 150 ms debounce — fast enough to feel instant, avoids mid-drag thrashing
+});
+
+// ── One-time event listener init ────────────────────────────
+// Attaching this inside openPreWorkout() would add a new copy every time the
+// modal opens. Attached once here instead so updateWeightNote() is never called
+// more than once per keystroke regardless of how many times the modal has opened.
+document.getElementById('setup-weight').addEventListener('input', updateWeightNote);
+
+// ── Level switcher ────────────────────────────────────────
+function switchLevel(level) {
+  trainingLevel = level;
+  save('fitdash_level', level); // use save() for consistent QuotaExceededError handling
+
+  // update button states
+  ['beginner','amateur','master'].forEach(l => {
+    const btn = document.getElementById('lvl-btn-' + l);
+    if(btn) btn.classList.toggle('active', l === level);
+  });
+
+  const cfg = LEVEL_CONFIG[level];
+
+  // update meta pills
+  const ms = document.getElementById('tmeta-sessions');
+  const md = document.getElementById('tmeta-duration');
+  const mt = document.getElementById('tmeta-sets');
+  if(ms) ms.textContent = `📅 ${cfg.sessionsPerWeek} per week`;
+  if(md) md.textContent = `⏱ ${cfg.duration}`;
+  if(mt) mt.textContent = `🔋 ${cfg.setsLabel}`;
+
+  // update set legend
+  const legend = document.getElementById('set-legend-static');
+  if(legend) legend.innerHTML = cfg.legendHTML;
+
+  // update each block's sets-grid and rest-note
+  [
+    { id:'A', isCircuit:false },
+    { id:'B', isCircuit:false },
+    { id:'C', isCircuit:true  }
+  ].forEach(({ id, isCircuit }) => {
+    const grid = document.getElementById('sets-grid-' + id);
+    if(grid) grid.innerHTML = cfg.gridHTML(isCircuit);
+    const note = document.getElementById('rest-note-' + id);
+    if(note) note.textContent = cfg.note(id);
+  });
+}
+
+// ── Init level on page load ───────────────────────────────
+switchLevel(trainingLevel);
+
+// Populate training history on startup — without this, the Training tab
+// shows an empty history list until the user navigates away and back,
+// because showPage('training') is the only other caller of renderTrainingHistory().
+renderTrainingHistory();
+</script>
+</body>
+</html>
