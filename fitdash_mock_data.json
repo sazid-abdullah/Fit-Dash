@@ -1,0 +1,64 @@
+{
+  "fitdash_profile": {
+    "height": 178,
+    "weight": 82,
+    "age": 28,
+    "gender": "male",
+    "activity": 1.375
+  },
+  "fitdash_level": 2,
+  "fitdash_goals": {
+    "goal": "cut",
+    "targetWeight": 75,
+    "targetBf": 12,
+    "calories": 2100,
+    "cuisine": "bengali",
+    "waterTarget": 3500
+  },
+  "fitdash_custom_ex": [],
+  "fitdash_overrides": {},
+  "fitdash_sessions": [
+    { "date": "2026-07-02", "duration": 2700, "level": 1, "logs": {} },
+    { "date": "2026-07-04", "duration": 3100, "level": 1, "logs": {} },
+    { "date": "2026-07-06", "duration": 2900, "level": 1, "logs": {} },
+    { "date": "2026-07-10", "duration": 2800, "level": 1, "logs": {} },
+    { "date": "2026-07-14", "duration": 3200, "level": 1, "logs": {} },
+    { "date": "2026-07-18", "duration": 3300, "level": 1, "logs": {} },
+    { "date": "2026-07-22", "duration": 2900, "level": 1, "logs": {} },
+    { "date": "2026-07-26", "duration": 3400, "level": 2, "logs": {} }
+  ],
+  "fitdash_pr": {
+    "A1": [
+      { "date": "2026-07-02", "weight": 20, "reps": 15, "est1RM": 30 },
+      { "date": "2026-07-10", "weight": 22.5, "reps": 15, "est1RM": 33.7 },
+      { "date": "2026-07-18", "weight": 25, "reps": 12, "est1RM": 35 },
+      { "date": "2026-07-26", "weight": 27.5, "reps": 10, "est1RM": 36.6 }
+    ],
+    "B2": [
+      { "date": "2026-07-04", "weight": 40, "reps": 10, "est1RM": 53 },
+      { "date": "2026-07-14", "weight": 45, "reps": 10, "est1RM": 60 },
+      { "date": "2026-07-26", "weight": 50, "reps": 8, "est1RM": 62 }
+    ]
+  },
+  "fitdash_recomp": [
+    { "date": "2026-07-01", "waist": 90, "neck": 38, "hip": 100, "bf": 22.5 },
+    { "date": "2026-07-08", "waist": 89, "neck": 38, "hip": 99, "bf": 21.8 },
+    { "date": "2026-07-15", "waist": 87.5, "neck": 38, "hip": 98, "bf": 20.5 },
+    { "date": "2026-07-22", "waist": 86, "neck": 38, "hip": 97, "bf": 19.3 },
+    { "date": "2026-07-29", "waist": 84, "neck": 38, "hip": 96, "bf": 18.0 }
+  ],
+  "fitdash_circ": [
+    { "date": "2026-07-01", "chest": 100, "shoulders": 115, "bicep-l": 34, "bicep-r": 34, "forearm-l": 28, "forearm-r": 28, "thigh-l": 60, "thigh-r": 60, "calf-l": 36, "calf-r": 36, "waist": 90, "hips": 100 },
+    { "date": "2026-07-15", "chest": 102, "shoulders": 117, "bicep-l": 34.5, "bicep-r": 34.5, "forearm-l": 28.5, "forearm-r": 28.5, "thigh-l": 61, "thigh-r": 61, "calf-l": 36.5, "calf-r": 36.5, "waist": 87.5, "hips": 98 },
+    { "date": "2026-07-29", "chest": 104, "shoulders": 119, "bicep-l": 35.5, "bicep-r": 35.5, "forearm-l": 29, "forearm-r": 29, "thigh-l": 62, "thigh-r": 62, "calf-l": 37, "calf-r": 37, "waist": 84, "hips": 96 }
+  ],
+  "fitdash_water": { "date": "2026-08-07", "ml": 2500 },
+  "fitdash_sleep": [
+    { "date": "2026-08-01", "bedtime": "23:00", "wake": "07:00", "hours": 8, "quality": "good" },
+    { "date": "2026-08-02", "bedtime": "00:00", "wake": "07:30", "hours": 7.5, "quality": "ok" },
+    { "date": "2026-08-03", "bedtime": "22:30", "wake": "06:30", "hours": 8, "quality": "great" },
+    { "date": "2026-08-04", "bedtime": "23:30", "wake": "07:00", "hours": 7.5, "quality": "good" },
+    { "date": "2026-08-05", "bedtime": "01:00", "wake": "06:00", "hours": 5, "quality": "poor" },
+    { "date": "2026-08-06", "bedtime": "22:00", "wake": "07:00", "hours": 9, "quality": "great" }
+  ]
+}

@@ -1,0 +1,33 @@
+# Node
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# Logs
+*.log
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# VSCode
+.vscode/
+
+# Temp
+*.tmp
+*.bak
+
+# Test artifacts
+coverage/
+
+# JetBrains
+.idea/
+
+# Build outputs
+dist/
+build/
+
+# OS files
+desktop.ini

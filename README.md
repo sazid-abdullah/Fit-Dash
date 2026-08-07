@@ -143,3 +143,33 @@ Works in any modern browser. Requires JavaScript enabled and localStorage availa
 Training protocol and nutrition plans based on the work of **Greg Doucette** (IFBB Pro) — *The Ultimate Anabolic Cookbook 2.0*, *The Circle Diet*, and the HTLT coaching methodology.
 
 Bangladesh meal plans designed around locally available foods and brands for users in Dhaka and across Bangladesh.
+
+---
+
+## Getting started (developer)
+
+Clone or download this folder and open `fitdash.html` in your browser. For developer testing there are two options:
+
+- Native browser tests: open `test.html` in the same folder (file://) and click "Run tests". This runs vanilla JS checks against the app iframe and reports PASS/FAIL in the page.
+- Node-based tests (optional): a Jest + jsdom scaffold is provided in `package.json` and `tests/`. To run:
+
+```bash
+npm install
+npm test
+```
+
+## Contributing
+
+1. File an issue for bugs or feature requests.
+2. Create a branch `feature/whatever` and open a pull request when ready.
+3. Keep changes focused to one area (UI, storage, tests, data).
+
+## License
+
+This project is released under the MIT License — see `LICENSE`.
+
+## Security & Privacy
+
+- API keys: The app includes an opt-in flag to store API keys locally. Exported backups redact API keys unless explicitly opted-in.
+- Data is stored only in browser `localStorage` under `fitdash_*` keys and is not transmitted anywhere by default.
+
