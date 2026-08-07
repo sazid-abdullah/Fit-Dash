@@ -1509,8 +1509,8 @@ canvas { width:100%!important; }
         <input type="text" class="settings-input" id="cx-tips" placeholder="e.g. Keep elbows pinned to sides">
       </div>
       <div style="margin-bottom:10px">
-        <label class="settings-label">YouTube Query (Optional)</label>
-        <input type="text" class="settings-input" id="cx-yt" placeholder="e.g. incline dumbbell curl form">
+        <label class="settings-label">YouTube Video ID (Optional)</label>
+        <input type="text" class="settings-input" id="cx-yt" placeholder="Paste a YouTube code or URL">
       </div>
       <div style="margin-bottom:14px">
         <label class="settings-label">Block Assignment</label>
@@ -1816,6 +1816,14 @@ canvas { width:100%!important; }
         </div>
       </div>
       <button class="btn-red" onclick="saveAISettings()" style="margin-top:14px;max-width:200px">💾 Save AI Config</button>
+    </div>
+  </div>
+
+  <!-- Exercise Videos -->
+  <div class="settings-section">
+    <div class="settings-section-title">🎥 Exercise Video Codes</div>
+    <div class="settings-card" id="exercise-video-library">
+      <!-- Injected by JS -->
     </div>
   </div>
 
@@ -3443,12 +3451,37 @@ function clearHistory() {
 // ══ CUSTOM EXERCISES ════════════════════════════════════════
 let customExercises = safeLoad('fitdash_custom_ex', []);
 let workoutOverrides = safeLoad('fitdash_overrides', {}); // format: { exCode: 'targetBlockId' }
+let exerciseVideoOverrides = safeLoad('fitdash_video_codes', {}); // format: { videoKey: 'youtubeId' }
+
+function normalizeYouTubeId(value) {
+  const input = String(value || '').trim();
+  if(!input) return '';
+  const match = input.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([A-Za-z0-9_-]{6,})/i);
+  if(match) return match[1];
+  return input;
+}
+
+function getSavedVideoId(key, fallback) {
+  return exerciseVideoOverrides[key] || fallback || '';
+}
+
+function saveVideoCode(key, inputId, refreshKind) {
+  const input = document.getElementById(inputId);
+  if(!input) return;
+  const ytId = normalizeYouTubeId(input.value);
+  if(ytId) exerciseVideoOverrides[key] = ytId;
+  else delete exerciseVideoOverrides[key];
+  save('fitdash_video_codes', exerciseVideoOverrides);
+  if(refreshKind === 'settings') renderVideoCodeLibrary();
+  else if(refreshKind === 'training') renderTrainingBlocks(LEVEL_CONFIG[trainingLevel]);
+  alert(ytId ? 'Video code saved.' : 'Video code cleared.');
+}
 
 function saveCustomExercise() {
   const name = document.getElementById('cx-name').value.trim();
   const muscle = document.getElementById('cx-muscle').value.trim();
   const tips = document.getElementById('cx-tips').value.trim();
-  const ytQuery = document.getElementById('cx-yt').value.trim();
+  const ytId = normalizeYouTubeId(document.getElementById('cx-yt').value.trim());
   const block = document.getElementById('cx-block').value;
   
   if(!name || !muscle || !tips) { alert('Name, Muscle, and Tips are required.'); return; }
@@ -3466,7 +3499,7 @@ function saveCustomExercise() {
   const baseCount = (targetBlock === 'A' ? 2 : targetBlock === 'B' ? 3 : targetBlock === 'C' ? 6 : 0);
   const exCode = targetBlock + (baseCount + existingInBlock.length + 1);
   
-  const cx = { id: Date.now(), code: exCode, name, muscle, tips, ytQuery, block: targetBlock };
+  const cx = { id: Date.now(), code: exCode, name, muscle, tips, ytId, block: targetBlock };
   customExercises.push(cx);
   save('fitdash_custom_ex', customExercises);
   
@@ -3505,10 +3538,57 @@ function renderCustomExercises() {
           <span class="tag tag-blue" style="font-size:9px">Block ${cx.block}</span>
         </div>
         <div style="font-size:12px;color:var(--muted);margin-top:4px">${escapeHtml(cx.muscle)}</div>
+        ${(cx.ytId || cx.ytQuery) ? `<div style="font-size:11px;color:var(--muted2);margin-top:3px">Video: ${escapeHtml(cx.ytId || cx.ytQuery)}</div>` : ''}
       </div>
       <button class="del-btn" onclick="deleteCustomExercise(${cx.id})">×</button>
     </div>
   `).join('');
+}
+
+function renderVideoCodeLibrary() {
+  const el = document.getElementById('exercise-video-library');
+  if(!el) return;
+
+  const sections = [];
+  sections.push('<div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5">Paste a YouTube video code or full URL for each exercise. These values control the demo button across training and rest-day routines.</div>');
+
+  WORKOUT_PLAN.forEach(block => {
+    sections.push(`<div style="margin-bottom:18px"><div style="font-size:14px;font-weight:800;margin-bottom:8px">Block ${escapeHtml(block.id)} · ${escapeHtml(block.name)}</div>`);
+    block.exercises.forEach(ex => {
+      const inputId = `video-${ex.code}`;
+      const saved = getSavedVideoId(ex.code, ex.ytId || '');
+      sections.push(`
+        <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;flex-wrap:wrap">
+          <div style="flex:1;min-width:220px">
+            <label class="settings-label">${escapeHtml(ex.code)} · ${escapeHtml(ex.name)}</label>
+            <input type="text" class="settings-input" id="${inputId}" placeholder="YouTube video ID or URL" value="${escapeHtml(saved)}">
+          </div>
+          <button class="btn-ghost" style="min-width:88px" onclick="saveVideoCode('${ex.code}', '${inputId}', 'settings')">Save</button>
+        </div>`);
+    });
+    sections.push('</div>');
+  });
+
+  Object.entries(RECOVERY_ROUTINES).forEach(([tab, routines]) => {
+    const title = tab === 'mobility' ? 'Rest Day · Full Body Mobility' : tab === 'stretch' ? 'Rest Day · Lower Body Stretch' : 'Rest Day · Upper Body Relief';
+    sections.push(`<div style="margin-bottom:18px"><div style="font-size:14px;font-weight:800;margin-bottom:8px">${title}</div>`);
+    routines.forEach((routine, idx) => {
+      const key = `recovery:${tab}:${idx}`;
+      const inputId = `video-${tab}-${idx}`;
+      const saved = getSavedVideoId(key, routine.ytId || '');
+      sections.push(`
+        <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;flex-wrap:wrap">
+          <div style="flex:1;min-width:220px">
+            <label class="settings-label">${escapeHtml(routine.title)}</label>
+            <input type="text" class="settings-input" id="${inputId}" placeholder="YouTube video ID or URL" value="${escapeHtml(saved)}">
+          </div>
+          <button class="btn-ghost" style="min-width:88px" onclick="saveVideoCode('${key}', '${inputId}', 'settings')">Save</button>
+        </div>`);
+    });
+    sections.push('</div>');
+  });
+
+  el.innerHTML = sections.join('');
 }
 
 // ══ WORKOUT ENGINE ══════════════════════════════════════════
@@ -3520,11 +3600,11 @@ const WORKOUT_PLAN = [
       { code:'A1', name:'Dumbbell Goblet Squat',
         muscle:'🎯 Quads · Glutes · Core',
         tips:'Keep chest tall, elbows inside knees at bottom. Drive through heels.',
-        ytQuery:'goblet squat dumbbell full tutorial form', ytId:'v9LabO3xM3M' },
+        ytQuery:'goblet squat dumbbell full tutorial form', ytId:'gCESNsDsbqk' },
       { code:'A2', name:'Standing Calf Raises',
         muscle:'🎯 Gastrocnemius · Soleus',
         tips:'Full range — heel below platform on stretch, full rise on toes. Pause at top.',
-        ytQuery:'standing calf raise proper form dumbbell', ytId:'-M4-G8p8fmc' },
+        ytQuery:'standing calf raise proper form dumbbell', ytId:'k8ipHzKeAkQ' },
     ]
   },
   { id:'B', name:'Back · Chest · Back', type:'Giant Set',
@@ -3533,15 +3613,15 @@ const WORKOUT_PLAN = [
       { code:'B1', name:'DB Pullover',
         muscle:'🎯 Lats · Serratus · Long-head Tricep',
         tips:'Slight elbow bend. Feel the stretch at bottom, squeeze lats at top. Do NOT flare ribs.',
-        ytQuery:'dumbbell pullover lat technique tutorial', ytId:'JZEKcum-S84' },
+        ytQuery:'dumbbell pullover lat technique tutorial', ytId:'5lbvUCXfDU0' },
       { code:'B2', name:'Barbell Floor Press',
         muscle:'🎯 Chest · Triceps · Front Delt',
         tips:'Touch triceps to floor each rep — full stop removes stretch reflex. Tuck elbows slightly.',
-        ytQuery:'barbell floor press chest exercise tutorial', ytId:'uUGDRwge4F8' },
+        ytQuery:'barbell floor press chest exercise tutorial', ytId:'9vYCwtHkWgI' },
       { code:'B3', name:'DB Bent-Over Row',
         muscle:'🎯 Mid Back · Rhomboids · Biceps',
         tips:'Hinge to ~45°. Drive elbows back — not up. Squeeze for 1s at top. Neutral spine.',
-        ytQuery:'dumbbell bent over row back form tutorial', ytId:'6TSP1TRMUzs' },
+        ytQuery:'dumbbell bent over row back form tutorial', ytId:'6gvmcqr226U' },
     ]
   },
   { id:'C', name:'Full Body Finish', type:'Circuit',
@@ -3550,27 +3630,27 @@ const WORKOUT_PLAN = [
       { code:'C1', name:'BB Overhead Press',
         muscle:'🎯 Shoulders · Triceps · Upper Traps',
         tips:'Bar path slightly back over skull at top. Don\'t lean back. Lock out fully overhead.',
-        ytQuery:'overhead press barbell technique form tutorial', ytId:'2yjwXTZQDDI' },
+        ytQuery:'overhead press barbell technique form tutorial', ytId:'cGnhixvC8uA' },
       { code:'C2', name:'DB Lateral Raises',
         muscle:'🎯 Lateral Deltoid',
         tips:'Lead with elbows, not wrists. Slight forward lean. Stop at shoulder height — don\'t shrug.',
-        ytQuery:'dumbbell lateral raise side delt form tutorial', ytId:'3VcKaXpzqRo' },
+        ytQuery:'dumbbell lateral raise side delt form tutorial', ytId:'XPPfnSEATJA' },
       { code:'C3', name:'BB Glute Bridges',
         muscle:'🎯 Glutes · Hamstrings',
         tips:'Drive hips to ceiling. Squeeze glutes HARD at top for 1 sec. Bar across hip crease.',
-        ytQuery:'barbell glute bridge hip thrust proper form', ytId:'A8nFGuYta7E' },
+        ytQuery:'barbell glute bridge hip thrust proper form', ytId:'cirBJ4FrxXQ' },
       { code:'C4', name:'BB / DB Bicep Curls',
         muscle:'🎯 Biceps · Brachialis',
         tips:'Elbows pinned to sides. Supinate wrist at top. Full extension at bottom — no cheating.',
-        ytQuery:'barbell bicep curl perfect form tutorial', ytId:'yTWO2th-RIY' },
+        ytQuery:'barbell bicep curl perfect form tutorial', ytId:'6DeLZ6cbgWQ' },
       { code:'C5', name:'DB Floor Skullcrushers',
         muscle:'🎯 Long Head Tricep',
         tips:'Upper arms vertical, only forearms move. Lower until DBs touch temples — full stretch.',
-        ytQuery:'dumbbell floor skullcrusher tricep tutorial form', ytId:'d_KZxkY_0cM' },
+        ytQuery:'dumbbell floor skullcrusher tricep tutorial form', ytId:'1BDGIcMTSXc' },
       { code:'C6', name:'DB Reverse Flyes',
         muscle:'🎯 Rear Delts · Mid Traps · Rhomboids',
         tips:'Hinge forward, slight elbow bend. Arc arms out to sides — feel rear delt squeeze at top.',
-        ytQuery:'dumbbell reverse fly rear delt proper form tutorial', ytId:'JoL_8_a4Wks' },
+        ytQuery:'dumbbell reverse fly rear delt proper form tutorial', ytId:'evXOlgLTPCw' },
     ]
   }
 ];
@@ -3590,7 +3670,7 @@ function getFullWorkoutPlan() {
   // Load custom exercises directly into the custom block pool
   customExercises.forEach(cx => {
     customBlock.exercises.push({
-      code: cx.code, name: cx.name, muscle: cx.muscle, tips: cx.tips, ytQuery: cx.ytQuery, ytId: cx.ytId || '', _isCustom: true, _id: cx.id
+      code: cx.code, name: cx.name, muscle: cx.muscle, tips: cx.tips, ytId: getSavedVideoId(`custom:${cx.id}`, cx.ytId || cx.ytQuery || ''), _isCustom: true, _id: cx.id
     });
   });
 
@@ -3601,6 +3681,7 @@ function getFullWorkoutPlan() {
   plan.forEach(b => {
     b.exercises.forEach(e => {
       e._originalBlock = b.id;
+      e.ytId = getSavedVideoId(e.code, e.ytId || '');
       allEx.push({ ex: e, currentBlock: workoutOverrides[e.code] || b.id });
     });
   });
@@ -3650,15 +3731,20 @@ function selectRecoveryTab(tab) {
 
   const container = document.getElementById('recovery-content');
   const routines = RECOVERY_ROUTINES[validTab] || [];
-  container.innerHTML = routines.map(routine => `
-    <div class="dash-quick" style="cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--card);" onclick="openYouTubeDemo('${routine.ytId}')">
+  container.innerHTML = routines.map((routine, idx) => {
+    const key = `recovery:${validTab}:${idx}`;
+    const ytId = getSavedVideoId(key, routine.ytId || '');
+    const query = `${routine.title} ${routine.subtitle || ''}`.trim();
+    return `
+    <div class="dash-quick" style="cursor:pointer;display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--card);" onclick="openYouTubeDemo('${ytId}', '${encodeURIComponent(query)}')">
       <div class="dash-quick-icon" style="background:#ff6b35;color:#fff;min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:12px;font-size:18px">▶</div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:14px;font-weight:700;color:var(--text);">${escapeHtml(routine.title)}</div>
         <div style="font-size:12px;color:var(--muted);margin-top:4px;">${escapeHtml(routine.subtitle)}</div>
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function showRecoveryModal() {
@@ -3715,7 +3801,7 @@ function executeMove(code, target) {
   save('fitdash_overrides', overrides);
   workoutOverrides = overrides; // Ensure global state is updated for instant re-render
   document.getElementById('move-modal').style.display = 'none';
-  renderTrainingBlocks(getSetConfig());
+  renderTrainingBlocks(LEVEL_CONFIG[trainingLevel]);
 }
 
 /**
@@ -4200,17 +4286,30 @@ function woSkipEx() {
 }
 
 // ── YouTube demo ──────────────────────────────────────────
-function openYouTubeDemo(explicitYtId) {
+function openYouTubeDemo(explicitYtId, explicitQuery) {
   let ytId = explicitYtId;
   let q = '';
   
   if (!ytId) {
     const btn = document.getElementById('wo-yt-btn');
-    ytId = btn.dataset.ytid;
-    q = btn.dataset.query || '';
+    if(btn) {
+      ytId = btn.dataset.ytid;
+      q = explicitQuery || btn.dataset.query || '';
+    } else {
+      q = explicitQuery || '';
+    }
+  } else {
+    q = explicitQuery || '';
   }
-  
-  if (ytId) {
+
+  if(q) {
+    try { q = decodeURIComponent(q); }
+    catch(_) { /* keep raw query */ }
+  }
+
+  const canEmbed = location.protocol !== 'file:' && location.origin && location.origin !== 'null';
+
+  if (ytId && canEmbed) {
     let modal = document.getElementById('yt-modal');
     if (!modal) {
       modal = document.createElement('div');
@@ -4234,8 +4333,27 @@ function openYouTubeDemo(explicitYtId) {
     document.getElementById('yt-external-link').href = `https://www.youtube.com/watch?v=${ytId}`;
     modal.style.display = 'flex';
   } else {
-    // Fallback for custom exercises without ytId
-    window.open('https://duckduckgo.com/?q=!ducky+site%3Ayoutube.com+' + encodeURIComponent(q), '_blank');
+    const targetUrl = ytId
+      ? `https://www.youtube.com/watch?v=${ytId}`
+      : 'https://duckduckgo.com/?q=!ducky+site%3Ayoutube.com+' + encodeURIComponent(q);
+
+    let modal = document.getElementById('yt-modal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'yt-modal';
+      modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(10px);';
+      modal.innerHTML = `
+        <div style="width:100%;max-width:520px;background:var(--card);border-radius:var(--radius);overflow:hidden;position:relative;box-shadow:0 25px 50px rgba(0,0,0,0.5);padding:24px;text-align:center;">
+          <button onclick="document.getElementById('yt-modal').style.display='none'" style="position:absolute;top:10px;right:10px;background:rgba(255,50,50,0.9);color:#fff;border:none;border-radius:50%;width:32px;height:32px;font-weight:bold;cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center;transition:0.2s;">✕</button>
+          <div style="font-size:15px;font-weight:800;margin-bottom:10px;color:var(--text)">Embedded playback is blocked in the local preview</div>
+          <div style="font-size:13px;line-height:1.5;color:var(--muted);margin-bottom:18px">Open the video in a new YouTube tab instead. This avoids the player configuration error caused by the file:// preview context.</div>
+          <a id="yt-external-link" href="#" target="_blank" style="color:var(--blue);text-decoration:none;font-weight:700;font-size:14px;display:inline-block;padding:10px 20px;background:var(--card2);border-radius:24px;border:1px solid var(--border);transition:0.2s;">▶ Open in YouTube App/Tab</a>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+    document.getElementById('yt-external-link').href = targetUrl;
+    modal.style.display = 'flex';
   }
 }
 
@@ -4730,6 +4848,7 @@ function renderSettings() {
   document.getElementById('s-api-store').checked = !!a.storeKey;
   loadModelOptions();
   setTimeout(() => { if(a.model) document.getElementById('s-ai-model').value = a.model; }, 50);
+  renderVideoCodeLibrary();
   
   const sched = p.schedule || [0,1,2,3,4,5,6]; // default all days
   document.querySelectorAll('.day-toggle-btn').forEach(btn => {
