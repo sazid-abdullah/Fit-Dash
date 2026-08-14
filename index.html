@@ -4306,6 +4306,9 @@ function openYouTubeDemo(explicitYtId, explicitQuery) {
   }
 
   const canEmbed = location.protocol !== 'file:' && location.origin && location.origin !== 'null';
+  const targetUrl = ytId
+    ? `https://www.youtube.com/watch?v=${ytId}`
+    : 'https://duckduckgo.com/?q=!ducky+site%3Ayoutube.com+' + encodeURIComponent(q);
 
   if (ytId && canEmbed) {
     let modal = document.getElementById('yt-modal');
@@ -4328,12 +4331,13 @@ function openYouTubeDemo(explicitYtId, explicitQuery) {
     }
     
     document.getElementById('yt-iframe').src = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`;
-    document.getElementById('yt-external-link').href = `https://www.youtube.com/watch?v=${ytId}`;
+    document.getElementById('yt-external-link').href = targetUrl;
     modal.style.display = 'flex';
   } else {
-    const targetUrl = ytId
-      ? `https://www.youtube.com/watch?v=${ytId}`
-      : 'https://duckduckgo.com/?q=!ducky+site%3Ayoutube.com+' + encodeURIComponent(q);
+    if (ytId) {
+      const opened = window.open(targetUrl, '_blank', 'noopener,noreferrer');
+      if (opened) return;
+    }
 
     let modal = document.getElementById('yt-modal');
     if (!modal) {
@@ -4344,7 +4348,7 @@ function openYouTubeDemo(explicitYtId, explicitQuery) {
         <div style="width:100%;max-width:520px;background:var(--card);border-radius:var(--radius);overflow:hidden;position:relative;box-shadow:0 25px 50px rgba(0,0,0,0.5);padding:24px;text-align:center;">
           <button onclick="document.getElementById('yt-modal').style.display='none'" style="position:absolute;top:10px;right:10px;background:rgba(255,50,50,0.9);color:#fff;border:none;border-radius:50%;width:32px;height:32px;font-weight:bold;cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center;transition:0.2s;">✕</button>
           <div style="font-size:15px;font-weight:800;margin-bottom:10px;color:var(--text)">Embedded playback is blocked in the local preview</div>
-          <div style="font-size:13px;line-height:1.5;color:var(--muted);margin-bottom:18px">Open the video in a new YouTube tab instead. This avoids the player configuration error caused by the file:// preview context.</div>
+          <div style="font-size:13px;line-height:1.5;color:var(--muted);margin-bottom:18px">This preview cannot host the YouTube iframe, so the video opens in a new tab instead.</div>
           <a id="yt-external-link" href="#" target="_blank" style="color:var(--blue);text-decoration:none;font-weight:700;font-size:14px;display:inline-block;padding:10px 20px;background:var(--card2);border-radius:24px;border:1px solid var(--border);transition:0.2s;">▶ Open in YouTube App/Tab</a>
         </div>
       `;
