@@ -2464,13 +2464,14 @@ const CHECKLIST_ITEMS = [
 // safeLoad wraps JSON.parse so that corrupted localStorage data (manual edits,
 // browser bugs, version mismatches) never white-screens the app — it falls back
 // to the supplied default and clears the broken key so future saves work cleanly.
+const FITDASH_DEBUG = false; // flip to true during development for console diagnostics
 function safeLoad(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
     if(raw === null) return fallback;
     return JSON.parse(raw);
   } catch(e) {
-    console.warn('fitdash: corrupted localStorage key "' + key + '", resetting to default.', e);
+    if(FITDASH_DEBUG) console.warn('fitdash: corrupted localStorage key "' + key + '", resetting to default.', e);
     try { localStorage.removeItem(key); } catch(_) {}
     return fallback;
   }
@@ -2480,10 +2481,10 @@ let sessions    = safeLoad('fitdash_sessions', []);
 let weights     = safeLoad('fitdash_weights',  []);
 let prs         = safeLoad('fitdash_prs',      {});
 let checklist   = safeLoad('fitdash_check',    {});
-let cardioMins  = parseFloat(localStorage.getItem('fitdash_cardio') || '0');  // parseFloat not parseInt — preserves e.g. 15.5 min
-if(isNaN(cardioMins)) cardioMins = 0;  // corrupted value guard: parseFloat('bad') = NaN, NaN += x stays NaN forever
-let lastCardioReset = localStorage.getItem('fitdash_cardio_week') || '';
-let activePlan  = localStorage.getItem('fitdash_plan') || '1500';
+let cardioMins  = safeLoad('fitdash_cardio', 0);  // safeLoad handles JSON.parse; falls back to 0
+if(typeof cardioMins !== 'number' || isNaN(cardioMins)) cardioMins = 0;  // corrupted value guard
+let lastCardioReset = safeLoad('fitdash_cardio_week', '');
+let activePlan  = safeLoad('fitdash_plan', '1500');
 // Run any localStorage migrations (versioning) early on load.
 function migrateStorage() {
   try {
@@ -2495,9 +2496,9 @@ function migrateStorage() {
     // if(stored < 1) { /* migrate older key shapes -> new keys */ }
     // After applying migrations, persist new version.
     localStorage.setItem(key, String(CUR));
-    console.log('fitdash: storage migrated to version', CUR);
+    if(FITDASH_DEBUG) console.log('fitdash: storage migrated to version', CUR);
   } catch(err) {
-    console.warn('fitdash: migration failed', err);
+    if(FITDASH_DEBUG) console.warn('fitdash: migration failed', err);
   }
 }
 migrateStorage();
@@ -2523,13 +2524,13 @@ function mobileOpenPlan() { showPage('nutrition'); setTimeout(() => { const el =
 // all fitdash data — every other caller goes through here.
 function save(key, val) {
   try {
-    localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val));
+    localStorage.setItem(key, JSON.stringify(val));
     return true;
   } catch(e) {
     if(e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
       alert('Storage full — your device has no space left for new data.\nTry exporting your history (Progress → Export CSV) then clearing old sessions.');
     } else {
-      console.error('fitdash: localStorage write failed for key "' + key + '"', e);
+      if(FITDASH_DEBUG) console.error('fitdash: localStorage write failed for key "' + key + '"', e);
     }
     return false;
   }
@@ -2574,19 +2575,23 @@ function getLocalDateStr() {
 }
 
 // ══ NAV ══════════════════════════════════════════════════════
+// Cache static NodeLists once — avoids repeated querySelectorAll on every navigation.
+const _cachedPages = document.querySelectorAll('.page');
+const _cachedTabs  = document.querySelectorAll('.nav-tab');
+const _tabMap = { dashboard:0, training:1, nutrition:2, progress:3, settings:4 };
+let activePageId = 'dashboard'; // tracks current page without DOM queries
 function showPage(id) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  _cachedPages.forEach(p => p.classList.remove('active'));
+  _cachedTabs.forEach(t => t.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  const tabs = document.querySelectorAll('.nav-tab');
-  const map = { dashboard:0, training:1, nutrition:2, progress:3, settings:4 };
-  if(tabs[map[id]]) tabs[map[id]].classList.add('active');
+  if(_cachedTabs[_tabMap[id]]) _cachedTabs[_tabMap[id]].classList.add('active');
   // update aria-selected on tabs for screen readers
-  tabs.forEach((t, idx) => {
-    const sel = (idx === map[id]);
+  _cachedTabs.forEach((t, idx) => {
+    const sel = (idx === _tabMap[id]);
     t.setAttribute('aria-selected', sel ? 'true' : 'false');
     t.setAttribute('tabindex', sel ? '0' : '-1');
   });
+  activePageId = id;
   if(id === 'progress') { renderProgress(); renderBodyComp(); }
   if(id === 'training') { renderTrainingHistory(); }
   if(id === 'settings') { renderSettings(); }
@@ -2693,8 +2698,7 @@ const PLAN_LABELS = {
 // writing the same plan value to localStorage dozens of times per session.
 function applyPlan(p) {
   // Only show the full plan details when Dashboard or Nutrition pages are active.
-  const showOnCurrent = (document.getElementById('page-dashboard')?.classList.contains('active')
-    || document.getElementById('page-nutrition')?.classList.contains('active'));
+  const showOnCurrent = (activePageId === 'dashboard' || activePageId === 'nutrition');
   ['1500','2000','2500','bd1500','bd2000','bd2500','ai'].forEach(id => {
     const planEl = document.getElementById('plan-'+id);
     const btnEl  = document.getElementById('btn-'+id);
@@ -2813,16 +2817,17 @@ function getWeekKey() {
 }
 
 function addCardio() {
-  const mins = Number(document.getElementById('cardio-add').value);
+  const raw = Number(document.getElementById('cardio-add').value);
   // Number() rejects "10abc" that parseInt would accept as 10
-  if(!Number.isFinite(mins) || mins <= 0) {
+  if(!Number.isFinite(raw) || raw <= 0) {
     alert('Please enter a positive number of minutes.');
     return;
   }
-  if(mins > 300) {
+  if(raw > 300) {
     alert('Please enter a realistic session duration (1–300 min).');
     return;
   }
+  const mins = Math.round(raw); // integer minutes prevents floating-point drift
   const wk = getWeekKey();
   if(lastCardioReset !== wk) { cardioMins=0; lastCardioReset=wk; }
   cardioMins += mins;
@@ -3937,7 +3942,7 @@ const LEVEL_CONFIG = {
 // undefined, causing getSetConfig() to throw TypeError and crash the workout engine.
 const VALID_LEVELS = ['beginner', 'amateur', 'master'];
 let trainingLevel = (() => {
-  const v = localStorage.getItem('fitdash_level');
+  const v = safeLoad('fitdash_level', null);
   return VALID_LEVELS.includes(v) ? v : 'amateur';
 })();
 function getSetConfig() { return LEVEL_CONFIG[trainingLevel].sets; }
@@ -4203,7 +4208,7 @@ function skipRest() {
   try {
     advanceStep();
   } catch(e) {
-    console.error("Error in advanceStep:", e);
+    if(FITDASH_DEBUG) console.error("Error in advanceStep:", e);
     alert("An error occurred while trying to skip the rest. Resetting the step.");
     // Fallback to forcefully re-render the current step to un-freeze the UI
     renderWorkoutStep(); 
@@ -4789,7 +4794,7 @@ initDeviceSettings();
 
 // ══ THEME SYSTEM ══════════════════════════════════════════
 function initTheme() {
-  const t = localStorage.getItem('fitdash_theme') || 'dark';
+  const t = safeLoad('fitdash_theme', 'dark');
   document.documentElement.dataset.theme = t;
   updateThemeBtn(t);
 }
@@ -4931,7 +4936,7 @@ function clearStoredApiKey() {
     const cb = document.getElementById('s-api-store'); if(cb) cb.checked = false;
     alert('Stored API key cleared from this browser.');
   } catch(err) {
-    console.error('Failed clearing API key', err);
+    if(FITDASH_DEBUG) console.error('Failed clearing API key', err);
     alert('Failed to clear stored API key. See console for details.');
   }
 }
@@ -4984,7 +4989,13 @@ function importAllData(event) {
       if(typeof data !== 'object') throw new Error('Invalid format');
       if(!confirm(`Import ${Object.keys(data).length} data keys? This will overwrite your current data.`)) return;
       Object.entries(data).forEach(([k, v]) => {
-        if(k.startsWith('fitdash_')) save(k, (typeof v === 'string' ? v : v));
+        if(k.startsWith('fitdash_')) {
+          // Export stores raw localStorage strings (already JSON-stringified).
+          // save() will JSON.stringify again, so parse first to restore the original value.
+          let parsed = v;
+          try { parsed = JSON.parse(v); } catch(_) { /* v is a plain string, use as-is */ }
+          save(k, parsed);
+        }
       });
       // run migrations after import
       try { migrateStorage(); } catch(_) {}
@@ -5328,7 +5339,7 @@ function parseAIActions(content) {
           lastMsg.appendChild(btn);
         }
       }, 100);
-    } catch(e) { console.warn('Failed to parse AI plan:', e); }
+    } catch(e) { if(FITDASH_DEBUG) console.warn('Failed to parse AI plan:', e); }
   }
 
   // Check for calorie target
@@ -5354,7 +5365,7 @@ function parseAIActions(content) {
           lastMsg.appendChild(btn);
         }
       }, 100);
-    } catch(e) { console.warn('Failed to parse calorie data:', e); }
+    } catch(e) { if(FITDASH_DEBUG) console.warn('Failed to parse calorie data:', e); }
   }
 
   // Check for food logging
@@ -5389,7 +5400,7 @@ function parseAIActions(content) {
           lastMsg.appendChild(btn);
         }
       }, 100);
-    } catch(e) { console.warn('Failed to parse food data:', e); }
+    } catch(e) { if(FITDASH_DEBUG) console.warn('Failed to parse food data:', e); }
   }
 }
 
@@ -5408,7 +5419,12 @@ function handleQuickChip(action) {
 // ══ BODY RECOMPOSITION ═══════════════════════════════════
 let bodyComp = safeLoad('fitdash_bodycomp', []);
 
-function calcNavyBF(waist, neck, hip, height, gender) {
+function calcNavyBF(waistCm, neckCm, hipCm, heightCm, gender) {
+  // U.S. Navy formula constants require inches — convert from cm.
+  const waist = waistCm / 2.54;
+  const neck  = neckCm  / 2.54;
+  const hip   = hipCm   ? hipCm / 2.54 : null;
+  const height = heightCm / 2.54;
   if(gender === 'female') {
     if(!hip) return null;
     return 163.205 * Math.log10(waist + hip - neck) - 97.684 * Math.log10(height) - 78.387;
@@ -5526,7 +5542,7 @@ function renderBodyComp() {
   const weight = latest.weight;
   const bmi = getBMI(weight, height);
   const bmiClass = getBMIClassification(bmi);
-  const whr = latest.waist && height ? Math.round((latest.waist / height) * 1000) / 10 : null;
+  const whr = latest.waist && height ? Math.round((latest.waist / height) * 100) / 100 : null;
   const whrLabel = whr ? getWaistHeightCategory(whr, userProfile.gender) : '';
   const bfCategory = latest.bf < 10 ? 'Athletic' : latest.bf < 15 ? 'Lean' : latest.bf < 20 ? 'Fit' : latest.bf < 25 ? 'Average' : 'Needs improvement';
   const bfColor = latest.bf < 15 ? 'var(--green)' : latest.bf < 20 ? 'var(--blue)' : latest.bf < 25 ? 'var(--yellow)' : 'var(--red)';
@@ -5649,13 +5665,13 @@ function renderCircHistory() {
 
   let summaryText = `Logged ${sorted.length} measurement ${sorted.length === 1 ? 'entry' : 'entries'}.`;
   if(previous) {
-    const waistDiff = latest.waist && previous.waist ? Math.round((latest.waist - previous.waist) * 10) / 10 : null;
-    const hipsDiff = latest.hips && previous.hips ? Math.round((latest.hips - previous.hips) * 10) / 10 : null;
     const muscleParts = ['chest','shoulders','bicep-l','bicep-r','thigh-l','thigh-r','calf-l','calf-r'];
     const gains = muscleParts.map(id => {
       if(!latest[id] || !previous[id]) return null;
       return { id, diff: Math.round((latest[id] - previous[id]) * 10) / 10 };
     }).filter(x => x && x.diff > 0);
+    const waistDiff = latest.waist && previous.waist ? Math.round((latest.waist - previous.waist) * 10) / 10 : null;
+    const hipsDiff = latest.hips && previous.hips ? Math.round((latest.hips - previous.hips) * 10) / 10 : null;
     const loss = [waistDiff, hipsDiff].filter(v => v !== null && v < 0).map(v => Math.abs(v));
     const bestGain = gains.sort((a,b) => b.diff - a.diff)[0];
     const bestShrink = loss.length ? Math.max(...loss) : null;
@@ -5669,22 +5685,34 @@ function renderCircHistory() {
     }
   }
 
+  // Pre-compute per-entry diffs once to avoid duplicate Math.round calculations in the loop below.
+  const _diffCache = new Map();
+  sorted.forEach((entry, idx) => {
+    const prev = sorted[idx + 1];
+    if(!prev) return;
+    const diffs = {};
+    CIRC_PARTS.forEach(p => {
+      if(entry[p.id] && prev[p.id]) {
+        diffs[p.id] = Math.round((entry[p.id] - prev[p.id]) * 10) / 10;
+      }
+    });
+    _diffCache.set(idx, diffs);
+  });
+
   let html = `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0 8px;border-bottom:1px solid var(--border);margin-bottom:10px">
       <div style="font-size:12px;color:var(--muted)">${summaryText}</div>
       <div style="font-size:11px;color:var(--muted)">Latest: ${latest.date}</div>
     </div>`;
 
   html += sorted.map((entry, idx) => {
-    const prev = sorted[idx + 1];
+    const diffs = _diffCache.get(idx) || {};
     let partsHtml = CIRC_PARTS.filter(p => entry[p.id]).map(p => {
       let delta = '';
-      if(prev && prev[p.id]) {
-        const diff = Math.round((entry[p.id] - prev[p.id]) * 10) / 10;
-        if(diff !== 0) {
-          const isWaistLike = (p.id === 'waist' || p.id === 'hips');
-          const color = (isWaistLike ? diff < 0 : diff > 0) ? 'var(--green)' : 'var(--orange)';
-          delta = ` <span style="color:${color};font-size:10px;font-weight:700">${diff > 0 ? '+' : ''}${diff}</span>`;
-        }
+      const diff = diffs[p.id];
+      if(diff !== undefined && diff !== 0) {
+        const isWaistLike = (p.id === 'waist' || p.id === 'hips');
+        const color = (isWaistLike ? diff < 0 : diff > 0) ? 'var(--green)' : 'var(--orange)';
+        delta = ` <span style="color:${color};font-size:10px;font-weight:700">${diff > 0 ? '+' : ''}${diff}</span>`;
       }
       return `<div style="display:flex;justify-content:space-between;padding:3px 0">
         <span style="color:var(--muted);font-size:11px">${p.label}</span>
