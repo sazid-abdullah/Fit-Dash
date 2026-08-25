@@ -1796,13 +1796,19 @@ canvas { width:100%!important; }
     <div class="settings-section-title">🤖 AI Coach Setup</div>
     <div class="settings-card">
       <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6">
-        Get a free API key from <strong style="color:var(--text)">Groq</strong> (fastest) at <span style="color:var(--blue)">console.groq.com</span> or <strong style="color:var(--text)">OpenRouter</strong> (more models) at <span style="color:var(--blue)">openrouter.ai</span>. You can choose whether to store the API key in this browser — if unchecked the key will not be saved and will be cleared on reload.
+        Get a free API key from <strong style="color:var(--text)">Groq</strong> (fastest) at <span style="color:var(--blue)">console.groq.com</span> or <strong style="color:var(--text)">OpenRouter</strong> (more models) at <span style="color:var(--blue)">openrouter.ai</span>.
+        If a model gets decommissioned, choose <strong style="color:var(--text)">OpenRouter Auto</strong> or select <strong style="color:var(--text)">Custom model ID...</strong> and paste the latest model slug from your provider.
+        You can choose whether to store the API key in this browser; if unchecked the key will not be saved and will be cleared on reload.
       </div>
       <div class="settings-row">
         <div><label class="settings-label">Provider</label><select class="settings-select" id="s-ai-provider" onchange="loadModelOptions()">
           <option value="groq">Groq (fastest)</option><option value="openrouter">OpenRouter (most models)</option>
         </select></div>
-        <div><label class="settings-label">Model</label><select class="settings-select" id="s-ai-model"></select></div>
+        <div>
+          <label class="settings-label">Model</label>
+          <select class="settings-select" id="s-ai-model" onchange="onModelChoiceChanged()"></select>
+          <input type="text" class="settings-input" id="s-ai-model-custom" placeholder="Custom model ID (e.g. openrouter/auto)" style="margin-top:8px;display:none">
+        </div>
       </div>
       <div>
         <label class="settings-label">API Key</label>
@@ -4815,19 +4821,21 @@ initTheme();
 // ══ SETTINGS ═════════════════════════════════════════════
 let userProfile = safeLoad('fitdash_profile', {});
 let userGoals   = safeLoad('fitdash_goals', {});
-let aiConfig    = safeLoad('fitdash_ai_config', { provider:'groq', model:'llama-3.3-70b-versatile', apiKey:'', storeKey:false });
+let aiConfig    = safeLoad('fitdash_ai_config', { provider:'groq', model:'llama-3.1-8b-instant', apiKey:'', storeKey:false });
+
+const CUSTOM_MODEL_VALUE = '__custom_model__';
 
 var AI_MODELS = {
   groq: [
-    { id:'llama-3.3-70b-versatile', name:'Llama 3.3 70B' },
-    { id:'llama-3.1-8b-instant', name:'Llama 3.1 8B' },
+    { id:'llama-3.1-8b-instant', name:'Llama 3.1 8B (fast)' },
+    { id:'llama-3.3-70b-versatile', name:'Llama 3.3 70B (quality)' },
     { id:'deepseek-r1-distill-llama-70b', name:'DeepSeek R1 70B' },
   ],
   openrouter: [
-    { id:'meta-llama/llama-3.1-8b-instruct:free', name:'Llama 3.1 8B' },
-    { id:'google/gemma-2-9b-it:free', name:'Gemma 2 9B' },
-    { id:'mistralai/mistral-7b-instruct:free', name:'Mistral 7B' },
-    { id:'deepseek/deepseek-r1:free', name:'DeepSeek R1' },
+    { id:'openrouter/auto', name:'OpenRouter Auto (recommended)' },
+    { id:'meta-llama/llama-3.1-8b-instruct', name:'Llama 3.1 8B' },
+    { id:'mistralai/mistral-7b-instruct', name:'Mistral 7B' },
+    { id:'deepseek/deepseek-r1', name:'DeepSeek R1' },
   ]
 };
 
@@ -4849,8 +4857,7 @@ function renderSettings() {
   if(a.provider) document.getElementById('s-ai-provider').value = a.provider;
   if(a.apiKey)   document.getElementById('s-api-key').value = a.apiKey;
   document.getElementById('s-api-store').checked = !!a.storeKey;
-  loadModelOptions();
-  setTimeout(() => { if(a.model) document.getElementById('s-ai-model').value = a.model; }, 50);
+  loadModelOptions(a.model);
   renderVideoCodeLibrary();
   
   const sched = p.schedule || [0,1,2,3,4,5,6]; // default all days
@@ -4906,19 +4913,58 @@ function saveGoalSettings() {
   alert('Goals saved!');
 }
 
-function loadModelOptions() {
+function loadModelOptions(selectedModel) {
   const provider = document.getElementById('s-ai-provider').value;
   const select = document.getElementById('s-ai-model');
+  const customInput = document.getElementById('s-ai-model-custom');
   const models = AI_MODELS[provider] || [];
-  select.innerHTML = models.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+  const modelToApply = selectedModel || aiConfig.model || '';
+
+  select.innerHTML = [
+    ...models.map(m => `<option value="${m.id}">${m.name}</option>`),
+    `<option value="${CUSTOM_MODEL_VALUE}">Custom model ID...</option>`
+  ].join('');
+
+  if(models.some(m => m.id === modelToApply)) {
+    select.value = modelToApply;
+    customInput.style.display = 'none';
+    customInput.value = '';
+  } else if(modelToApply) {
+    select.value = CUSTOM_MODEL_VALUE;
+    customInput.style.display = 'block';
+    customInput.value = modelToApply;
+  } else {
+    select.value = models[0]?.id || CUSTOM_MODEL_VALUE;
+    customInput.style.display = select.value === CUSTOM_MODEL_VALUE ? 'block' : 'none';
+    if(select.value !== CUSTOM_MODEL_VALUE) customInput.value = '';
+  }
+}
+
+function onModelChoiceChanged() {
+  const select = document.getElementById('s-ai-model');
+  const customInput = document.getElementById('s-ai-model-custom');
+  const useCustom = select.value === CUSTOM_MODEL_VALUE;
+  customInput.style.display = useCustom ? 'block' : 'none';
+  if(!useCustom) customInput.value = '';
+}
+
+function getSelectedModelValue() {
+  const selected = document.getElementById('s-ai-model').value;
+  if(selected !== CUSTOM_MODEL_VALUE) return selected;
+  return document.getElementById('s-ai-model-custom').value.trim();
 }
 
 function saveAISettings() {
   const storeKey = !!document.getElementById('s-api-store').checked;
   const enteredKey = document.getElementById('s-api-key').value.trim();
+  const chosenModel = getSelectedModelValue();
+  if(!chosenModel) {
+    alert('Please select a model or enter a custom model ID.');
+    return;
+  }
   aiConfig = {
     provider: document.getElementById('s-ai-provider').value,
-    model:    document.getElementById('s-ai-model').value,
+    model:    chosenModel,
     apiKey:   storeKey ? enteredKey : '',
     storeKey: storeKey,
   };
