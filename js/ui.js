@@ -805,10 +805,18 @@ function loadModelOptions(selectedModel) {
   const provider = document.getElementById('s-ai-provider').value;
   const select = document.getElementById('s-ai-model');
   const customInput = document.getElementById('s-ai-model-custom');
-  const apiInput = document.getElementById('s-api-key');
+  
+  // Update multi-provider inputs
+  ['groq', 'gemini', 'openrouter', 'ollama'].forEach(p => {
+    const el = document.getElementById('s-api-key-' + p);
+    if(el) {
+      el.style.display = p === provider ? 'block' : 'none';
+      if(p !== 'ollama') el.value = getProviderApiKey(p) || '';
+    }
+  });
+
   const storeInput = document.getElementById('s-api-store');
-  if(apiInput) apiInput.value = getProviderApiKey(provider);
-  if(storeInput) storeInput.checked = !!getProviderApiKey(provider) && aiConfig.storeKey;
+  if(storeInput) storeInput.checked = aiConfig.storeKey;
   const models = AI_MODELS[provider] || [];
   const modelToApply = selectedModel || aiConfig.model || '';
 
@@ -852,37 +860,40 @@ function providerRequiresApiKey(provider) {
 
 function saveAISettings() {
   const storeKey = !!document.getElementById('s-api-store').checked;
-  const enteredKey = document.getElementById('s-api-key').value.trim();
   const provider = document.getElementById('s-ai-provider').value;
   const chosenModel = getSelectedModelValue();
   if(!chosenModel) {
     alert('Please select a model or enter a custom model ID.');
     return;
   }
+  
+  // Read all entered keys so they can be kept in-memory even if not stored
+  const keys = {
+    groq: document.getElementById('s-api-key-groq')?.value.trim() || '',
+    gemini: document.getElementById('s-api-key-gemini')?.value.trim() || '',
+    openrouter: document.getElementById('s-api-key-openrouter')?.value.trim() || ''
+  };
+  
+  // If user unchecked 'storeKey', we blank out what's saved to localStorage, 
+  // but keep the current provider's entered key in memory for this session
+  let savedApiKeys = {};
+  if (storeKey) {
+    savedApiKeys = keys;
+  }
+
   aiConfig = {
-    ...aiConfig,
     provider,
-    model:    chosenModel,
-    apiKey:   providerRequiresApiKey(provider) && storeKey ? enteredKey : '',
-    apiKeys: { ...(aiConfig.apiKeys || {}), [provider]: providerRequiresApiKey(provider) && storeKey ? enteredKey : '' },
-    storeKey: providerRequiresApiKey(provider) && storeKey,
+    model: chosenModel,
+    apiKeys: storeKey ? savedApiKeys : keys,
+    storeKey,
     shareHealthData: document.getElementById('s-ai-share-health').checked,
   };
-  save('fitdash_ai_config', aiConfig);
-  alert('AI config saved! ' + (providerRequiresApiKey(aiConfig.provider) ? 'API key ' + (storeKey ? 'stored' : 'not stored') + '.' : 'Ollama uses your local model and needs no API key.') + ' You can now use the AI Coach.');
+  
+  // Save stripped config to localStorage
+  save('fitdash_ai_config', { ...aiConfig, apiKeys: savedApiKeys });
+  
+  alert('AI config saved! ' + (providerRequiresApiKey(aiConfig.provider) ? 'API key ' + (storeKey ? 'stored in browser' : 'kept for this session only') + '.' : 'Ollama uses your local model and needs no API key.'));
 }
-
-async function testAIConnection() {
-  const button = document.getElementById('test-ai-btn');
-  const status = document.getElementById('ai-test-status');
-  const provider = document.getElementById('s-ai-provider').value;
-  const model = getSelectedModelValue();
-  const apiKey = document.getElementById('s-api-key').value.trim() || aiConfig.apiKey;
-  if(providerRequiresApiKey(provider) && !apiKey) {
-    status.textContent = 'Enter an API key first.';
-    status.style.color = 'var(--orange)';
-    return;
-  }
   if(!model) {
     status.textContent = 'Select or enter a model first.';
     status.style.color = 'var(--orange)';
@@ -907,18 +918,54 @@ async function testAIConnection() {
   }
 }
 
-function clearStoredApiKey() {
+async function testAIConnection() {
+  const statusEl = document.getElementById('ai-test-status');
+  if(!statusEl) return;
+  statusEl.textContent = 'Testing connection...';
+  
+  const provider = document.getElementById('s-ai-provider').value;
+  const keyEl = document.getElementById('s-api-key-' + provider);
+  const testKey = provider === 'ollama' ? '' : (keyEl ? keyEl.value.trim() : '');
+  
+  if (providerRequiresApiKey(provider) && !testKey) {
+    statusEl.textContent = 'Please enter an API key first.';
+    statusEl.style.color = 'var(--red)';
+    return;
+  }
+  
+  // Temporarily override the config to test
+  const originalConfig = { ...aiConfig };
+  aiConfig = { ...originalConfig, provider: provider, apiKey: testKey, apiKeys: { [provider]: testKey } };
+  
   try {
-    const provider = document.getElementById('s-ai-provider').value;
-    aiConfig.apiKey = '';
-    aiConfig.apiKeys = { ...(aiConfig.apiKeys || {}), [provider]: '' };
-    aiConfig.storeKey = false;
-    save('fitdash_ai_config', aiConfig);
-    const inp = document.getElementById('s-api-key');
+    const res = await callAI('Say the exact word "SUCCESS" and nothing else.');
+    if (res && res.includes('SUCCESS')) {
+      statusEl.textContent = 'Connection successful! ✅';
+      statusEl.style.color = 'var(--green)';
+    } else {
+      statusEl.textContent = 'Failed: Unexpected response.';
+      statusEl.style.color = 'var(--red)';
+    }
+  } catch (err) {
+    statusEl.textContent = 'Error: ' + err.message;
+    statusEl.style.color = 'var(--red)';
+  } finally {
+    aiConfig = originalConfig;
+  }
+}
+
+function clearStoredApiKey() {
+  aiConfig.apiKey = '';
+  aiConfig.apiKeys = {};
+  aiConfig.storeKey = false;
+  save('fitdash_ai_config', aiConfig);
+  ['groq', 'gemini', 'openrouter'].forEach(p => {
+    const inp = document.getElementById('s-api-key-' + p);
     if(inp) inp.value = '';
-    const cb = document.getElementById('s-api-store'); if(cb) cb.checked = false;
-    alert('Stored API key cleared from this browser.');
-  } catch(err) {
+  });
+  const cb = document.getElementById('s-api-store'); if(cb) cb.checked = false;
+  alert('Stored API keys cleared from this browser.');
+} catch(err) {
     if(FITDASH_DEBUG) console.error('Failed clearing API key', err);
     alert('Failed to clear stored API key. See console for details.');
   }
@@ -1912,6 +1959,11 @@ function renderBFChart() {
     ctx.fillText('Target', W-pad.r-35, ty-5);
   }
 }
+
+
+
+
+
 
 
 

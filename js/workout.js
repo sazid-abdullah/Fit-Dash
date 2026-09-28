@@ -718,7 +718,7 @@ function advanceStep() {
   const block = getFullWorkoutPlan()[wo.blockIdx];
 
   // try next set
-  if(wo.setIdx < getSetConfig().length - 1) { wo.setIdx++; renderWorkoutStep(); return; }
+  if(wo.setIdx < getSetConfig().length - 1 && block.exercises.length > 0) { wo.setIdx++; renderWorkoutStep(); return; }
 
   // try next exercise in block
   if(wo.exIdx < block.exercises.length - 1) {
@@ -739,7 +739,12 @@ function woPrev() {
   const lastSet = getSetConfig().length - 1;
   if(wo.setIdx > 0) { wo.setIdx--; }
   else if(wo.exIdx > 0) { wo.exIdx--; wo.setIdx=lastSet; }
-  else if(wo.blockIdx > 0) { wo.blockIdx--; wo.exIdx=getFullWorkoutPlan()[wo.blockIdx].exercises.length-1; wo.setIdx=lastSet; }
+  else if(wo.blockIdx > 0) { 
+    wo.blockIdx--; 
+    const prevBlockExCount = getFullWorkoutPlan()[wo.blockIdx].exercises.length;
+    wo.exIdx = Math.max(0, prevBlockExCount - 1); 
+    wo.setIdx = lastSet; 
+  }
   renderWorkoutStep();
 }
 
@@ -1671,6 +1676,7 @@ function renderTrainingHistory() {
     </div>`;
   }).join('');
 }
+
 
 
 

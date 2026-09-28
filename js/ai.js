@@ -161,7 +161,7 @@ async function sendChatMessage() {
   const text = input.value.trim();
   if(!text || chatStreaming) return;
 
-  if(providerRequiresApiKey(aiConfig.provider) && !aiConfig.apiKey) {
+  if(providerRequiresApiKey(aiConfig.provider) && !getProviderApiKey(aiConfig.provider)) {
     chatHistory.push({ role:'assistant', content:'⚠️ Please set up your API key first! Go to **Settings → AI Coach Setup** to enter your provider key.' });
     save('fitdash_chat', chatHistory);
     renderChatMessages();
@@ -265,7 +265,7 @@ async function callAIRequest(messages) {
   }
 
   if(aiConfig.provider === 'gemini') {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(aiConfig.model)}:generateContent?key=${encodeURIComponent(aiConfig.apiKey)}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(aiConfig.model)}:generateContent?key=${encodeURIComponent(getProviderApiKey(aiConfig.provider))}`;
     const systemMessage = messages.find(message => message.role === 'system');
     const contents = messages
       .filter(message => message.role !== 'system')
@@ -297,7 +297,7 @@ async function callAIRequest(messages) {
 
   const headers = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${aiConfig.apiKey}`,
+    'Authorization': `Bearer ${getProviderApiKey(aiConfig.provider)}`,
   };
   if(!isGroq) {
     headers['HTTP-Referer'] = 'https://fitdash.app';
@@ -522,7 +522,7 @@ async function generateCustomDish() {
   const status = document.getElementById('custom-dish-status');
   const result = document.getElementById('custom-dish-result');
   if(!info) { status.textContent = 'Describe the ingredients or dish first.'; status.style.color = 'var(--orange)'; return; }
-  if(providerRequiresApiKey(aiConfig.provider) && !aiConfig.apiKey) { status.textContent = 'Set up an AI provider in Settings first.'; status.style.color = 'var(--orange)'; return; }
+  if(providerRequiresApiKey(aiConfig.provider) && !getProviderApiKey(aiConfig.provider)) { status.textContent = 'Set up an AI provider in Settings first.'; status.style.color = 'var(--orange)'; return; }
   if(aiConfig.shareHealthData === false) { status.textContent = 'Enable health-data sharing for personalized nutrition generation.'; status.style.color = 'var(--orange)'; return; }
   status.textContent = 'Creating recipe...'; status.style.color = 'var(--muted)';
   try {

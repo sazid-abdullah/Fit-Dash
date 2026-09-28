@@ -983,7 +983,10 @@
       <div>
         <label class="settings-label">API Key</label>
         <div class="api-key-wrap">
-          <input type="password" class="settings-input" id="s-api-key" placeholder="Not required for Ollama">
+          <input type="password" class="settings-input" id="s-api-key-groq" placeholder="Enter Groq API Key..." style="display:none;">
+          <input type="password" class="settings-input" id="s-api-key-gemini" placeholder="Enter Google Gemini API Key..." style="display:none;">
+          <input type="password" class="settings-input" id="s-api-key-openrouter" placeholder="Enter OpenRouter API Key..." style="display:none;">
+          <input type="text" class="settings-input" id="s-api-key-ollama" placeholder="Not required for Ollama" disabled style="display:none;">
           <button class="api-key-toggle" onclick="toggleApiKeyVis()" title="Show/hide key">👁️</button>
         </div>
         <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
@@ -1326,8 +1329,8 @@
 </div>
 
 <!-- User Guide Modal -->
-<div id="guide-modal" class="modal-overlay" style="display:none;z-index:999999;background:var(--bg)">
-  <div class="modal-content" style="max-width:700px;text-align:left;padding:32px 24px;max-height:85vh;overflow-y:auto;">
+<div id="guide-modal" class="modal-backdrop" style="display:none;z-index:999999;">
+  <div class="modal" style="max-width:700px;text-align:left;padding:32px 24px;max-height:85vh;overflow-y:auto;">
     <h2 style="margin-top:0;font-size:24px;color:var(--green);border-bottom:1px solid var(--border);padding-bottom:12px">FitDash User Guide</h2>
     
     <h3 style="color:var(--text);margin-top:20px">🏋️‍♂️ Training & Workouts</h3>
@@ -1358,8 +1361,8 @@
 </div>
 
 <!-- Onboarding Modal -->
-<div id="onboarding-modal" class="modal-overlay" style="display:none;z-index:999999;background:var(--bg)">
-  <div class="modal-content" style="max-width:500px;text-align:center;padding:40px 24px">
+<div id="onboarding-modal" class="modal-backdrop" style="display:none;z-index:999999;">
+  <div class="modal" style="max-width:500px;text-align:center;padding:40px 24px">
     <h2 style="margin-top:0;font-size:28px;color:var(--green)">Welcome to FitDash</h2>
     <p style="color:var(--muted);margin-bottom:32px">Let's set up your profile to personalize your workouts and nutrition.</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;text-align:left;margin-bottom:24px">
@@ -1381,6 +1384,10 @@
   
 </body>
 </html>
+
+
+
+
 
 
 
