@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fitness Dashboard</title>
 <meta name="description" content="FitDash — Personal fitness dashboard with workout tracking, nutrition plans, progress logging, and calorie calculations.">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#08080e">
 <style>
 :root {
   --bg:        #08080e;
@@ -1108,7 +1110,7 @@ canvas { width:100%!important; }
       <div class="cardio-bar-wrap">
         <div class="cardio-label">
           <span id="cardio-done-label">0 min done</span>
-          <span style="color:var(--muted)">150 min goal</span>
+          <span style="color:var(--muted)" id="cardio-goal-label">150 min goal</span>
         </div>
         <div class="cardio-bar"><div class="cardio-fill" id="cardio-fill" style="width:0%"></div></div>
       </div>
@@ -1126,12 +1128,14 @@ canvas { width:100%!important; }
     <div class="card" style="padding:18px">
       <div style="display:flex;gap:8px;margin-bottom:12px">
         <input type="text" id="food-name-input" placeholder="What did you eat?" style="flex:1;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;outline:none">
+        <button class="btn-ghost" onclick="startVoiceFoodInput()" title="Speak food name">🎙️</button>
         <input type="number" id="food-grams-input" placeholder="g" min="1" style="width:80px;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;outline:none">
         <button class="btn-ghost" onclick="logQuickFood()">+ Log</button>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:16px">
-        <button class="btn-ghost" onclick="askAIToCount()" style="font-size:11px;flex:1">🤖 Ask AI to count</button>
+        <button class="btn-ghost" onclick="askAIToCount()" style="font-size:11px;flex:1">🤖 Count calories + macros</button>
         <button class="btn-ghost" onclick="toggleLabelForm()" style="font-size:11px;flex:1">🏷️ Scan Label</button>
+        <button class="btn-ghost" onclick="suggestFoodSubstitution()" style="font-size:11px;flex:1">🔄 AI Substitution</button>
       </div>
       <div id="quick-food-picker" style="margin-bottom:16px"></div>
       <div id="label-form" class="label-form">
@@ -1151,6 +1155,10 @@ canvas { width:100%!important; }
         <div class="label-form-row">
           <input class="settings-input" id="label-fat" type="number" placeholder="Fat/serving (g)">
           <select class="settings-select" id="label-country"><option value="BD">Bangladesh 🇧🇩</option><option value="INT">International</option></select>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
+          <label class="btn-ghost" style="font-size:11px;cursor:pointer">📷 Take label photo<input id="label-photo" type="file" accept="image/*" capture="environment" onchange="analyzeLabelPhoto(this)" style="display:none"></label>
+          <span id="label-photo-status" style="font-size:11px;color:var(--muted)">Gemini can read a clear nutrition-label photo.</span>
         </div>
         <div style="display:flex;gap:8px;margin-top:6px">
           <button class="btn-red" onclick="logBrandedProduct()" style="flex:1">Log Product</button>
@@ -1185,6 +1193,31 @@ canvas { width:100%!important; }
     <div>
       <button class="btn-ghost" onclick="openDishBuilderFromNutrition()" style="font-size:13px;min-height:36px">🍽️ Open Dish Builder</button>
     </div>
+  </div>
+
+  <div class="card" style="padding:18px;margin-bottom:20px">
+    <div class="section-title" style="margin-bottom:4px">🍳 Custom Dish Studio</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Describe your ingredients, portions, cooking preferences, budget, or local foods. AI will create an editable recipe with nutrition and cooking steps.</div>
+    <div style="background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:12px;font-size:12px;line-height:1.55">
+      <strong style="color:var(--text)">How to get the result you want</strong>
+      <div style="margin-top:6px;color:var(--muted2)">1. Give the dish name or main ingredients.</div>
+      <div style="color:var(--muted2)">2. State servings and a calorie or protein target.</div>
+      <div style="color:var(--muted2)">3. Add preferences such as Bangladeshi style, low oil, vegetarian, spicy, budget-friendly, or available equipment.</div>
+      <div style="color:var(--muted2)">4. Review the ingredients, macros, and cooking steps before saving.</div>
+      <button class="btn-ghost" onclick="toggleDishExample()" aria-expanded="false" aria-controls="custom-dish-example" style="margin-top:8px;font-size:12px;padding:4px 8px" title="Show example">ⓘ Example</button>
+      <div id="custom-dish-example" hidden style="margin-top:8px;color:var(--blue)">“Make 2 servings of low-oil Bangladeshi chicken khichuri, under 450 calories each, at least 30g protein, using rice, dal, chicken, and vegetables.”</div>
+    </div>
+    <div class="settings-row">
+      <input class="settings-input" id="custom-dish-name" placeholder="Dish name or idea">
+      <input class="settings-input" id="custom-dish-servings" type="number" min="1" value="1" placeholder="Servings">
+    </div>
+    <textarea class="settings-input" id="custom-dish-info" rows="4" placeholder="Ingredients and preferences: chicken, rice, vegetables, low oil, Bangladeshi style, under 500 calories..."></textarea>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px">
+      <button class="btn-red" onclick="generateCustomDish()">🤖 Create Custom Dish</button>
+      <span id="custom-dish-status" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+    <div id="custom-dish-result" style="margin-top:14px"></div>
+    <div id="saved-custom-dishes" style="margin-top:14px"></div>
   </div>
   <div id="plan-group-international">
   <div style="margin-top:16px;margin-bottom:6px;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">🌍 International Plans</div>
@@ -1427,8 +1460,12 @@ canvas { width:100%!important; }
 
 <!-- ══ TRAINING ════════════════════════════════════════════════ -->
 <div id="page-training" class="page" role="main" aria-label="Training">
+  <div style="display:flex;justify-content:center;gap:8px;margin-bottom:16px" role="group" aria-label="Training category">
+    <button class="btn-red" id="training-category-home" onclick="switchTrainingCategory('home')">🏠 Home</button>
+    <button class="btn-ghost" id="training-category-gym" onclick="switchTrainingCategory('gym')">🏋️ Gym</button>
+  </div>
   <div class="training-hero">
-    <div class="tag tag-red" style="margin-bottom:10px">Full Body · Home Gym</div>
+    <div class="tag tag-red" id="training-category-tag" style="margin-bottom:10px">Full Body · Home Gym</div>
     <h1>Full Body <span>Protocol</span></h1>
     <!-- Level selector -->
     <div class="level-selector">
@@ -1462,6 +1499,7 @@ canvas { width:100%!important; }
       </button>
     </div>
   </div>
+  <div id="training-reminder" style="margin:0 auto 16px;max-width:760px"></div>
 
   <div class="set-legend" id="set-legend-static"><!-- populated by switchLevel() --></div>
 
@@ -1470,7 +1508,7 @@ canvas { width:100%!important; }
     <div class="warmup-icon">🚶</div>
     <div>
       <div class="warmup-title">Pre-Workout Warmup</div>
-      <div class="warmup-desc">Brisk walk or light jog in place. Moderate pace — break a light sweat, warm the joints before loading.</div>
+      <div class="warmup-desc" id="training-warmup-desc">Brisk walk or light jog in place. Moderate pace — break a light sweat, warm the joints before loading.</div>
       <div class="warmup-dur">5–10 min</div>
     </div>
   </div>
@@ -1486,6 +1524,10 @@ canvas { width:100%!important; }
   <div style="margin-bottom:20px;border-top:1px solid var(--border);padding-top:20px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <div class="section-title" style="margin-bottom:0">🏋️ Custom Exercises</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <input class="settings-input" id="custom-exercise-search" placeholder="Search exercises..." oninput="renderCustomExercises()">
+      <button class="btn-ghost" onclick="saveCurrentWorkoutTemplate()" title="Save current category as a template">💾 Template</button>
     </div>
     
     <div id="custom-exercises-list">
@@ -1576,6 +1618,31 @@ canvas { width:100%!important; }
       <div class="stat-num" id="ps-bf-progress">—</div>
       <div class="progress-summary-title">Body Fat</div>
     </div>
+  </div>
+
+  <div class="card" style="padding:18px;margin-bottom:20px">
+    <div class="section-title" style="margin-bottom:4px">📊 Nutrition History</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Calories logged over the last 7 days.</div>
+    <div id="nutrition-history-chart" style="display:flex;align-items:flex-end;gap:6px;height:120px"></div>
+  </div>
+
+  <div class="card" style="padding:18px;margin-bottom:20px">
+    <div class="section-title" style="margin-bottom:4px">📈 Exercise Progression</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Compare your logged weight and reps for one exercise.</div>
+    <select class="settings-select" id="progress-exercise-select" onchange="renderExerciseProgression()"></select>
+    <div id="exercise-progression-output" style="margin-top:12px"></div>
+  </div>
+
+  <div class="card" style="padding:18px;margin-bottom:20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <div class="section-title" style="margin-bottom:4px">🤖 Weekly AI Report</div>
+        <div style="font-size:12px;color:var(--muted)">Review the last 7 days of workouts, weight, cardio, nutrition, and sleep.</div>
+      </div>
+      <button class="btn-red" id="weekly-report-btn" onclick="generateWeeklyReport()">Generate Report</button>
+    </div>
+    <div id="weekly-report-status" style="font-size:12px;color:var(--muted);margin-top:12px"></div>
+    <div id="weekly-report-output" style="font-size:13px;line-height:1.6;margin-top:12px"></div>
   </div>
 
   <!-- Week streak dots -->
@@ -1766,6 +1833,36 @@ canvas { width:100%!important; }
     </div>
   </div>
 
+  <div class="settings-section">
+    <div class="settings-section-title">🏋️ Equipment &amp; Limitations</div>
+    <div class="settings-card">
+      <div class="settings-label">Gym equipment available</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 14px" id="equipment-options">
+        <label><input type="checkbox" value="machines"> Machines</label>
+        <label><input type="checkbox" value="cables"> Cables</label>
+        <label><input type="checkbox" value="dumbbells"> Dumbbells</label>
+        <label><input type="checkbox" value="barbell"> Barbell</label>
+        <label><input type="checkbox" value="cardio"> Cardio machines</label>
+      </div>
+      <label class="settings-label" for="s-limitations">Injuries or movement limitations</label>
+      <textarea class="settings-input" id="s-limitations" rows="3" placeholder="Example: avoid deep knee flexion; left shoulder discomfort"></textarea>
+      <button class="btn-red" onclick="saveTrainingPreferences()" style="margin-top:10px;max-width:220px">💾 Save Training Preferences</button>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">⏰ Workout Reminders &amp; Cardio Plan</div>
+    <div class="settings-card">
+      <label style="font-size:13px"><input type="checkbox" id="s-reminder-enabled" style="margin-right:8px"> Show workout reminder on scheduled days</label>
+      <div class="settings-row" style="margin-top:10px">
+        <div><label class="settings-label">Reminder time</label><input type="time" class="settings-input" id="s-reminder-time" value="18:00"></div>
+        <div><label class="settings-label">Weekly focus</label><select class="settings-select" id="s-cardio-focus"><option value="strength">Strength / hypertrophy · 150 min cardio</option><option value="cardio">Cardio focus · 300 min cardio</option></select></div>
+      </div>
+      <button class="btn-red" onclick="saveTrainingPreferences()" style="margin-top:10px;max-width:220px">💾 Save Reminder &amp; Cardio Plan</button>
+      <div id="cardio-plan-preview" style="margin-top:14px"></div>
+    </div>
+  </div>
+
   <!-- Body Recomp Goals -->
   <div class="settings-section">
     <div class="settings-section-title">🎯 Body Recomposition Goals</div>
@@ -1785,6 +1882,9 @@ canvas { width:100%!important; }
           <option value="both">Both (International + BD)</option><option value="international">International</option><option value="bangladeshi">Bangladeshi 🇧🇩</option>
         </select></div>
         <div><label class="settings-label">Daily Calorie Target</label><input type="number" class="settings-input" id="s-cal-target" placeholder="Auto (from AI)" step="50" min="800" max="5000"></div>
+        <div><label class="settings-label">Protein Target (g)</label><input type="number" class="settings-input" id="s-protein-target" placeholder="Auto: 1.6g/kg" step="1" min="20" max="400"></div>
+        <div><label class="settings-label">Carb Target (g)</label><input type="number" class="settings-input" id="s-carb-target" placeholder="Optional" step="1" min="20" max="800"></div>
+        <div><label class="settings-label">Fat Target (g)</label><input type="number" class="settings-input" id="s-fat-target" placeholder="Optional" step="1" min="15" max="300"></div>
         <div><label class="settings-label">Water Target (ml)</label><input type="number" class="settings-input" id="s-water-target" placeholder="3000" step="100" min="500" max="8000"></div>
       </div>
       <button class="btn-red" onclick="saveGoalSettings()" style="margin-top:8px;max-width:200px">💾 Save Goals</button>
@@ -1796,13 +1896,13 @@ canvas { width:100%!important; }
     <div class="settings-section-title">🤖 AI Coach Setup</div>
     <div class="settings-card">
       <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6">
-        Get a free API key from <strong style="color:var(--text)">Groq</strong> (fastest) at <span style="color:var(--blue)">console.groq.com</span> or <strong style="color:var(--text)">OpenRouter</strong> (more models) at <span style="color:var(--blue)">openrouter.ai</span>.
+        Get a free API key from <strong style="color:var(--text)">Groq</strong> (fastest) at <span style="color:var(--blue)">console.groq.com</span>, <strong style="color:var(--text)">Google Gemini</strong> at <span style="color:var(--blue)">aistudio.google.com</span>, or <strong style="color:var(--text)">OpenRouter</strong> (more models) at <span style="color:var(--blue)">openrouter.ai</span>. For private local AI, install <strong style="color:var(--text)">Ollama</strong> and download a model on your computer.
         If a model gets decommissioned, choose <strong style="color:var(--text)">OpenRouter Auto</strong> or select <strong style="color:var(--text)">Custom model ID...</strong> and paste the latest model slug from your provider.
         You can choose whether to store the API key in this browser; if unchecked the key will not be saved and will be cleared on reload.
       </div>
       <div class="settings-row">
         <div><label class="settings-label">Provider</label><select class="settings-select" id="s-ai-provider" onchange="loadModelOptions()">
-          <option value="groq">Groq (fastest)</option><option value="openrouter">OpenRouter (most models)</option>
+          <option value="groq">Groq (fastest)</option><option value="gemini">Google Gemini (free tier)</option><option value="openrouter">OpenRouter (most models)</option><option value="ollama">Ollama (local/private)</option>
         </select></div>
         <div>
           <label class="settings-label">Model</label>
@@ -1813,15 +1913,20 @@ canvas { width:100%!important; }
       <div>
         <label class="settings-label">API Key</label>
         <div class="api-key-wrap">
-          <input type="password" class="settings-input" id="s-api-key" placeholder="Enter your API key...">
+          <input type="password" class="settings-input" id="s-api-key" placeholder="Not required for Ollama">
           <button class="api-key-toggle" onclick="toggleApiKeyVis()" title="Show/hide key">👁️</button>
         </div>
         <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
           <label style="font-size:13px"><input type="checkbox" id="s-api-store" style="margin-right:8px"> Store API key in this browser</label>
           <button class="btn-ghost" style="font-size:12px;padding:6px 10px" onclick="clearStoredApiKey()">Clear stored key</button>
         </div>
+        <label style="display:block;margin-top:10px;font-size:13px"><input type="checkbox" id="s-ai-share-health" style="margin-right:8px"> Include my health and progress data in AI prompts</label>
       </div>
-      <button class="btn-red" onclick="saveAISettings()" style="margin-top:14px;max-width:200px">💾 Save AI Config</button>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:14px">
+        <button class="btn-red" onclick="saveAISettings()" style="max-width:200px">💾 Save AI Config</button>
+        <button class="btn-ghost" id="test-ai-btn" onclick="testAIConnection()" style="font-size:12px">⚡ Test Connection</button>
+        <span id="ai-test-status" style="font-size:12px;color:var(--muted)"></span>
+      </div>
     </div>
   </div>
 
@@ -1875,6 +1980,21 @@ canvas { width:100%!important; }
         <input type="file" id="import-file" accept=".json" style="display:none" onchange="importAllData(event)">
         <button class="btn-ghost" onclick="clearAllData()" style="color:var(--red)">🗑 Clear All Data</button>
       </div>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">🧰 Planning Tools</div>
+    <div class="settings-card">
+      <div class="settings-actions">
+        <button class="btn-ghost" onclick="generateGroceryList()">🛒 AI Grocery List</button>
+        <button class="btn-ghost" onclick="adjustCaloriesFromTrend()">⚖️ Adjust Calories</button>
+        <button class="btn-ghost" onclick="showDeloadRecommendation()">🧘 Deload Check</button>
+        <button class="btn-ghost" onclick="exportProgressReport()">🖨 Progress Report</button>
+        <button class="btn-ghost" onclick="exportEncryptedBackup()">🔐 Encrypted Backup</button>
+      </div>
+      <div id="planning-tools-status" style="font-size:12px;color:var(--muted);margin-top:12px"></div>
+      <div id="saved-grocery-list" style="font-size:12px;line-height:1.5;margin-top:10px"></div>
     </div>
   </div>
 </div>
@@ -2599,7 +2719,7 @@ function showPage(id) {
   });
   activePageId = id;
   if(id === 'progress') { renderProgress(); renderBodyComp(); }
-  if(id === 'training') { renderTrainingHistory(); }
+  if(id === 'training') { renderTrainingHistory(); renderTrainingReminder(); }
   if(id === 'settings') { renderSettings(); }
   if(id === 'nutrition') { renderNutrition(); renderCalorieTracker(); }
   if(id === 'dashboard') { renderDashboard(); renderCalorieTracker(); }
@@ -2862,10 +2982,24 @@ function renderCardio() {
     save('fitdash_cardio',      0);
     save('fitdash_cardio_week', lastCardioReset);
   }
-  const target = 150;
+  const target = userProfile.cardioFocus === 'cardio' ? 300 : 150;
   const pct = Math.min(100, Math.round(cardioMins / target * 100));
   document.getElementById('cardio-fill').style.width = pct + '%';
   document.getElementById('cardio-done-label').textContent = cardioMins + ' min done';
+  const goalLabel = document.getElementById('cardio-goal-label');
+  if(goalLabel) goalLabel.textContent = target + ' min goal';
+}
+
+function renderTrainingReminder() {
+  const el = document.getElementById('training-reminder');
+  if(!el) return;
+  const day = new Date().getDay();
+  const scheduled = (userProfile.schedule || [0,1,2,3,4,5,6]).includes(day);
+  if(!userProfile.reminderEnabled || !scheduled) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--muted);text-align:center">Rest or active recovery day. Adjust your schedule in Settings.</div>';
+    return;
+  }
+  el.innerHTML = `<div class="card" style="padding:12px 16px;border-color:var(--red)"><strong>Today is a training day.</strong> Suggested reminder: ${escapeHtml(userProfile.reminderTime || '18:00')}. Warm up, train with control, and follow your selected Home/Gym plan.</div>`;
 }
 
 // ══ DASHBOARD ════════════════════════════════════════════════
@@ -3333,7 +3467,56 @@ function renderProgress() {
   renderPRs();
   renderCircChart();
   renderPRVolumeChart();
+  renderExerciseProgression();
+  renderNutritionHistory();
   renderHistoryList();
+}
+
+function renderNutritionHistory() {
+  const el = document.getElementById('nutrition-history-chart');
+  if(!el) return;
+  const today = new Date();
+  const days = Array.from({length:7}, (_, index) => {
+    const date = new Date(today); date.setDate(today.getDate() - (6 - index));
+    const key = dateToStableStr(date);
+    return { key, label:date.toLocaleDateString('en-US',{weekday:'short'}), calories:(calorieLog[key] || []).reduce((sum, entry) => sum + Number(entry.calories || 0), 0) };
+  });
+  const max = Math.max(...days.map(day => day.calories), 1);
+  el.innerHTML = days.map(day => `<div style="flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px"><span style="font-size:10px;color:var(--muted)">${day.calories || ''}</span><div style="width:100%;height:${Math.max(4, Math.round(day.calories / max * 82))}px;background:var(--green);border-radius:4px 4px 0 0"></div><span style="font-size:10px;color:var(--muted)">${day.label}</span></div>`).join('');
+}
+
+function getLoggedExerciseNames() {
+  const names = new Set();
+  sessions.forEach(session => Object.values(session.exercises || {}).forEach(entry => {
+    if(entry && entry.exName) names.add(entry.exName);
+    if(entry && typeof entry === 'object' && !entry.exName) Object.keys(entry).forEach(() => {});
+  }));
+  return [...names].sort();
+}
+
+function renderExerciseProgression() {
+  const select = document.getElementById('progress-exercise-select');
+  const output = document.getElementById('exercise-progression-output');
+  if(!select || !output) return;
+  const names = getLoggedExerciseNames();
+  const previous = select.value;
+  select.innerHTML = names.length
+    ? names.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('')
+    : '<option value="">No guided exercise logs yet</option>';
+  if(names.includes(previous)) select.value = previous;
+  if(!names.length) { output.innerHTML = '<div style="font-size:12px;color:var(--muted)">Complete a guided workout to see exercise progression.</div>'; return; }
+  const selected = select.value;
+  const rows = [];
+  sessions.forEach(session => Object.values(session.exercises || {}).forEach(entry => {
+    if(!entry || entry.exName !== selected) return;
+    rows.push({date:session.date, weight:Number(entry.weight)||0, reps:Number(entry.reps)||0});
+  }));
+  rows.sort((a,b) => a.date.localeCompare(b.date));
+  output.innerHTML = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
+    <div class="stat-card"><div class="stat-num">${rows.length}</div><div class="stat-label">Sets logged</div></div>
+    <div class="stat-card"><div class="stat-num">${rows.length ? Math.max(...rows.map(row => row.weight)) : 0}</div><div class="stat-label">Best weight</div></div>
+    <div class="stat-card"><div class="stat-num">${rows.length ? Math.max(...rows.map(row => row.reps)) : 0}</div><div class="stat-label">Best reps</div></div>
+  </div>${rows.slice(-8).reverse().map(row => `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px"><span>${row.date}</span><strong>${row.weight}kg × ${row.reps}</strong></div>`).join('')}`;
 }
 
 function renderProgressSummary() {
@@ -3366,6 +3549,64 @@ function renderProgressSummary() {
 
   const bodyDiff = bodyComp.length > 1 ? Math.round((bodyComp[bodyComp.length-1].bf - bodyComp[0].bf) * 10) / 10 : null;
   if(bfEl) bfEl.textContent = bodyDiff !== null ? `${bodyDiff > 0 ? '+' : ''}${bodyDiff}%` : 'No data';
+}
+
+async function generateWeeklyReport() {
+  const button = document.getElementById('weekly-report-btn');
+  const status = document.getElementById('weekly-report-status');
+  const output = document.getElementById('weekly-report-output');
+  if(providerRequiresApiKey(aiConfig.provider) && !aiConfig.apiKey) {
+    status.textContent = 'Set up an AI provider in Settings first.';
+    status.style.color = 'var(--orange)';
+    return;
+  }
+  if(aiConfig.shareHealthData === false) {
+    status.textContent = 'Enable health and progress data sharing in AI settings to generate a personal report.';
+    status.style.color = 'var(--orange)';
+    return;
+  }
+
+  const today = new Date();
+  const start = new Date(today);
+  start.setDate(today.getDate() - 6);
+  const startKey = dateToStableStr(start);
+  const endKey = dateToStableStr(today);
+  const weekSessions = sessions.filter(session => session.date >= startKey && session.date <= endKey);
+  const weekWeights = weights.filter(weight => weight.date >= startKey && weight.date <= endKey);
+  const weekFood = Object.entries(calorieLog)
+    .filter(([date]) => date >= startKey && date <= endKey)
+    .flatMap(([, foods]) => foods || []);
+  const weekSleep = sleepHistory.filter(entry => entry.date >= startKey && entry.date <= endKey);
+  const foodCalories = weekFood.reduce((total, food) => total + (food.calories || 0), 0);
+  const averageSleep = weekSleep.length
+    ? (weekSleep.reduce((total, entry) => total + Number(entry.hours || 0), 0) / weekSleep.length).toFixed(1)
+    : 'no data';
+  const reportData = `Period: ${startKey} to ${endKey}
+Training sessions: ${weekSessions.length}
+Cardio logged this week: ${cardioMins} minutes
+Weight entries: ${weekWeights.map(weight => `${weight.date}: ${weight.val}kg`).join(', ') || 'none'}
+Food calories logged: ${foodCalories} across ${weekFood.length} entries
+Average sleep: ${averageSleep} hours
+Personal records: ${Object.keys(prs).length}`;
+
+  button.disabled = true;
+  status.textContent = 'Generating report...';
+  status.style.color = 'var(--muted)';
+  output.textContent = '';
+  try {
+    const response = await callAI([
+      { role:'system', content:buildSystemPrompt() },
+      { role:'user', content:`Create a concise weekly fitness report from this data. Include: wins, risks or missing data, and 3 practical priorities for next week. Do not invent measurements or medical conclusions.\n\n${reportData}` }
+    ]);
+    output.innerHTML = formatAIResponse(response);
+    status.textContent = 'Report generated.';
+    status.style.color = 'var(--green)';
+  } catch(err) {
+    status.textContent = `Report failed: ${err.message.slice(0,140)}`;
+    status.style.color = 'var(--red)';
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function renderWeekStreak() {
@@ -3535,11 +3776,13 @@ function deleteCustomExercise(id) {
 function renderCustomExercises() {
   const el = document.getElementById('custom-exercises-list');
   if(!el) return;
-  if(!customExercises.length) {
+  const query = (document.getElementById('custom-exercise-search')?.value || '').trim().toLowerCase();
+  const visibleExercises = customExercises.filter(cx => !query || `${cx.name} ${cx.muscle} ${cx.block}`.toLowerCase().includes(query));
+  if(!visibleExercises.length) {
     el.innerHTML = '<div style="font-size:13px;color:var(--muted);margin-bottom:12px">No custom exercises added yet.</div>';
     return;
   }
-  el.innerHTML = customExercises.map(cx => `
+  el.innerHTML = visibleExercises.map(cx => `
     <div style="background:var(--card2);border-radius:6px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center">
       <div>
         <div style="display:flex;align-items:center;gap:8px">
@@ -3553,6 +3796,14 @@ function renderCustomExercises() {
       <button class="del-btn" onclick="deleteCustomExercise(${cx.id})">×</button>
     </div>
   `).join('');
+}
+
+function saveCurrentWorkoutTemplate() {
+  const templates = safeLoad('fitdash_workout_templates', []);
+  const plan = getFullWorkoutPlan().filter(block => block.id !== '🛠️').map(block => ({ name:block.name, type:block.type, exercises:block.exercises.map(ex => ex.name) }));
+  templates.unshift({ name:`${trainingCategory === 'gym' ? 'Gym' : 'Home'} Template ${new Date().toLocaleDateString()}`, category:trainingCategory, plan });
+  save('fitdash_workout_templates', templates.slice(0,10));
+  alert('Workout template saved.');
 }
 
 function renderVideoCodeLibrary() {
@@ -3578,6 +3829,43 @@ function renderVideoCodeLibrary() {
     });
     sections.push('</div>');
   });
+
+  sections.push('<div style="border-top:1px solid var(--border);padding-top:18px;margin-bottom:18px"><div style="font-size:15px;font-weight:800;margin-bottom:6px">🏋️ Gym Program Videos</div><div style="font-size:12px;color:var(--muted);margin-bottom:12px">Gym exercise video codes are stored separately from the Home program.</div>');
+  GYM_WORKOUT_PLAN.forEach(block => {
+    sections.push(`<div style="margin-bottom:18px"><div style="font-size:14px;font-weight:800;margin-bottom:8px">Block ${escapeHtml(block.id)} · ${escapeHtml(block.name)}</div>`);
+    block.exercises.forEach(ex => {
+      const inputId = `video-gym-${ex.code}`;
+      const saved = getSavedVideoId(ex.code, ex.ytId || '');
+      sections.push(`
+        <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;flex-wrap:wrap">
+          <div style="flex:1;min-width:220px">
+            <label class="settings-label">${escapeHtml(ex.code)} · ${escapeHtml(ex.name)}</label>
+            <input type="text" class="settings-input" id="${inputId}" placeholder="YouTube video ID or URL" value="${escapeHtml(saved)}">
+          </div>
+          <button class="btn-ghost" style="min-width:88px" onclick="saveVideoCode('${ex.code}', '${inputId}', 'settings')">Save</button>
+        </div>`);
+    });
+    sections.push('</div>');
+  });
+  sections.push('</div>');
+
+  if(customExercises.length) {
+    sections.push('<div style="border-top:1px solid var(--border);padding-top:18px;margin-bottom:18px"><div style="font-size:15px;font-weight:800;margin-bottom:6px">🛠️ Custom Exercise Videos</div><div style="font-size:12px;color:var(--muted);margin-bottom:12px">These codes are linked to your Custom Block exercises.</div>');
+    customExercises.forEach(cx => {
+      const key = `custom:${cx.id}`;
+      const inputId = `video-custom-${cx.id}`;
+      const saved = getSavedVideoId(key, cx.ytId || '');
+      sections.push(`
+        <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;flex-wrap:wrap">
+          <div style="flex:1;min-width:220px">
+            <label class="settings-label">${escapeHtml(cx.code)} · ${escapeHtml(cx.name)}</label>
+            <input type="text" class="settings-input" id="${inputId}" placeholder="YouTube video ID or URL" value="${escapeHtml(saved)}">
+          </div>
+          <button class="btn-ghost" style="min-width:88px" onclick="saveVideoCode('${key}', '${inputId}', 'settings')">Save</button>
+        </div>`);
+    });
+    sections.push('</div>');
+  }
 
   Object.entries(RECOVERY_ROUTINES).forEach(([tab, routines]) => {
     const title = tab === 'mobility' ? 'Rest Day · Full Body Mobility' : tab === 'stretch' ? 'Rest Day · Lower Body Stretch' : 'Rest Day · Upper Body Relief';
@@ -3665,8 +3953,60 @@ const WORKOUT_PLAN = [
   }
 ];
 
+const GYM_WORKOUT_PLAN = [
+  { id:'A', name:'Legs & Calves', type:'Superset',
+    info:'Choose leg press, V-squat, hack squat, belt squat, or alternating leg extension/curl. Train calves between leg sets.',
+    exercises:[
+      { code:'GA1', name:'Leg Press', muscle:'🎯 Quads · Glutes', tips:'Use a machine that fits you. Start easy, then progress from 20–25 reps to hard 5–10 rep sets. Keep the range controlled.', ytQuery:'leg press machine proper form tutorial' },
+      { code:'GA2', name:'Seated Calf Press', muscle:'🎯 Gastrocnemius · Soleus', tips:'Perform between leg sets with little rest. Use a full stretch and full contraction. Skip the first warmup set if experienced.', ytQuery:'seated calf press machine proper form tutorial' },
+    ]
+  },
+  { id:'B', name:'Back · Chest · Back', type:'Giant Set',
+    info:'Lat pulldown → chest press → machine row. Move between exercises with minimal rest and rest fully after the row.',
+    exercises:[
+      { code:'GB1', name:'Lat Pulldown', muscle:'🎯 Vertical Back · Lats', tips:'Choose a pulldown or chin-up option. Use 20–25 reps for the easy warmup, then progress toward hard 5–10 rep sets.', ytQuery:'lat pulldown proper form tutorial' },
+      { code:'GB2', name:'Machine Chest Press', muscle:'🎯 Chest · Triceps', tips:'Prefer a machine. If occupied, use an incline or another chest press that lets you control the full range.', ytQuery:'machine chest press proper form tutorial' },
+      { code:'GB3', name:'Machine Row', muscle:'🎯 Horizontal Back · Rhomboids', tips:'Use a machine or cable row. Complete the full giant set before taking the longer 1–2 minute rest.', ytQuery:'seated machine row proper form tutorial' },
+    ]
+  },
+  { id:'C', name:'Finishing Circuit', type:'Circuit',
+    info:'Shoulders → adductors → abductors → arms → rear delts. Rest briefly between exercises and fully after each round.',
+    exercises:[
+      { code:'GC1', name:'Machine Shoulder Press', muscle:'🎯 Shoulders · Triceps', tips:'Use 15–20 reps for the hard warmup, then 10–15 and 8–10 reps for working rounds.', ytQuery:'machine shoulder press proper form tutorial' },
+      { code:'GC2', name:'Dumbbell Lateral Raise', muscle:'🎯 Lateral Delts', tips:'Keep the movement controlled and stop around shoulder height. Use 10–15 reps in the first three rounds.', ytQuery:'dumbbell lateral raise proper form tutorial' },
+      { code:'GC3', name:'Adductor Machine', muscle:'🎯 Inner Thighs', tips:'Use at least 8 reps on hard rounds. Choose a load that stays controlled through the full range.', ytQuery:'adductor machine proper form tutorial' },
+      { code:'GC4', name:'Abductor Machine', muscle:'🎯 Glutes · Outer Hips', tips:'Use at least 8 reps on hard rounds. Avoid bouncing or rushing the range of motion.', ytQuery:'abductor machine proper form tutorial' },
+      { code:'GC5', name:'Dumbbell Curls', muscle:'🎯 Biceps', tips:'Keep elbows stable. Use 15–20 reps for the warmup, then 10–15 and 5–10 reps.', ytQuery:'dumbbell bicep curl proper form tutorial' },
+      { code:'GC6', name:'Cable Extensions', muscle:'🎯 Triceps', tips:'Use any safe cable triceps variation. Keep the upper arm controlled and use the target rep ranges.', ytQuery:'cable tricep extension proper form tutorial' },
+      { code:'GC7', name:'Reverse Pec-Deck Rear Delts', muscle:'🎯 Rear Delts · Upper Back', tips:'This is the preference exercise. Substitute another rear-delt or glute exercise if needed.', ytQuery:'reverse pec deck rear delt proper form tutorial' },
+    ]
+  }
+];
+
+let trainingCategory = (() => {
+  const saved = safeLoad('fitdash_training_category', 'home');
+  return saved === 'gym' ? 'gym' : 'home';
+})();
+
+function switchTrainingCategory(category) {
+  trainingCategory = category === 'gym' ? 'gym' : 'home';
+  save('fitdash_training_category', trainingCategory);
+  const isGym = trainingCategory === 'gym';
+  const homeBtn = document.getElementById('training-category-home');
+  const gymBtn = document.getElementById('training-category-gym');
+  if(homeBtn) homeBtn.className = isGym ? 'btn-ghost' : 'btn-red';
+  if(gymBtn) gymBtn.className = isGym ? 'btn-red' : 'btn-ghost';
+  const tag = document.getElementById('training-category-tag');
+  if(tag) tag.textContent = isGym ? 'Full Body · Gym Program' : 'Full Body · Home Gym';
+  const warmup = document.getElementById('training-warmup-desc');
+  if(warmup) warmup.textContent = isGym
+    ? '5–10 min moderate cardio on a machine before weights. Use an incline if using a treadmill.'
+    : 'Brisk walk or light jog in place. Moderate pace — break a light sweat, warm the joints before loading.';
+  switchLevel(trainingLevel);
+}
+
 function getFullWorkoutPlan() {
-  const plan = JSON.parse(JSON.stringify(WORKOUT_PLAN));
+  const plan = JSON.parse(JSON.stringify(trainingCategory === 'gym' ? GYM_WORKOUT_PLAN : WORKOUT_PLAN));
   
   // Create the dedicated Custom Block pool
   let customBlock = {
@@ -4735,8 +5075,8 @@ function renderTrainingBlocks(cfg) {
   container.innerHTML = html;
 }
 
-// ── Init level on page load ───────────────────────────────
-switchLevel(trainingLevel);
+// ── Init training category and level on page load ─────────
+switchTrainingCategory(trainingCategory);
 
 // Populate training history on startup — without this, the Training tab
 // shows an empty history list until the user navigates away and back,
@@ -4821,7 +5161,13 @@ initTheme();
 // ══ SETTINGS ═════════════════════════════════════════════
 let userProfile = safeLoad('fitdash_profile', {});
 let userGoals   = safeLoad('fitdash_goals', {});
-let aiConfig    = safeLoad('fitdash_ai_config', { provider:'groq', model:'llama-3.1-8b-instant', apiKey:'', storeKey:false });
+let aiConfig    = safeLoad('fitdash_ai_config', { provider:'groq', model:'llama-3.1-8b-instant', apiKey:'', apiKeys:{}, storeKey:false, shareHealthData:true });
+
+function getProviderApiKey(provider) {
+  if(!aiConfig.apiKeys || typeof aiConfig.apiKeys !== 'object') aiConfig.apiKeys = {};
+  if(aiConfig.apiKey && !aiConfig.apiKeys[aiConfig.provider]) aiConfig.apiKeys[aiConfig.provider] = aiConfig.apiKey;
+  return aiConfig.apiKeys[provider] || '';
+}
 
 const CUSTOM_MODEL_VALUE = '__custom_model__';
 
@@ -4831,11 +5177,20 @@ var AI_MODELS = {
     { id:'llama-3.3-70b-versatile', name:'Llama 3.3 70B (quality)' },
     { id:'deepseek-r1-distill-llama-70b', name:'DeepSeek R1 70B' },
   ],
+  gemini: [
+    { id:'gemini-2.5-flash-lite', name:'Gemini 2.5 Flash-Lite (free)' },
+    { id:'gemini-2.5-flash', name:'Gemini 2.5 Flash (free)' },
+  ],
   openrouter: [
     { id:'openrouter/auto', name:'OpenRouter Auto (recommended)' },
     { id:'meta-llama/llama-3.1-8b-instruct', name:'Llama 3.1 8B' },
     { id:'mistralai/mistral-7b-instruct', name:'Mistral 7B' },
     { id:'deepseek/deepseek-r1', name:'DeepSeek R1' },
+  ],
+  ollama: [
+    { id:'llama3.2', name:'Llama 3.2 (local)' },
+    { id:'qwen2.5:7b', name:'Qwen 2.5 7B (local)' },
+    { id:'gemma3:4b', name:'Gemma 3 4B (local)' },
   ]
 };
 
@@ -4851,12 +5206,24 @@ function renderSettings() {
   if(g.targetWeight) document.getElementById('s-target-weight').value = g.targetWeight;
   if(g.targetBF)     document.getElementById('s-target-bf').value = g.targetBF;
   if(g.calTarget)    document.getElementById('s-cal-target').value = g.calTarget;
+  if(g.proteinTarget) document.getElementById('s-protein-target').value = g.proteinTarget;
+  if(g.carbTarget) document.getElementById('s-carb-target').value = g.carbTarget;
+  if(g.fatTarget) document.getElementById('s-fat-target').value = g.fatTarget;
   if(g.waterTarget)  document.getElementById('s-water-target').value = g.waterTarget;
+  const equipment = p.equipment || [];
+  document.querySelectorAll('#equipment-options input').forEach(input => { input.checked = equipment.includes(input.value); });
+  document.getElementById('s-limitations').value = p.limitations || '';
+  document.getElementById('s-reminder-enabled').checked = p.reminderEnabled !== false;
+  document.getElementById('s-reminder-time').value = p.reminderTime || '18:00';
+  document.getElementById('s-cardio-focus').value = p.cardioFocus || 'strength';
+  renderCardioPlan();
+  renderSavedGroceryList();
   if(g.cuisinePref)  document.getElementById('s-cuisine').value = g.cuisinePref;
   selectGoal(g.goalType || 'recomp');
   if(a.provider) document.getElementById('s-ai-provider').value = a.provider;
-  if(a.apiKey)   document.getElementById('s-api-key').value = a.apiKey;
+  document.getElementById('s-api-key').value = getProviderApiKey(a.provider || 'groq');
   document.getElementById('s-api-store').checked = !!a.storeKey;
+  document.getElementById('s-ai-share-health').checked = a.shareHealthData !== false;
   loadModelOptions(a.model);
   renderVideoCodeLibrary();
   
@@ -4892,6 +5259,101 @@ function saveScheduleSettings() {
   renderDashboard(); // Update dashboard if today became a rest day
 }
 
+function saveTrainingPreferences() {
+  userProfile.equipment = [...document.querySelectorAll('#equipment-options input:checked')].map(input => input.value);
+  userProfile.limitations = document.getElementById('s-limitations').value.trim();
+  userProfile.reminderEnabled = document.getElementById('s-reminder-enabled').checked;
+  userProfile.reminderTime = document.getElementById('s-reminder-time').value || '18:00';
+  userProfile.cardioFocus = document.getElementById('s-cardio-focus').value;
+  save('fitdash_profile', userProfile);
+  renderCardioPlan();
+  alert('Training preferences saved!');
+}
+
+function renderCardioPlan() {
+  const el = document.getElementById('cardio-plan-preview');
+  if(!el) return;
+  const focus = userProfile.cardioFocus || 'strength';
+  const total = focus === 'cardio' ? 300 : 150;
+  const trainingDays = (userProfile.schedule || [1,3,5]).filter(day => day !== 0).slice(0,3);
+  const names = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const minutes = trainingDays.length ? Math.floor(total / trainingDays.length) : total;
+  const remainder = trainingDays.length ? total - minutes * trainingDays.length : 0;
+  const plan = trainingDays.map((day, index) => `${names[day]}: ${minutes + (index === 0 ? remainder : 0)} min MISS cardio`).join(' · ');
+  el.innerHTML = `<div style="font-size:12px;font-weight:700">Weekly cardio target: ${total} minutes</div><div style="font-size:12px;color:var(--muted);margin-top:5px">${plan || 'Choose training days to build a cardio plan.'}</div>`;
+}
+
+function setPlanningStatus(message, color) {
+  const el = document.getElementById('planning-tools-status');
+  if(el) { el.textContent = message; el.style.color = color || 'var(--muted)'; }
+}
+
+function renderSavedGroceryList() {
+  const el = document.getElementById('saved-grocery-list');
+  if(!el) return;
+  const list = safeLoad('fitdash_grocery_list', []);
+  el.innerHTML = list.length ? `<strong>Saved grocery list</strong><br>${list.map(item => `• ${escapeHtml(item)}`).join('<br>')}` : '';
+}
+
+function downloadText(filename, text, type='text/plain') {
+  const url = URL.createObjectURL(new Blob([text], {type}));
+  const link = document.createElement('a'); link.href = url; link.download = filename; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function generateGroceryList() {
+  if(providerRequiresApiKey(aiConfig.provider) && !aiConfig.apiKey) { setPlanningStatus('Set up an AI provider first.', 'var(--orange)'); return; }
+  setPlanningStatus('Generating grocery list...');
+  try {
+    const response = await callAI([{role:'system',content:'Create a concise grocery list. Group items by protein, produce, grains, dairy, and pantry. Return plain text only.'},{role:'user',content:`Build a grocery list from my selected ${activePlan} meal plan and ${userGoals.cuisinePref || 'both'} cuisine preference. Include practical quantities for one week.`}]);
+    downloadText('fitdash-grocery-list.txt', response);
+    setPlanningStatus('Grocery list downloaded.');
+  } catch(err) { setPlanningStatus(`Grocery list failed: ${err.message.slice(0,100)}`, 'var(--red)'); }
+}
+
+function adjustCaloriesFromTrend() {
+  const recent = [...weights].sort((a,b) => a.date.localeCompare(b.date)).slice(-4);
+  const current = getTodayCalorieTarget();
+  if(recent.length < 2 || !current) { setPlanningStatus('Log at least two weights and set a calorie target first.', 'var(--orange)'); return; }
+  const change = recent[recent.length - 1].val - recent[0].val;
+  const delta = userGoals.goalType === 'bulk' ? (change <= 0 ? 100 : 0) : (change >= 0 ? -100 : 0);
+  if(!delta) { setPlanningStatus('Current weight trend does not require an adjustment.'); return; }
+  userGoals.calTarget = Math.max(800, current + delta);
+  save('fitdash_goals', userGoals);
+  setPlanningStatus(`Suggested calorie target: ${userGoals.calTarget} kcal (${delta > 0 ? '+' : ''}${delta}). Review before applying.`);
+}
+
+function showDeloadRecommendation() {
+  const recent = [...sessions].sort((a,b) => a.date.localeCompare(b.date)).slice(-3);
+  const volumes = recent.map(session => Number(session.volumeKg || 0));
+  const rising = volumes.length === 3 && volumes[2] >= volumes[1] && volumes[1] >= volumes[0] && volumes[2] > 0;
+  setPlanningStatus(rising ? 'Deload suggestion: reduce load or sets by 30–40% for one week if soreness, fatigue, or performance drop is present.' : 'No automatic deload signal. Use a deload if fatigue, soreness, or performance decline persists.', rising ? 'var(--orange)' : 'var(--muted)');
+}
+
+function exportProgressReport() {
+  const text = `FitDash Progress Report\nGenerated: ${new Date().toLocaleString()}\n\nSessions: ${sessions.length}\nCardio this week: ${cardioMins} minutes\nLatest weight: ${weights.length ? weights[weights.length-1].val + ' kg' : 'No data'}\nPersonal records: ${Object.keys(prs).length}\n\nThis report is for personal tracking and is not medical advice.`;
+  const win = window.open('', '_blank');
+  if(win) { win.document.write(`<pre style="font:16px system-ui;white-space:pre-wrap;padding:30px">${escapeHtml(text)}</pre>`); win.document.close(); win.print(); }
+  else downloadText('fitdash-progress-report.txt', text);
+}
+
+async function exportEncryptedBackup() {
+  const password = prompt('Enter a password for this encrypted backup:');
+  if(!password) return;
+  if(!window.crypto?.subtle) { setPlanningStatus('Encrypted backup is not supported in this browser.', 'var(--red)'); return; }
+  const data = {};
+  for(let i=0; i<localStorage.length; i++) { const key=localStorage.key(i); if(key && key.startsWith('fitdash_')) data[key]=localStorage.getItem(key); }
+  const encoder = new TextEncoder();
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const baseKey = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:100000,hash:'SHA-256'}, baseKey, {name:'AES-GCM',length:256}, false, ['encrypt']);
+  const ciphertext = await crypto.subtle.encrypt({name:'AES-GCM',iv}, key, encoder.encode(JSON.stringify(data)));
+  const payload = {version:1, salt:Array.from(salt), iv:Array.from(iv), data:Array.from(new Uint8Array(ciphertext))};
+  downloadText('fitdash-encrypted-backup.json', JSON.stringify(payload), 'application/json');
+  setPlanningStatus('Encrypted backup downloaded. Keep the password safe.');
+}
+
 function selectGoal(type) {
   if(!type) type = 'recomp';
   document.querySelectorAll('.goal-radio').forEach(el => {
@@ -4907,6 +5369,9 @@ function saveGoalSettings() {
     targetBF:    parseFloat(document.getElementById('s-target-bf').value) || null,
     cuisinePref: document.getElementById('s-cuisine').value,
     calTarget:   parseInt(document.getElementById('s-cal-target').value) || null,
+    proteinTarget: parseInt(document.getElementById('s-protein-target').value) || null,
+    carbTarget: parseInt(document.getElementById('s-carb-target').value) || null,
+    fatTarget: parseInt(document.getElementById('s-fat-target').value) || null,
     waterTarget: parseInt(document.getElementById('s-water-target').value) || null,
   };
   save('fitdash_goals', userGoals);
@@ -4917,6 +5382,10 @@ function loadModelOptions(selectedModel) {
   const provider = document.getElementById('s-ai-provider').value;
   const select = document.getElementById('s-ai-model');
   const customInput = document.getElementById('s-ai-model-custom');
+  const apiInput = document.getElementById('s-api-key');
+  const storeInput = document.getElementById('s-api-store');
+  if(apiInput) apiInput.value = getProviderApiKey(provider);
+  if(storeInput) storeInput.checked = !!getProviderApiKey(provider) && aiConfig.storeKey;
   const models = AI_MODELS[provider] || [];
   const modelToApply = selectedModel || aiConfig.model || '';
 
@@ -4954,27 +5423,72 @@ function getSelectedModelValue() {
   return document.getElementById('s-ai-model-custom').value.trim();
 }
 
+function providerRequiresApiKey(provider) {
+  return provider !== 'ollama';
+}
+
 function saveAISettings() {
   const storeKey = !!document.getElementById('s-api-store').checked;
   const enteredKey = document.getElementById('s-api-key').value.trim();
+  const provider = document.getElementById('s-ai-provider').value;
   const chosenModel = getSelectedModelValue();
   if(!chosenModel) {
     alert('Please select a model or enter a custom model ID.');
     return;
   }
   aiConfig = {
-    provider: document.getElementById('s-ai-provider').value,
+    ...aiConfig,
+    provider,
     model:    chosenModel,
-    apiKey:   storeKey ? enteredKey : '',
-    storeKey: storeKey,
+    apiKey:   providerRequiresApiKey(provider) && storeKey ? enteredKey : '',
+    apiKeys: { ...(aiConfig.apiKeys || {}), [provider]: providerRequiresApiKey(provider) && storeKey ? enteredKey : '' },
+    storeKey: providerRequiresApiKey(provider) && storeKey,
+    shareHealthData: document.getElementById('s-ai-share-health').checked,
   };
   save('fitdash_ai_config', aiConfig);
-  alert('AI config saved! API key ' + (storeKey ? 'stored' : 'not stored') + '. You can now use the AI Coach.');
+  alert('AI config saved! ' + (providerRequiresApiKey(aiConfig.provider) ? 'API key ' + (storeKey ? 'stored' : 'not stored') + '.' : 'Ollama uses your local model and needs no API key.') + ' You can now use the AI Coach.');
+}
+
+async function testAIConnection() {
+  const button = document.getElementById('test-ai-btn');
+  const status = document.getElementById('ai-test-status');
+  const provider = document.getElementById('s-ai-provider').value;
+  const model = getSelectedModelValue();
+  const apiKey = document.getElementById('s-api-key').value.trim() || aiConfig.apiKey;
+  if(providerRequiresApiKey(provider) && !apiKey) {
+    status.textContent = 'Enter an API key first.';
+    status.style.color = 'var(--orange)';
+    return;
+  }
+  if(!model) {
+    status.textContent = 'Select or enter a model first.';
+    status.style.color = 'var(--orange)';
+    return;
+  }
+
+  const previousConfig = aiConfig;
+  aiConfig = { provider, model, apiKey, storeKey:false };
+  button.disabled = true;
+  status.textContent = 'Testing...';
+  status.style.color = 'var(--muted)';
+  try {
+    await callAI([{ role:'user', content:'Reply with exactly: FitDash connection OK' }]);
+    status.textContent = 'Connection successful.';
+    status.style.color = 'var(--green)';
+  } catch(err) {
+    status.textContent = `Connection failed: ${err.message.slice(0,120)}`;
+    status.style.color = 'var(--red)';
+  } finally {
+    aiConfig = previousConfig;
+    button.disabled = false;
+  }
 }
 
 function clearStoredApiKey() {
   try {
+    const provider = document.getElementById('s-ai-provider').value;
     aiConfig.apiKey = '';
+    aiConfig.apiKeys = { ...(aiConfig.apiKeys || {}), [provider]: '' };
     aiConfig.storeKey = false;
     save('fitdash_ai_config', aiConfig);
     const inp = document.getElementById('s-api-key');
@@ -5243,7 +5757,14 @@ function buildSystemPrompt() {
 
   return `You are FitDash Coach, a concise fitness and nutrition advisor embedded in a tracking app.
 
-USER PROFILE:
+SELECTED TRAINING CATEGORY:
+- ${trainingCategory === 'gym' ? 'Gym: use the supplied full-body gym plan. Prefer machines, use the Legs & Calves superset, Back-Chest-Back giant set, and Finishing Circuit. Beginners should start with 2 sessions weekly; experienced users can use 2–3 sessions with at least one rest day between sessions. Aim for 150–300 weekly minutes of moderate steady-state cardio, and progress by training harder than last time without treating example weights as prescriptions.' : 'Home: use the existing FitDash home workout plan and its available-equipment exercise substitutions.'}
+- Equipment available: ${(p.equipment || []).join(', ') || 'not specified'}
+- Movement limitations: ${p.limitations || 'none specified'}
+
+${aiConfig.shareHealthData === false ? `PRIVACY MODE:
+- Personal health, body, nutrition, sleep, and progress data are not shared with the AI provider.
+- Give general fitness guidance only and ask the user for details when needed.` : `USER PROFILE:
 - Height: ${p.height||'?'}cm | Weight: ${latestW?latestW.val:(p.weight||'?')}kg | Age: ${p.age||'?'} | Gender: ${p.gender||'?'}
 - Activity: ${p.activity||'moderate'} | Goal: ${g.goalType||'recomp'}
 - Daily calorie target: ${g.calTarget||tdee||'?'} cal
@@ -5253,7 +5774,7 @@ USER PROFILE:
 TODAY:
 - Food log: ${todayFoodSummary}
 - Water: ${todayWater}ml / ${g.waterTarget||3000}ml
-- Sleep: ${recentSleep}
+- Sleep: ${recentSleep}`}
 
 INSTRUCTIONS:
 - Use evidence-based nutrition and training guidance.
@@ -5261,7 +5782,12 @@ INSTRUCTIONS:
 - Prefer Bangladeshi foods and brands when the user requests them.
 - Avoid rich festive dishes unless the calorie target allows them.
 - When counting food calories, break down macros by weight and include totals.
+- Include ingredients and concise numbered cooking steps for every generated meal or recipe.
 - Output special FitDash markers as instructed (FITDASH_PLAN, FITDASH_CAL, FITDASH_FOOD).
+- When the user asks to personalize app data, propose changes using approval markers only. Never claim a change was applied until the user presses Apply.
+- For goal edits, output |||FITDASH_GOALS|||JSON|||END_GOALS||| with only requested fields: calTarget, proteinTarget, carbTarget, fatTarget, waterTarget, goalType.
+- For a custom exercise, output |||FITDASH_EXERCISE|||JSON|||END_EXERCISE||| with name, muscle, tips, block, and optional ytId.
+- For a grocery list, output |||FITDASH_GROCERY|||JSON array|||END_GROCERY|||. For a workout template, output |||FITDASH_TEMPLATE|||JSON|||END_TEMPLATE|||.
 `;
 }
 
@@ -5270,8 +5796,8 @@ async function sendChatMessage() {
   const text = input.value.trim();
   if(!text || chatStreaming) return;
 
-  if(!aiConfig.apiKey) {
-    chatHistory.push({ role:'assistant', content:'⚠️ Please set up your API key first! Go to **Settings → AI Coach Setup** to enter your Groq or OpenRouter API key.' });
+  if(providerRequiresApiKey(aiConfig.provider) && !aiConfig.apiKey) {
+    chatHistory.push({ role:'assistant', content:'⚠️ Please set up your API key first! Go to **Settings → AI Coach Setup** to enter your provider key.' });
     save('fitdash_chat', chatHistory);
     renderChatMessages();
     return;
@@ -5332,10 +5858,77 @@ async function sendChatMessage() {
 }
 
 async function callAI(messages) {
+  const primaryConfig = { ...aiConfig };
+  try {
+    return await callAIRequest(messages);
+  } catch(primaryError) {
+    const statusMatch = String(primaryError.message || '').match(/^(\d+):/);
+    const statusCode = statusMatch ? Number(statusMatch[1]) : 0;
+    const canFallback = [400, 404, 408, 409, 429].includes(statusCode) || statusCode >= 500;
+    const fallbackModels = canFallback
+      ? (AI_MODELS[primaryConfig.provider] || []).map(model => model.id).filter(model => model !== primaryConfig.model)
+      : [];
+    if(!fallbackModels.length) throw primaryError;
+
+    for(const fallbackModel of fallbackModels) {
+      aiConfig = { ...primaryConfig, model:fallbackModel };
+      try {
+        return await callAIRequest(messages);
+      } catch(fallbackError) {
+        primaryError = fallbackError;
+      }
+    }
+    throw primaryError;
+  } finally {
+    aiConfig = primaryConfig;
+  }
+}
+
+async function callAIRequest(messages) {
+  if(aiConfig.provider === 'ollama') {
+    const res = await fetch('http://localhost:11434/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model:aiConfig.model, messages, temperature:0.7, max_tokens:2048, stream:false })
+    });
+    if(!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(`${res.status}: ${errText.slice(0,200)}`);
+    }
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || 'No response received.';
+  }
+
+  if(aiConfig.provider === 'gemini') {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(aiConfig.model)}:generateContent?key=${encodeURIComponent(aiConfig.apiKey)}`;
+    const systemMessage = messages.find(message => message.role === 'system');
+    const contents = messages
+      .filter(message => message.role !== 'system')
+      .map(message => ({
+        role: message.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: message.content }],
+      }));
+    const body = {
+      contents,
+      generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+    };
+    if(systemMessage) body.systemInstruction = { parts: [{ text: systemMessage.content }] };
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if(!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(`${res.status}: ${errText.slice(0,200)}`);
+    }
+    const data = await res.json();
+    return data.candidates?.[0]?.content?.parts?.map(part => part.text || '').join('') || 'No response received.';
+  }
+
   const isGroq = aiConfig.provider === 'groq';
-  const url = isGroq
-    ? 'https://api.groq.com/openai/v1/chat/completions'
-    : 'https://openrouter.ai/api/v1/chat/completions';
+  const url = isGroq ? 'https://api.groq.com/openai/v1/chat/completions' : 'https://openrouter.ai/api/v1/chat/completions';
 
   const headers = {
     'Content-Type': 'application/json',
@@ -5448,17 +6041,84 @@ function parseAIActions(content) {
       }, 100);
     } catch(e) { if(FITDASH_DEBUG) console.warn('Failed to parse food data:', e); }
   }
+
+  const addActionButton = (label, action, actionKey) => setTimeout(() => {
+    const msgs = document.querySelectorAll('.chat-msg.assistant');
+    const lastMsg = msgs[msgs.length - 1];
+    if(!lastMsg || lastMsg.querySelector(`[data-ai-action="${actionKey}"]`)) return;
+    const btn = document.createElement('button');
+    btn.className = 'apply-btn'; btn.dataset.aiAction = actionKey; btn.textContent = label;
+    btn.onclick = () => { action(btn); };
+    lastMsg.appendChild(btn);
+  }, 100);
+
+  const goalsMatch = content.match(/\|\|\|FITDASH_GOALS\|\|\|([\s\S]*?)\|\|\|END_GOALS\|\|\|/);
+  if(goalsMatch) {
+    try {
+      const requested = JSON.parse(goalsMatch[1]);
+      addActionButton('✅ Apply goal changes', btn => {
+        ['calTarget','proteinTarget','carbTarget','fatTarget','waterTarget'].forEach(key => { if(Number.isFinite(Number(requested[key]))) userGoals[key] = Number(requested[key]); });
+        if(['cut','recomp','bulk'].includes(requested.goalType)) userGoals.goalType = requested.goalType;
+        save('fitdash_goals', userGoals); btn.textContent = '✓ Goals applied'; btn.disabled = true; renderCalorieTracker();
+      }, 'goals');
+    } catch(e) { if(FITDASH_DEBUG) console.warn('Failed to parse goal data:', e); }
+  }
+
+  const exerciseMatch = content.match(/\|\|\|FITDASH_EXERCISE\|\|\|([\s\S]*?)\|\|\|END_EXERCISE\|\|\|/);
+  if(exerciseMatch) {
+    try {
+      const exercise = JSON.parse(exerciseMatch[1]);
+      if(exercise.name && exercise.muscle && exercise.tips) addActionButton(`✅ Add ${exercise.name}`, btn => {
+        const block = ['A','B','C'].includes(exercise.block) ? exercise.block : 'C';
+        const existing = customExercises.filter(cx => cx.block === block);
+        const baseCount = block === 'A' ? 2 : block === 'B' ? 3 : 6;
+        const item = { id:Date.now(), code:`${block}${baseCount + existing.length + 1}`, name:String(exercise.name).slice(0,80), muscle:String(exercise.muscle).slice(0,100), tips:String(exercise.tips).slice(0,240), ytId:normalizeYouTubeId(exercise.ytId || ''), block };
+        customExercises.push(item); save('fitdash_custom_ex', customExercises); renderCustomExercises(); renderVideoCodeLibrary(); btn.textContent = '✓ Exercise added'; btn.disabled = true;
+      }, 'exercise');
+    } catch(e) { if(FITDASH_DEBUG) console.warn('Failed to parse exercise data:', e); }
+  }
+
+  const groceryMatch = content.match(/\|\|\|FITDASH_GROCERY\|\|\|([\s\S]*?)\|\|\|END_GROCERY\|\|\|/);
+  if(groceryMatch) {
+    try {
+      const grocery = JSON.parse(groceryMatch[1]);
+      if(Array.isArray(grocery)) addActionButton('✅ Save grocery list', btn => { save('fitdash_grocery_list', grocery.map(item => typeof item === 'string' ? item : `${item.name || 'Item'}${item.quantity ? ` — ${item.quantity}` : ''}`)); renderSavedGroceryList(); btn.textContent = '✓ Grocery list saved'; btn.disabled = true; }, 'grocery');
+    } catch(e) { if(FITDASH_DEBUG) console.warn('Failed to parse grocery data:', e); }
+  }
+
+  const templateMatch = content.match(/\|\|\|FITDASH_TEMPLATE\|\|\|([\s\S]*?)\|\|\|END_TEMPLATE\|\|\|/);
+  if(templateMatch) {
+    try {
+      const template = JSON.parse(templateMatch[1]);
+      if(template && template.name && Array.isArray(template.plan)) addActionButton('✅ Save workout template', btn => { const templates=safeLoad('fitdash_workout_templates',[]); templates.unshift({...template,category:trainingCategory}); save('fitdash_workout_templates',templates.slice(0,10)); btn.textContent='✓ Template saved'; btn.disabled=true; }, 'template');
+    } catch(e) { if(FITDASH_DEBUG) console.warn('Failed to parse template data:', e); }
+  }
 }
 
 function handleQuickChip(action) {
   const input = document.getElementById('chat-input');
   const prompts = {
     'count':    'I want to log what I ate. I\'ll describe the food and amounts — please count the calories and macros for each item and give me a table breakdown.',
-    'plan':     'Create a personalized daily meal plan for me based on my profile, goals, and calorie target. Include breakfast, lunch, dinner, and snacks.',
+    'plan':     'Create a personalized daily meal plan for me based on my profile, goals, and calorie target. Include breakfast, lunch, dinner, and snacks. Include ingredients and concise numbered cooking steps for every meal.',
     'progress': 'Analyze my recent workout history, weight trend, and body composition. What\'s going well? What should I adjust?',
     'calories': 'Based on my current weight trend and goals, should I adjust my daily calorie target? Analyze my data and recommend a specific number.',
   };
   input.value = prompts[action] || '';
+  input.focus();
+}
+
+function suggestFoodSubstitution() {
+  const today = getLocalDateStr();
+  const entries = calorieLog[today] || [];
+  const input = document.getElementById('chat-input');
+  if(!input) return;
+  if(!entries.length) {
+    input.value = 'Suggest a high-protein, lower-calorie food substitution for a meal I am planning. Prefer foods from my selected cuisine.';
+  } else {
+    const foods = entries.map(entry => `${entry.name} (${entry.grams || '?'}g, ${Math.round(entry.calories || 0)} cal)`).join('; ');
+    input.value = `Suggest practical substitutions for these foods while preserving similar protein and improving my calorie or micronutrient balance: ${foods}. Give 3 alternatives with approximate calories and macros.`;
+  }
+  toggleChat();
   input.focus();
 }
 
@@ -6049,6 +6709,7 @@ function renderBFChart() {
 
 // ══ CALORIE TRACKER ═════════════════════════════════════
 let calorieLog = safeLoad('fitdash_calorie_log', {});
+let micronutrientLog = safeLoad('fitdash_micronutrient_log', {});
 let recentFoods = safeLoad('fitdash_recent_foods', []);
 let ingredientBuilder = { name: '', items: [] };
 let savedRecipes = safeLoad('fitdash_saved_recipes', []);
@@ -6146,6 +6807,7 @@ function renderIngredientBuilder() {
             <div style="font-size:11px;color:var(--muted)">${recipe.items.length} ingredients · ${Math.round(recipe.items.reduce((s,i)=>s+i.calories,0))} kcal</div>
             <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px">
               <button class="btn-ghost" onclick="loadSavedRecipe(${idx})" style="font-size:11px">Load</button>
+              <button class="btn-ghost" onclick="scaleSavedRecipe(${idx})" style="font-size:11px">Scale</button>
               <button class="btn-ghost" onclick="deleteSavedRecipe(${idx})" style="font-size:11px;color:var(--red)">Delete</button>
             </div>
           </div>`).join('')}</div>
@@ -6215,7 +6877,7 @@ async function lookupIngredientMacros(button) {
     alert('Enter a custom ingredient name first.');
     return;
   }
-  if(!aiConfig.apiKey) {
+  if(providerRequiresApiKey(aiConfig.provider) && !aiConfig.apiKey) {
     alert('Set your AI API key in Settings first.');
     return;
   }
@@ -6285,6 +6947,15 @@ function loadSavedRecipe(index) {
   const recipe = savedRecipes[index];
   if(!recipe) return;
   ingredientBuilder = { name: recipe.name, items: recipe.items.map(item => ({ ...item })) };
+  renderIngredientBuilder();
+}
+
+function scaleSavedRecipe(index) {
+  const recipe = savedRecipes[index];
+  if(!recipe) return;
+  const factor = Number(prompt('How many times this recipe?', '1'));
+  if(!Number.isFinite(factor) || factor <= 0 || factor > 20) return;
+  ingredientBuilder = { name:`${recipe.name} ×${factor}`, items:recipe.items.map(item => ({ ...item, grams:item.grams * factor, calories:item.calories * factor, protein:item.protein * factor, carbs:item.carbs * factor, fat:item.fat * factor })) };
   renderIngredientBuilder();
 }
 
@@ -6406,7 +7077,7 @@ async function logQuickFood() {
   const grams = Number.isFinite(gramsInput) && gramsInput > 0 ? gramsInput : gramsText;
   if(!name) { alert('Enter a food name.'); return; }
   if(!grams || grams <= 0) { alert('Enter valid grams.'); return; }
-  if(!aiConfig.apiKey) {
+  if(providerRequiresApiKey(aiConfig.provider) && !aiConfig.apiKey) {
     alert('Set your AI API key in Settings first to estimate calories from grams.');
     return;
   }
@@ -6421,6 +7092,18 @@ async function logQuickFood() {
   } catch(err) {
     alert('Auto count failed: ' + err.message + ' Use Ask AI to count instead.');
   }
+}
+
+function startVoiceFoodInput() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const input = document.getElementById('food-name-input');
+  if(!SpeechRecognition || !input) { alert('Voice input is not supported in this browser.'); return; }
+  const recognition = new SpeechRecognition();
+  recognition.lang = 'en-US';
+  recognition.interimResults = false;
+  recognition.onresult = event => { input.value = event.results[0][0].transcript; input.focus(); };
+  recognition.onerror = () => alert('Could not understand the food name.');
+  recognition.start();
 }
 
 async function estimateFoodMacros(name, grams, country) {
@@ -6565,6 +7248,10 @@ function renderCalorieTracker() {
   const totalP = entries.reduce((s,e) => s + e.protein, 0);
   const totalC = entries.reduce((s,e) => s + e.carbs, 0);
   const totalF = entries.reduce((s,e) => s + e.fat, 0);
+  const latestWeight = weights.length ? weights.reduce((latest, entry) => (!latest || entry.date > latest.date) ? entry : latest, null) : null;
+  const proteinTarget = userGoals.proteinTarget || (latestWeight ? Math.round(latestWeight.val * 1.6) : null);
+  const carbTarget = userGoals.carbTarget;
+  const fatTarget = userGoals.fatTarget;
   const pct = target ? Math.min(100, Math.round(totalCals / target * 100)) : 0;
   const barColor = pct > 100 ? 'var(--red)' : pct > 80 ? 'var(--yellow)' : 'var(--green)';
 
@@ -6581,6 +7268,27 @@ function renderCalorieTracker() {
       <span class="cal-macro-pill p">P ${totalP}g</span>
       <span class="cal-macro-pill c">C ${totalC}g</span>
       <span class="cal-macro-pill f">F ${totalF}g</span>
+    </div>
+    ${proteinTarget ? `<div style="margin-top:10px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px"><span>Protein target</span><span>${Math.round(totalP)} / ${proteinTarget}g</span></div>
+      <div class="cardio-bar"><div class="cardio-fill" style="width:${Math.min(100, Math.round(totalP / proteinTarget * 100))}%;background:var(--green)"></div></div>
+    </div>` : '<div style="font-size:11px;color:var(--muted);text-align:center;margin-top:8px">Add body weight or set a protein target in Settings.</div>'}
+    ${renderMacroTargetBar('Carbs', totalC, carbTarget, 'var(--blue)')}
+    ${renderMacroTargetBar('Fat', totalF, fatTarget, 'var(--yellow)')}
+  </div>`;
+
+  const micronutrients = micronutrientLog[today];
+  html += `<div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:13px;font-weight:700">Micronutrients</div>
+        <div style="font-size:11px;color:var(--muted)">AI estimates from today's logged foods</div>
+      </div>
+      <button class="btn-ghost" id="micronutrient-btn" onclick="estimateDailyMicronutrients()" style="font-size:11px">🤖 Estimate micros</button>
+    </div>
+    <div id="micronutrient-status" style="font-size:11px;color:var(--muted);margin-top:8px"></div>
+    <div id="micronutrient-values" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px">
+      ${micronutrients ? renderMicronutrientValues(micronutrients) : '<div style="grid-column:1/-1;font-size:12px;color:var(--muted);padding:8px 0">Add food first, then estimate fiber, sodium, potassium, calcium, iron, and vitamins.</div>'}
     </div>
   </div>`;
 
@@ -6647,9 +7355,201 @@ function renderCalorieTracker() {
   el.innerHTML = html;
 }
 
+function renderMacroTargetBar(label, total, target, color) {
+  if(!target) return '';
+  const pct = Math.min(100, Math.round(total / target * 100));
+  return `<div style="margin-top:10px">
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px"><span>${label} target</span><span>${Math.round(total)} / ${target}g</span></div>
+    <div class="cardio-bar"><div class="cardio-fill" style="width:${pct}%;background:${color}"></div></div>
+  </div>`;
+}
+
+function renderMicronutrientValues(values) {
+  const targets = {
+    fiber_g:25, sodium_mg:2300, potassium_mg:3400, calcium_mg:1000, iron_mg:8,
+    magnesium_mg:400, zinc_mg:11, phosphorus_mg:700, folate_mcg:400, vitamin_a_mcg:900,
+    vitamin_c_mg:90, vitamin_d_mcg:15, vitamin_e_mg:15, vitamin_k_mcg:120, vitamin_b12_mcg:2.4
+  };
+  const items = [
+    ['Fiber', values.fiber_g, 'g', 'fiber_g'], ['Sodium', values.sodium_mg, 'mg', 'sodium_mg'],
+    ['Potassium', values.potassium_mg, 'mg', 'potassium_mg'], ['Calcium', values.calcium_mg, 'mg', 'calcium_mg'],
+    ['Iron', values.iron_mg, 'mg', 'iron_mg'], ['Magnesium', values.magnesium_mg, 'mg', 'magnesium_mg'],
+    ['Zinc', values.zinc_mg, 'mg', 'zinc_mg'], ['Phosphorus', values.phosphorus_mg, 'mg', 'phosphorus_mg'],
+    ['Folate', values.folate_mcg, 'mcg', 'folate_mcg'], ['Vitamin A', values.vitamin_a_mcg, 'mcg', 'vitamin_a_mcg'],
+    ['Vitamin C', values.vitamin_c_mg, 'mg', 'vitamin_c_mg'], ['Vitamin D', values.vitamin_d_mcg, 'mcg', 'vitamin_d_mcg'],
+    ['Vitamin E', values.vitamin_e_mg, 'mg', 'vitamin_e_mg'], ['Vitamin K', values.vitamin_k_mcg, 'mcg', 'vitamin_k_mcg'],
+    ['Vitamin B12', values.vitamin_b12_mcg, 'mcg', 'vitamin_b12_mcg']
+  ];
+  return items.map(([label, value, unit, key]) => {
+    const target = targets[key];
+    const pct = target ? Math.round(Number(value || 0) / target * 100) : 0;
+    const color = pct >= 80 ? 'var(--green)' : 'var(--orange)';
+    return `
+    <div style="background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;text-align:center">
+      <div style="font-size:11px;color:var(--muted)">${label}</div>
+      <div style="font-size:14px;font-weight:700;color:var(--text);margin-top:3px">${Number(value || 0).toFixed(1)}${unit}</div>
+      <div style="font-size:10px;color:${color};margin-top:3px">${pct}% of daily reference</div>
+    </div>`;
+  }).join('');
+}
+
+async function estimateDailyMicronutrients() {
+  const today = getLocalDateStr();
+  const entries = calorieLog[today] || [];
+  const button = document.getElementById('micronutrient-btn');
+  const status = document.getElementById('micronutrient-status');
+  const values = document.getElementById('micronutrient-values');
+  if(!entries.length) {
+    status.textContent = 'Log at least one food first.';
+    status.style.color = 'var(--orange)';
+    return;
+  }
+  if(providerRequiresApiKey(aiConfig.provider) && !aiConfig.apiKey) {
+    status.textContent = 'Set up an AI provider in Settings first.';
+    status.style.color = 'var(--orange)';
+    return;
+  }
+  if(aiConfig.shareHealthData === false) {
+    status.textContent = 'Enable health and progress data sharing in AI settings to estimate daily micros.';
+    status.style.color = 'var(--orange)';
+    return;
+  }
+
+  button.disabled = true;
+  status.textContent = 'Estimating...';
+  status.style.color = 'var(--muted)';
+  try {
+    const foodSummary = entries.map(entry => `${entry.name} (${entry.grams || '?'}g)`).join('\n');
+    const response = await callAI([
+      { role:'system', content:'You are a nutrition assistant. Return only valid JSON with numeric daily totals. Estimate these nutrients from the listed foods: fiber_g, sodium_mg, potassium_mg, calcium_mg, iron_mg, magnesium_mg, zinc_mg, phosphorus_mg, folate_mcg, vitamin_a_mcg, vitamin_c_mg, vitamin_d_mcg, vitamin_e_mg, vitamin_k_mcg, vitamin_b12_mcg. Do not include explanations.' },
+      { role:'user', content:`Estimate total micronutrients for these foods eaten today:\n${foodSummary}\nReturn JSON with exactly these keys: fiber_g, sodium_mg, potassium_mg, calcium_mg, iron_mg, magnesium_mg, zinc_mg, phosphorus_mg, folate_mcg, vitamin_a_mcg, vitamin_c_mg, vitamin_d_mcg, vitamin_e_mg, vitamin_k_mcg, vitamin_b12_mcg.` }
+    ]);
+    const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || response.match(/(\{[\s\S]*\})/);
+    if(!jsonMatch) throw new Error('AI response did not contain JSON.');
+    const parsed = JSON.parse(jsonMatch[1].trim());
+    const keys = ['fiber_g','sodium_mg','potassium_mg','calcium_mg','iron_mg','magnesium_mg','zinc_mg','phosphorus_mg','folate_mcg','vitamin_a_mcg','vitamin_c_mg','vitamin_d_mcg','vitamin_e_mg','vitamin_k_mcg','vitamin_b12_mcg'];
+    if(keys.some(key => !Number.isFinite(Number(parsed[key])))) throw new Error('Incomplete micronutrient data returned.');
+    micronutrientLog[today] = Object.fromEntries(keys.map(key => [key, Number(parsed[key])]));
+    save('fitdash_micronutrient_log', micronutrientLog);
+    values.innerHTML = renderMicronutrientValues(micronutrientLog[today]);
+    status.textContent = 'Estimated from today\'s logged foods. Values are approximate.';
+    status.style.color = 'var(--green)';
+  } catch(err) {
+    status.textContent = `Micronutrient estimate failed: ${err.message.slice(0,120)}`;
+    status.style.color = 'var(--red)';
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function analyzeLabelPhoto(input) {
+  const file = input.files?.[0];
+  const status = document.getElementById('label-photo-status');
+  if(!file) return;
+  if(aiConfig.provider !== 'gemini') {
+    status.textContent = 'Photo reading currently requires Gemini. Use manual entry with other providers.';
+    status.style.color = 'var(--orange)';
+    return;
+  }
+  if(!aiConfig.apiKey) {
+    status.textContent = 'Set a Gemini API key in Settings first.';
+    status.style.color = 'var(--orange)';
+    return;
+  }
+  status.textContent = 'Reading label...';
+  status.style.color = 'var(--muted)';
+  try {
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error('Could not read the photo.'));
+      reader.readAsDataURL(file);
+    });
+    const comma = dataUrl.indexOf(',');
+    const mimeType = dataUrl.slice(5, comma).split(';')[0];
+    const base64 = dataUrl.slice(comma + 1);
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(aiConfig.model)}:generateContent?key=${encodeURIComponent(aiConfig.apiKey)}`;
+    const response = await fetch(url, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        contents:[{role:'user',parts:[
+          {text:'Read this nutrition label. Return only JSON with productName, calories, servingSizeGrams, protein, carbs, fat. Use numbers for all nutrition fields and do not guess if the label is unreadable.'},
+          {inlineData:{mimeType,data:base64}}
+        ]}],
+        generationConfig:{temperature:0, maxOutputTokens:512}
+      })
+    });
+    if(!response.ok) throw new Error(`${response.status}: ${(await response.text()).slice(0,120)}`);
+    const result = await response.json();
+    const text = result.candidates?.[0]?.content?.parts?.map(part => part.text || '').join('') || '';
+    const match = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || text.match(/(\{[\s\S]*\})/);
+    if(!match) throw new Error('No readable nutrition data found.');
+    const parsed = JSON.parse(match[1].trim());
+    const fields = { 'label-name':parsed.productName, 'label-cals':parsed.calories, 'label-serving':parsed.servingSizeGrams, 'label-protein':parsed.protein, 'label-carbs':parsed.carbs, 'label-fat':parsed.fat };
+    Object.entries(fields).forEach(([id, value]) => { if(value !== undefined && value !== null) document.getElementById(id).value = value; });
+    status.textContent = 'Label read. Check the fields before logging.';
+    status.style.color = 'var(--green)';
+  } catch(err) {
+    status.textContent = `Photo reading failed: ${err.message.slice(0,100)}`;
+    status.style.color = 'var(--red)';
+  } finally {
+    input.value = '';
+  }
+}
+
 // ══ AI PLAN MANAGEMENT ═══════════════════════════════════
 let aiPlan = safeLoad('fitdash_ai_plan', null);
+let customDishes = safeLoad('fitdash_custom_dishes', []);
 if (activePlan === 'ai' && !aiPlan) activePlan = '1500';
+
+function renderSavedCustomDishes() {
+  const el = document.getElementById('saved-custom-dishes');
+  if(!el) return;
+  el.innerHTML = customDishes.length ? `<div style="font-size:12px;font-weight:700;margin-bottom:8px">Saved custom dishes</div>${customDishes.slice(0,8).map((dish, index) => `<div style="display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px"><span><strong>${escapeHtml(dish.name)}</strong> · ${dish.calories || '?'} cal · ${dish.servings || 1} serving(s)</span><button class="btn-ghost" onclick="loadCustomDish(${index})" style="font-size:11px;padding:4px 8px">Edit with AI</button></div>`).join('')}` : '';
+}
+
+function loadCustomDish(index) {
+  const dish = customDishes[index];
+  if(!dish) return;
+  document.getElementById('custom-dish-name').value = dish.name || '';
+  document.getElementById('custom-dish-servings').value = dish.servings || 1;
+  document.getElementById('custom-dish-info').value = (dish.ingredients || []).join(', ');
+  document.getElementById('custom-dish-result').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function toggleDishExample() {
+  const example = document.getElementById('custom-dish-example');
+  const button = document.querySelector('[aria-controls="custom-dish-example"]');
+  if(!example || !button) return;
+  example.hidden = !example.hidden;
+  button.setAttribute('aria-expanded', String(!example.hidden));
+}
+
+async function generateCustomDish() {
+  const name = document.getElementById('custom-dish-name').value.trim() || 'Custom dish';
+  const info = document.getElementById('custom-dish-info').value.trim();
+  const servings = Number(document.getElementById('custom-dish-servings').value) || 1;
+  const status = document.getElementById('custom-dish-status');
+  const result = document.getElementById('custom-dish-result');
+  if(!info) { status.textContent = 'Describe the ingredients or dish first.'; status.style.color = 'var(--orange)'; return; }
+  if(providerRequiresApiKey(aiConfig.provider) && !aiConfig.apiKey) { status.textContent = 'Set up an AI provider in Settings first.'; status.style.color = 'var(--orange)'; return; }
+  if(aiConfig.shareHealthData === false) { status.textContent = 'Enable health-data sharing for personalized nutrition generation.'; status.style.color = 'var(--orange)'; return; }
+  status.textContent = 'Creating recipe...'; status.style.color = 'var(--muted)';
+  try {
+    const response = await callAI([
+      {role:'system',content:'You are a practical nutrition recipe assistant. Return only valid JSON with name, servings, ingredients (array of strings), steps (array of concise cooking steps), calories, protein, carbs, and fat. Respect the user ingredients, cuisine, budget, and cooking preferences. Never invent medical claims.'},
+      {role:'user',content:`Create or edit this custom dish. Name: ${name}. Servings: ${servings}. User information: ${info}. Return JSON only.`}
+    ]);
+    const match = response.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || response.match(/(\{[\s\S]*\})/);
+    if(!match) throw new Error('AI response did not contain recipe JSON.');
+    const dish = JSON.parse(match[1].trim());
+    if(!dish.name || !Array.isArray(dish.ingredients) || !Array.isArray(dish.steps)) throw new Error('Recipe is missing ingredients or cooking steps.');
+    result.innerHTML = `<div style="background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px"><strong>${escapeHtml(dish.name)}</strong><div style="font-size:12px;color:var(--muted);margin-top:5px">${dish.calories || '?'} cal · P ${dish.protein || '?'}g · C ${dish.carbs || '?'}g · F ${dish.fat || '?'}g</div><div style="font-size:12px;margin-top:8px"><strong>Ingredients:</strong> ${escapeHtml(dish.ingredients.join(', '))}</div><div style="font-size:12px;margin-top:8px"><strong>Cooking steps:</strong><br>${dish.steps.map((step,index)=>`${index+1}. ${escapeHtml(step)}`).join('<br>')}</div><button class="apply-btn" id="apply-custom-dish">✅ Save custom dish</button></div>`;
+    document.getElementById('apply-custom-dish').onclick = event => { customDishes.unshift({...dish, servings}); customDishes=customDishes.slice(0,20); save('fitdash_custom_dishes',customDishes); renderSavedCustomDishes(); event.target.textContent='✓ Dish saved'; event.target.disabled=true; };
+    status.textContent = 'Recipe ready. Review it before saving.'; status.style.color = 'var(--green)';
+  } catch(err) { status.textContent = `Recipe failed: ${err.message.slice(0,120)}`; status.style.color = 'var(--red)'; }
+}
 
 function applyAIPlan(planData) {
   aiPlan = { ...planData, createdAt: getLocalDateStr() };
@@ -6696,6 +7596,7 @@ function renderAIPlan() {
         <div class="meal-card-body">
           <div class="meal-desc">${escapeHtml(m.desc||'')}</div>
           ${m.recipe ? `<div style="font-size:11px;color:var(--muted2);margin-top:8px;background:var(--bg);padding:8px;border-radius:var(--radius-sm)"><strong>Recipe & Macros:</strong><br>${escapeHtml(typeof m.recipe === 'string' ? m.recipe : (Array.isArray(m.recipe) ? m.recipe.map(x => Object.values(x).join(' ')).join(', ') : JSON.stringify(m.recipe)))}</div>` : ''}
+          ${m.steps || m.cookingSteps || m.instructions ? `<div style="font-size:11px;color:var(--muted2);margin-top:8px;background:var(--bg);padding:8px;border-radius:var(--radius-sm)"><strong>Cooking steps:</strong><br>${escapeHtml(Array.isArray(m.steps || m.cookingSteps || m.instructions) ? (m.steps || m.cookingSteps || m.instructions).map((step, index) => `${index + 1}. ${step}`).join('\n') : (m.steps || m.cookingSteps || m.instructions))}</div>` : ''}
         </div>
       </div>`).join('');
     out += '</div>';
@@ -6842,6 +7743,7 @@ function logSleep() {
 // Initialize Phase 1 components after state variables are defined
 renderCalorieTracker();
 renderIngredientBuilder();
+renderSavedCustomDishes();
 renderBodyComp();
 renderAIPlan();
 renderCircHistory();
@@ -6857,6 +7759,10 @@ renderMeals(MEALS_BD1500, 'bd1500');
 renderMeals(MEALS_BD2000, 'bd2000');
 renderMeals(MEALS_BD2500, 'bd2500');
 renderDashboard();
+
+if('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+}
 
 </script>
 </body>

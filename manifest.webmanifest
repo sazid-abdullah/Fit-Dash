@@ -1,0 +1,10 @@
+{
+  "name": "FitDash Fitness Dashboard",
+  "short_name": "FitDash",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#08080e",
+  "theme_color": "#08080e",
+  "description": "Offline fitness, nutrition, and AI coaching dashboard.",
+  "icons": []
+}
