@@ -81,6 +81,8 @@ All plans follow Greg Doucette's Circle Diet: low calorie-density, high protein,
 
 All meal data is from Greg Doucette's published diet plans and the Ultimate Anabolic Cookbook 2.0. The Bangladesh plans use recipes and ingredients available at Agora, Meena Bazaar, Shwapno, and Unimart.
 
+The **🤖 My Plan** tab is the personalized path. The user enters preferences once — goal, calorie target, meal structure, foods to include, foods to avoid, budget, cuisine, equipment, and preparation limits. FitDash sends one structured request to the configured AI provider. The AI resolves targets, builds the meals, checks calories and protein, and returns JSON that FitDash validates and saves immediately. The example plans remain available in their existing tabs.
+
 ---
 
 ## Calorie calculation
