@@ -636,7 +636,6 @@ function renderSettings() {
   if(g.cuisinePref)  document.getElementById('s-cuisine').value = g.cuisinePref;
   selectGoal(g.goalType || 'recomp');
   if(a.provider) document.getElementById('s-ai-provider').value = a.provider;
-  document.getElementById('s-api-key').value = getProviderApiKey(a.provider || 'groq');
   document.getElementById('s-api-store').checked = !!a.storeKey;
   document.getElementById('s-ai-share-health').checked = a.shareHealthData !== false;
   loadModelOptions(a.model);
@@ -972,8 +971,10 @@ function clearStoredApiKey() {
 }
 
 function toggleApiKeyVis() {
-  const inp = document.getElementById('s-api-key');
-  inp.type = inp.type === 'password' ? 'text' : 'password';
+  ['groq', 'gemini', 'openrouter'].forEach(p => {
+    const inp = document.getElementById('s-api-key-' + p);
+    if(inp) inp.type = inp.type === 'password' ? 'text' : 'password';
+  });
 }
 
 // â”€â”€ Data Export / Import â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1959,6 +1960,8 @@ function renderBFChart() {
     ctx.fillText('Target', W-pad.r-35, ty-5);
   }
 }
+
+
 
 
 
