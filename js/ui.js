@@ -1,4 +1,4 @@
-﻿// â•â• NAV â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+﻿// ══ NAV ══════════════════════════════════════════════════════
 
 let undoTimeout;
 function showUndoToast(msg, onUndo) {
@@ -15,7 +15,7 @@ function showUndoToast(msg, onUndo) {
   clearTimeout(undoTimeout);
   undoTimeout = setTimeout(() => { toast.style.bottom = '-100px'; }, 5000);
 }
-// Cache static NodeLists once â€” avoids repeated querySelectorAll on every navigation.
+// Cache static NodeLists once — avoids repeated querySelectorAll on every navigation.
 const _cachedPages = document.querySelectorAll('.page');
 const _cachedTabs  = document.querySelectorAll('.nav-tab');
 const _tabMap = { dashboard:0, training:1, nutrition:2, progress:3, settings:4 };
@@ -88,7 +88,7 @@ function getTodayCalorieTarget() {
   return Math.round(bmr * (actMap[p.activity]||1.55));
 }
 
-// â•â• DASHBOARD â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══ DASHBOARD ════════════════════════════════════════════════
 function renderDashboard() {
   const now = new Date();
   const h = now.getHours();
@@ -112,7 +112,7 @@ function renderDashboard() {
     pCalEl.textContent = tc >= 1000 ? (tc/1000).toFixed(1)+'k' : tc;
   }
 
-  // Today's weight â€” use local ISO date to match how weights are stored
+  // Today's weight — use local ISO date to match how weights are stored
   const todayW = weights.find(w => w.date === getLocalDateStr());
   document.getElementById('stat-weight').textContent = todayW ? todayW.val : '--';
 
@@ -138,7 +138,7 @@ function renderDashboard() {
   
   if (isRestDay) {
     if(heroBtn) {
-      heroBtn.innerHTML = 'ðŸ§˜ &nbsp;Enjoy your Rest Day';
+      heroBtn.innerHTML = '🧘 &nbsp;Enjoy your Rest Day';
       heroBtn.style.background = 'var(--card)';
       heroBtn.style.color = 'var(--text)';
       heroBtn.style.border = '1px solid var(--border)';
@@ -148,7 +148,7 @@ function renderDashboard() {
     if(quickRecov) quickRecov.style.display = 'flex';
   } else {
     if(heroBtn) {
-      heroBtn.innerHTML = 'â–¶ &nbsp;Start Today\'s Workout';
+      heroBtn.innerHTML = '▶ &nbsp;Start Today\'s Workout';
       heroBtn.style.background = 'var(--red)';
       heroBtn.style.color = '#fff';
       heroBtn.style.border = 'none';
@@ -160,7 +160,7 @@ function renderDashboard() {
 
   renderChecklist();
   renderCardio();
-  applyPlan(activePlan); // applyPlan = UI only; switchPlan also saves â€” don't write localStorage on every render
+  applyPlan(activePlan); // applyPlan = UI only; switchPlan also saves — don't write localStorage on every render
 }
 
 /**
@@ -185,11 +185,11 @@ function calcStreak() {
   return streak;
 }
 
-// â•â• WEIGHT CHART â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══ WEIGHT CHART ══════════════════════════════════════════════
 let weightChart = null;
 
 function renderWeightChart() {
-  // Sort chronologically before slicing â€” both write paths keep the array in order
+  // Sort chronologically before slicing — both write paths keep the array in order
   // for fresh data, but localStorage loaded from an older/imported history may not be.
   // localeCompare on ISO dates (YYYY-MM-DD) is equivalent to date-order comparison.
   const last7 = [...weights].sort((a,b) => a.date.localeCompare(b.date)).slice(-7);
@@ -208,10 +208,10 @@ function renderWeightChart() {
     const avg = data.length ? (data.reduce((a,b) => a + b, 0) / data.length).toFixed(1) : null;
     const delta = (latest !== null && first !== null) ? (latest - first).toFixed(1) : null;
     const trend = delta !== null ? (delta > 0 ? `up ${Math.abs(delta)} kg` : (delta < 0 ? `down ${Math.abs(delta)} kg` : 'no change')) : '';
-    desc.textContent = `7-day weight trend â€” ${data.length} entries. Latest: ${latest} kg. Average: ${avg} kg. ${trend}`;
+    desc.textContent = `7-day weight trend — ${data.length} entries. Latest: ${latest} kg. Average: ${avg} kg. ${trend}`;
   }
 
-  // weightChart stays null â€” this chart uses custom canvas drawing, not Chart.js.
+  // weightChart stays null — this chart uses custom canvas drawing, not Chart.js.
   // Canvas is redrawn fresh each call via clearRect(); no destroy() needed.
 
   if(!data.length) {
@@ -309,7 +309,7 @@ function clearWeightHistory() {
   weights = [];
   save('fitdash_weights', weights);
   const statEl = document.getElementById('stat-weight');
-  if(statEl) statEl.textContent = 'â€”';
+  if(statEl) statEl.textContent = '—';
   renderProgress();
 }
 
@@ -327,12 +327,12 @@ function renderWeightHistory() {
         <span style="font-size:15px;font-weight:700;color:var(--text)">${w.val} kg</span>
         <button onclick="deleteWeight('${w.date}')"
           title="Delete this entry"
-          class="del-btn del-btn-md">Ã—</button>
+          class="del-btn del-btn-md">×</button>
       </div>
     </div>`).join('');
 }
 
-// â•â• PROGRESS PAGE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══ PROGRESS PAGE ════════════════════════════════════════════
 function renderProgress() {
   renderDashboard();
   renderProgressSummary();
@@ -391,7 +391,7 @@ function renderExerciseProgression() {
     <div class="stat-card"><div class="stat-num">${rows.length}</div><div class="stat-label">Sets logged</div></div>
     <div class="stat-card"><div class="stat-num">${rows.length ? Math.max(...rows.map(row => row.weight)) : 0}</div><div class="stat-label">Best weight</div></div>
     <div class="stat-card"><div class="stat-num">${rows.length ? Math.max(...rows.map(row => row.reps)) : 0}</div><div class="stat-label">Best reps</div></div>
-  </div>${rows.slice(-8).reverse().map(row => `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px"><span>${row.date}</span><strong>${row.weight}kg Ã— ${row.reps}</strong></div>`).join('')}`;
+  </div>${rows.slice(-8).reverse().map(row => `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px"><span>${row.date}</span><strong>${row.weight}kg × ${row.reps}</strong></div>`).join('')}`;
 }
 
 function renderProgressSummary() {
@@ -505,7 +505,7 @@ function renderHistoryList() {
   const el = document.getElementById('history-list');
   if(!el) return;
   if(!sessions.length) {
-    el.innerHTML = '<div class="empty-state"><div class="empty-icon">ðŸ“‹</div><p>No sessions yet.<br>Log your first workout on the Training page.</p></div>';
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><p>No sessions yet.<br>Log your first workout on the Training page.</p></div>';
     return;
   }
   const sorted = [...sessions].reverse().slice(0,20);
@@ -513,11 +513,11 @@ function renderHistoryList() {
     const d        = parseLocalDate(s.date);
     const dateStr  = d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
     const durLabel = s.durationSecs
-      ? `â± ${String(Math.floor(s.durationSecs/60)).padStart(2,'0')}:${String(s.durationSecs%60).padStart(2,'0')}`
+      ? `⏱ ${String(Math.floor(s.durationSecs/60)).padStart(2,'0')}:${String(s.durationSecs%60).padStart(2,'0')}`
       : '';
-    const calLabel = s.caloriesBurned ? `ðŸ”¥ ${s.caloriesBurned} cal` : '';
-    const volLabel = s.volumeKg       ? `ðŸ“¦ ${s.volumeKg} kg` : `${countSets(s)} sets`;
-    const chips    = [dateStr, durLabel, calLabel, volLabel].filter(Boolean).join(' Â· ');
+    const calLabel = s.caloriesBurned ? `🔥 ${s.caloriesBurned} cal` : '';
+    const volLabel = s.volumeKg       ? `📦 ${s.volumeKg} kg` : `${countSets(s)} sets`;
+    const chips    = [dateStr, durLabel, calLabel, volLabel].filter(Boolean).join(' · ');
     return `<div class="history-item">
       <div class="history-date">
         <div class="history-day">${d.toLocaleDateString('en-US',{weekday:'short'})}</div>
@@ -528,7 +528,7 @@ function renderHistoryList() {
         <div class="history-detail" style="color:var(--muted2);font-size:11px">${chips}</div>
         ${s.notes?`<div class="history-detail" style="margin-top:3px;color:var(--muted)">${escapeHtml(s.notes.slice(0,80))}</div>`:''}
       </div>
-      <button onclick="deleteSession(${s.id})" title="Delete this session" class="del-btn del-btn-md" style="flex-shrink:0;margin-left:8px">Ã—</button>
+      <button onclick="deleteSession(${s.id})" title="Delete this session" class="del-btn del-btn-md" style="flex-shrink:0;margin-left:8px">×</button>
     </div>`;
   }).join('');
 }
@@ -568,12 +568,12 @@ function clearHistory() {
   if(!confirm('Clear all session history? This cannot be undone.')) return;
   sessions=[];
   save('fitdash_sessions', sessions);
-  renderDashboard();           // â† streak, session count, last session label were left stale without this
-  renderTrainingHistory();     // â† history list on Training tab also stale without this
+  renderDashboard();           // ← streak, session count, last session label were left stale without this
+  renderTrainingHistory();     // ← history list on Training tab also stale without this
   renderProgress();
 }
 
-// â•â• SETTINGS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══ SETTINGS ═════════════════════════════════════════════
 let userProfile = safeLoad('fitdash_profile', {});
 let userGoals   = safeLoad('fitdash_goals', {});
 let aiConfig    = safeLoad('fitdash_ai_config', { provider:'groq', model:'llama-3.1-8b-instant', apiKey:'', apiKeys:{}, storeKey:false, shareHealthData:true });
@@ -701,7 +701,7 @@ function renderCardioPlan() {
   const names = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const minutes = trainingDays.length ? Math.floor(total / trainingDays.length) : total;
   const remainder = trainingDays.length ? total - minutes * trainingDays.length : 0;
-  const plan = trainingDays.map((day, index) => `${names[day]}: ${minutes + (index === 0 ? remainder : 0)} min MISS cardio`).join(' Â· ');
+  const plan = trainingDays.map((day, index) => `${names[day]}: ${minutes + (index === 0 ? remainder : 0)} min LISS cardio`).join(' · ');
   el.innerHTML = `<div style="font-size:12px;font-weight:700">Weekly cardio target: ${total} minutes</div><div style="font-size:12px;color:var(--muted);margin-top:5px">${plan || 'Choose training days to build a cardio plan.'}</div>`;
 }
 
@@ -714,7 +714,7 @@ function renderSavedGroceryList() {
   const el = document.getElementById('saved-grocery-list');
   if(!el) return;
   const list = safeLoad('fitdash_grocery_list', []);
-  el.innerHTML = list.length ? `<strong>Saved grocery list</strong><br>${list.map(item => `â€¢ ${escapeHtml(item)}`).join('<br>')}` : '';
+  el.innerHTML = list.length ? `<strong>Saved grocery list</strong><br>${list.map(item => `• ${escapeHtml(item)}`).join('<br>')}` : '';
 }
 
 function downloadText(filename, text, type='text/plain') {
@@ -749,7 +749,7 @@ function showDeloadRecommendation() {
   const recent = [...sessions].sort((a,b) => a.date.localeCompare(b.date)).slice(-3);
   const volumes = recent.map(session => Number(session.volumeKg || 0));
   const rising = volumes.length === 3 && volumes[2] >= volumes[1] && volumes[1] >= volumes[0] && volumes[2] > 0;
-  setPlanningStatus(rising ? 'Deload suggestion: reduce load or sets by 30â€“40% for one week if soreness, fatigue, or performance drop is present.' : 'No automatic deload signal. Use a deload if fatigue, soreness, or performance decline persists.', rising ? 'var(--orange)' : 'var(--muted)');
+  setPlanningStatus(rising ? 'Deload suggestion: reduce load or sets by 30–40% for one week if soreness, fatigue, or performance drop is present.' : 'No automatic deload signal. Use a deload if fatigue, soreness, or performance decline persists.', rising ? 'var(--orange)' : 'var(--muted)');
 }
 
 function exportProgressReport() {
@@ -955,7 +955,7 @@ function toggleApiKeyVis() {
   });
 }
 
-// â”€â”€ Data Export / Import â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Data Export / Import ──────────────────────────────────
 function exportAllData() {
   const data = {};
   for(let i = 0; i < localStorage.length; i++) {
@@ -1072,7 +1072,7 @@ function generate30DayMockData() {
 }
 
 function clearAllData() {
-  if(!confirm('âš ï¸ Delete ALL FitDash data? This includes sessions, weight logs, PRs, settings, and AI config. This cannot be undone!')) return;
+  if(!confirm('⚠️ Delete ALL FitDash data? This includes sessions, weight logs, PRs, settings, and AI config. This cannot be undone!')) return;
   const keys = [];
   for(let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
@@ -1082,7 +1082,7 @@ function clearAllData() {
   location.reload();
 }
 
-// â•â• WATER TRACKER â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══ WATER TRACKER ═══════════════════════════════════════════
 let waterLog = safeLoad('fitdash_water', { date: getLocalDateStr(), ml: 0 });
 
 function renderWater() {
@@ -1112,7 +1112,7 @@ function resetWater() {
   renderWater();
 }
 
-// â•â• SLEEP TRACKER â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══ SLEEP TRACKER ═══════════════════════════════════════════
 let sleepHistory = safeLoad('fitdash_sleep', []);
 
 function renderSleep() {
@@ -1196,9 +1196,9 @@ renderWater();
 renderSleep();
 renderCustomExercises();
 
-// â•â• CHECKLIST â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══ CHECKLIST ════════════════════════════════════════════════
 function renderChecklist() {
-  const today = getLocalDateStr();   // ISO local â€” avoids toDateString() locale variance
+  const today = getLocalDateStr();   // ISO local — avoids toDateString() locale variance
   if(checklist._date !== today) { checklist = { _date: today }; save('fitdash_check', checklist); }
   const el = document.getElementById('checklist');
   if(!el) return;
@@ -1224,7 +1224,7 @@ function toggleCheck(id) {
   renderChecklist();
 }
 
-// â•â• NUTRITION RENDER â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══ NUTRITION RENDER ═════════════════════════════════════════
 function renderMeals(data, prefix) {
   ['breakfast','lunch','dinner'].forEach((slot,i) => {
     const el = document.getElementById(`meals-${prefix}-${i+1}`);
@@ -1235,7 +1235,7 @@ function renderMeals(data, prefix) {
           <div class="meal-icon">${m.emoji}</div>
           <div class="meal-name">${m.name}</div>
           <div class="meal-cals">${m.kcal} cal</div>
-          <div class="meal-chevron">â–¼</div>
+          <div class="meal-chevron">▼</div>
         </div>
         <div class="meal-card-body">
           <div class="meal-desc">${m.desc}</div>
@@ -1249,7 +1249,7 @@ function renderMeals(data, prefix) {
         <div class="snack-emoji">${s.emoji}</div>
         <div>
           <div class="snack-name">${s.name}</div>
-          <div class="snack-cal">${s.approx ? 'â‰ˆ' : ''}${s.kcal} cal</div>
+          <div class="snack-cal">${s.approx ? '≈' : ''}${s.kcal} cal</div>
         </div>
       </div>`).join('');
   }
@@ -1263,13 +1263,13 @@ const PLAN_LABELS = {
   '1500':   '1500 kcal Plan',
   '2000':   '2000 kcal Plan',
   '2500':   '2500 kcal Plan',
-  'bd1500': 'ðŸ‡§ðŸ‡© BD 1500 kcal Plan',
-  'bd2000': 'ðŸ‡§ðŸ‡© BD 2000 kcal Plan',
-  'bd2500': 'ðŸ‡§ðŸ‡© BD 2500 kcal Plan',
-  'ai':     'ðŸ¤– AI Custom Plan',
+  'bd1500': '🇧🇩 BD 1500 kcal Plan',
+  'bd2000': '🇧🇩 BD 2000 kcal Plan',
+  'bd2500': '🇧🇩 BD 2500 kcal Plan',
+  'ai':     '🤖 AI Custom Plan',
 };
 
-// applyPlan updates the UI only â€” no localStorage write.
+// applyPlan updates the UI only — no localStorage write.
 // Called by renderDashboard() (which runs on every interaction) to avoid
 // writing the same plan value to localStorage dozens of times per session.
 function applyPlan(p) {
@@ -1304,13 +1304,13 @@ function renderPlanPreview() {
     const kcal = kcalEl ? kcalEl.textContent.trim() : '';
     html += `<div style="display:flex;justify-content:space-between"><span style="font-weight:700">${escapeHtml(title)}</span><span style="color:var(--muted)">${escapeHtml(kcal)}</span></div>`;
   }
-  html += `<div style="margin-top:6px"><a href="#" onclick="showPage('nutrition');return false;" style="font-size:13px;color:var(--blue)">Open full plan â€º</a></div>`;
+  html += `<div style="margin-top:6px"><a href="#" onclick="showPage('nutrition');return false;" style="font-size:13px;color:var(--blue)">Open full plan ›</a></div>`;
   html += '</div>';
   preview.innerHTML = html;
   preview.style.display = '';
 }
 
-// switchPlan is called by the user tapping a plan button â€” it saves AND updates UI.
+// switchPlan is called by the user tapping a plan button — it saves AND updates UI.
 function switchPlan(p) {
   activePlan = p;
   save('fitdash_plan', p);
@@ -1354,11 +1354,11 @@ function renderNutrition() {
   }
 }
 
-// â•â• BODY RECOMPOSITION â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══ BODY RECOMPOSITION ═══════════════════════════════════
 let bodyComp = safeLoad('fitdash_bodycomp', []);
 
 function calcNavyBF(waistCm, neckCm, hipCm, heightCm, gender) {
-  // U.S. Navy formula constants require inches â€” convert from cm.
+  // U.S. Navy formula constants require inches — convert from cm.
   const waist = waistCm / 2.54;
   const neck  = neckCm  / 2.54;
   const hip   = hipCm   ? hipCm / 2.54 : null;
@@ -1541,12 +1541,12 @@ function renderBodyComp() {
       <div style="display:flex;align-items:center;gap:12px">
         <span style="font-size:13px;font-weight:700">${e.bf}%</span>
         <span style="font-size:11px;color:var(--muted)">${e.method}</span>
-        <button onclick="deleteBodyComp('${e.date}')" class="del-btn del-btn-sm">Ã—</button>
+        <button onclick="deleteBodyComp('${e.date}')" class="del-btn del-btn-sm">×</button>
       </div>
     </div>`).join('');
 }
 
-// â•â• BODY CIRCUMFERENCE TRACKER â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══ BODY CIRCUMFERENCE TRACKER ═══════════════════════════
 let circHistory = safeLoad('fitdash_circ', []);
 const CIRC_PARTS = [
   {id:'chest', label:'Chest'}, {id:'shoulders', label:'Shoulders'},
@@ -1660,7 +1660,7 @@ function renderCircHistory() {
     return `<div style="border-bottom:1px solid var(--border);padding:12px 0">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <span style="font-size:12px;font-weight:700;color:var(--text)">${entry.date}</span>
-        <button onclick="deleteCircEntry('${entry.date}')" class="del-btn del-btn-sm">Ã—</button>
+        <button onclick="deleteCircEntry('${entry.date}')" class="del-btn del-btn-sm">×</button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 16px">${partsHtml}</div>
     </div>`;
@@ -1761,7 +1761,7 @@ function renderCircChart() {
 
   if(desc) {
     const latestVals = nonEmpty.map(ds => ({ label: ds.label, val: ds.values[ds.values.length-1] })).filter(x => x.val != null).map(x => `${x.label}: ${x.val} cm`).join('; ');
-    desc.textContent = `Recent circumference measurements â€” ${latestVals}`;
+    desc.textContent = `Recent circumference measurements — ${latestVals}`;
   }
 }
 
