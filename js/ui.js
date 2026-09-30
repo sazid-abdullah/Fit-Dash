@@ -893,29 +893,6 @@ function saveAISettings() {
   
   alert('AI config saved! ' + (providerRequiresApiKey(aiConfig.provider) ? 'API key ' + (storeKey ? 'stored in browser' : 'kept for this session only') + '.' : 'Ollama uses your local model and needs no API key.'));
 }
-  if(!model) {
-    status.textContent = 'Select or enter a model first.';
-    status.style.color = 'var(--orange)';
-    return;
-  }
-
-  const previousConfig = aiConfig;
-  aiConfig = { provider, model, apiKey, storeKey:false };
-  button.disabled = true;
-  status.textContent = 'Testing...';
-  status.style.color = 'var(--muted)';
-  try {
-    await callAI([{ role:'user', content:'Reply with exactly: FitDash connection OK' }]);
-    status.textContent = 'Connection successful.';
-    status.style.color = 'var(--green)';
-  } catch(err) {
-    status.textContent = `Connection failed: ${err.message.slice(0,120)}`;
-    status.style.color = 'var(--red)';
-  } finally {
-    aiConfig = previousConfig;
-    button.disabled = false;
-  }
-}
 
 async function testAIConnection() {
   const statusEl = document.getElementById('ai-test-status');
@@ -1960,6 +1937,7 @@ function renderBFChart() {
     ctx.fillText('Target', W-pad.r-35, ty-5);
   }
 }
+
 
 
 
