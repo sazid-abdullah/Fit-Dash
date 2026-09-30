@@ -123,7 +123,7 @@ let _cachedFullPlan = null;
 let _cachedFullPlanDeps = '';
 
 function getFullWorkoutPlan() {
-  const deps = JSON.stringify({ c: trainingCategory, cx: customExercises, wo: workoutOverrides });
+  const deps = JSON.stringify({ c: trainingCategory, cx: customExercises, wo: workoutOverrides, vo: exerciseVideoOverrides });
   if (_cachedFullPlan && _cachedFullPlanDeps === deps) return _cachedFullPlan;
   _cachedFullPlanDeps = deps;
   const plan = JSON.parse(JSON.stringify(trainingCategory === 'gym' ? GYM_WORKOUT_PLAN : WORKOUT_PLAN));
@@ -1231,6 +1231,12 @@ function saveVideoCode(key, inputId, refreshKind) {
   if(ytId) exerciseVideoOverrides[key] = ytId;
   else delete exerciseVideoOverrides[key];
   save('fitdash_video_codes', exerciseVideoOverrides);
+  _cachedFullPlanDeps = '';
+  if(wo.active) {
+    const ex = getFullWorkoutPlan()[wo.blockIdx]?.exercises[wo.exIdx];
+    const ytBtn = document.getElementById('wo-yt-btn');
+    if(ex && ytBtn) ytBtn.dataset.ytid = ex.ytId || '';
+  }
   if(refreshKind === 'settings') renderVideoCodeLibrary();
   else if(refreshKind === 'training') renderTrainingBlocks(LEVEL_CONFIG[trainingLevel]);
   alert(ytId ? 'Video code saved.' : 'Video code cleared.');
