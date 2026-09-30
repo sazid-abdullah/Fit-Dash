@@ -92,7 +92,7 @@ function getTodayCalorieTarget() {
 function renderDashboard() {
   const now = new Date();
   const h = now.getHours();
-  const greeting = h<12?'Good morning ðŸŒ…':h<17?'Good afternoon â˜€ï¸':'Good evening ðŸŒ™';
+  const greeting = h<12 ? 'Good morning \uD83C\uDF04' : h<17 ? 'Good afternoon \u2600\uFE0F' : 'Good evening \uD83C\uDF19';
   document.getElementById('greeting').textContent = greeting;
   document.getElementById('today-date').textContent = now.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 
@@ -114,7 +114,7 @@ function renderDashboard() {
 
   // Today's weight â€” use local ISO date to match how weights are stored
   const todayW = weights.find(w => w.date === getLocalDateStr());
-  document.getElementById('stat-weight').textContent = todayW ? todayW.val : 'â€”';
+  document.getElementById('stat-weight').textContent = todayW ? todayW.val : '--';
 
   // Last session
   const lastSes = sessions[sessions.length-1];
@@ -300,7 +300,7 @@ function deleteWeight(date) {
   // Refresh the dashboard kg stat in case today's entry was removed
   const todayW = weights.find(w => w.date === getLocalDateStr());
   const statEl = document.getElementById('stat-weight');
-  if(statEl) statEl.textContent = todayW ? todayW.val : 'â€”';
+  if(statEl) statEl.textContent = todayW ? todayW.val : '--';
   renderProgress();
 }
 
@@ -916,7 +916,7 @@ async function testAIConnection() {
   try {
     const res = await callAI('Say the exact word "SUCCESS" and nothing else.');
     if (res && res.includes('SUCCESS')) {
-      statusEl.textContent = 'Connection successful! ✅';
+      statusEl.textContent = 'Connection successful! \u2705';
       statusEl.style.color = 'var(--green)';
     } else {
       statusEl.textContent = 'Failed: Unexpected response.';
@@ -1938,6 +1938,15 @@ function renderBFChart() {
     ctx.fillText('Target', W-pad.r-35, ty-5);
   }
 }
+
+
+
+
+
+
+
+
+
 
 
 
