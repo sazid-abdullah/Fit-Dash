@@ -591,11 +591,22 @@ function renderWorkoutStep() {
     document.getElementById('wo-set-tip').textContent  = set.tip;
     document.getElementById('wo-set-reps').textContent = set.reps;
 
-    // pre-fill last logged weight for this exercise if available
+    // pre-fill this session's entry if revisiting, otherwise the progression suggestion
     const prevKey = logKey(block.id, ex.code, wo.setIdx);
     const prev = wo.log[prevKey];
-    document.getElementById('wo-weight').value = prev ? prev.weight : '';
-    document.getElementById('wo-reps').value   = prev ? prev.reps   : '';
+    const suggestion = suggestNextSet(ex.name, wo.setIdx, set.reps);
+    const fill = prev || suggestion;
+    document.getElementById('wo-weight').value = fill ? fill.weight : '';
+    document.getElementById('wo-reps').value   = fill ? fill.reps   : '';
+    const suggestEl = document.getElementById('wo-suggest');
+    if(suggestEl) {
+      suggestEl.style.display = suggestion ? '' : 'none';
+      suggestEl.innerHTML = suggestion
+        ? `📈 Last (${escapeHtml(suggestion.lastDate)}): <strong>${formatSet(suggestion.last.weight, suggestion.last.reps)}</strong>` +
+          (suggestion.lastE1RM ? ` · e1RM ${suggestion.lastE1RM} kg` : '') +
+          `<br>🎯 Suggested: <strong style="color:var(--green)">${formatSet(suggestion.weight, suggestion.reps)}</strong> — ${escapeHtml(suggestion.reason)}`
+        : '';
+    }
 
     // show set card, hide rest
     document.getElementById('wo-set-card').style.display  = '';
@@ -1183,9 +1194,13 @@ function renderTrainingBlocks(cfg) {
           <div class="exercise-item" style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
             <div style="display:flex;align-items:center;gap:8px;flex:1;">
               <span class="ex-code" ${ex._isCustom ? 'style="background:var(--green)"' : ''}>${ex.code}</span>
-              <span class="ex-name">${escapeHtml(ex.name)}</span>
+              <div style="min-width:0">
+                <span class="ex-name">${escapeHtml(ex.name)}</span>
+                ${renderNextSetHint(ex.name, cfg)}
+              </div>
             </div>
             <div style="display:flex;gap:4px;">
+              <button class="btn-ghost" style="padding:4px 8px;font-size:12px;border:1px solid var(--border);color:${isFavoriteExercise(ex.name) ? 'var(--yellow)' : 'var(--muted)'}" onclick="toggleFavoriteExercise(this.dataset.ex)" data-ex="${escapeHtml(ex.name)}" title="Pin to dashboard Quick Log" aria-label="Pin ${escapeHtml(ex.name)} to Quick Log">${isFavoriteExercise(ex.name) ? '★' : '☆'}</button>
               <button class="btn-ghost" style="padding:4px 8px;font-size:12px;color:var(--text);border:1px solid var(--border);" onclick="promptMoveExercise('${ex.code}')">⇄ Move</button>
               ${ex._isCustom && block.id === '🛠️' ? `<button class="btn-ghost" style="padding:4px 8px;font-size:12px;color:var(--red);border:1px solid var(--border);" onclick="deleteCustomExercise(${ex._id})">✕</button>` : ''}
             </div>
@@ -1425,14 +1440,19 @@ function addCardio() {
     alert('Please enter a realistic session duration (1–300 min).');
     return;
   }
-  const mins = Math.round(raw); // integer minutes prevents floating-point drift
+  addCardioMinutes(Math.round(raw)); // integer minutes prevents floating-point drift
+  document.getElementById('cardio-add').value = '';
+}
+
+function addCardioMinutes(mins) {
+  if(!(mins > 0)) return false;
   const wk = getWeekKey();
   if(lastCardioReset !== wk) { cardioMins=0; lastCardioReset=wk; }
   cardioMins += mins;
   save('fitdash_cardio', cardioMins);
   save('fitdash_cardio_week', lastCardioReset);
-  document.getElementById('cardio-add').value = '';
   renderCardio();
+  return true;
 }
 
 function resetCardio() {
@@ -1460,6 +1480,7 @@ function renderCardio() {
   document.getElementById('cardio-done-label').textContent = cardioMins + ' min done';
   const goalLabel = document.getElementById('cardio-goal-label');
   if(goalLabel) goalLabel.textContent = target + ' min goal';
+  if(typeof renderQuickLog === 'function') renderQuickLog();
 }
 
 function renderTrainingReminder() {

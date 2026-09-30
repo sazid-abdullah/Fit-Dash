@@ -10,6 +10,10 @@ FitDash covers four areas in one file:
 
 **Dashboard** — daily greeting, session count, current streak, today's weight, weekly cardio progress bar, and a five-item habit checklist that resets each morning.
 
+**Quick Log** — one-tap logging from the dashboard: water (+250 ml / +500 ml / +1 L), weight, sleep ("same as last night"), cardio (+10/20/30 min), pinned and frequently eaten foods, and single sets for pinned or frequently trained exercises. Every quick action shows an undo toast. Pin foods with ☆ in today's food log and exercises with ☆ in the Training blocks.
+
+**Personalized progression** — each exercise gets a next weight/reps suggestion from your last session using double progression (add reps until the top of the level's rep range, then add 2.5 kg, or 1 kg under 20 kg). The guided workout pre-fills the suggestion and shows your last set and estimated 1-rep max (Epley). Progress → Exercise Progression shows best e1RM, total volume, and per-session e1RM/volume bars.
+
 **Training** — a structured Full Body Protocol (Legs & Calves superset → Back/Chest/Back giant set → Full Body Circuit) with three difficulty levels. The guided workout overlay walks you set by set, runs a rest timer, logs weight and reps, auto-detects personal records, and calculates calories burned using the Mifflin–St Jeor BMR formula with a MET/volume-load adjustment. Sessions can also be logged manually from a free-form entry modal.
 
 **Nutrition** — Greg Doucette's Circle Diet meal plans rendered as expandable cards. Six plans are included: International 1500 / 2000 / 2500 kcal and Bangladesh-localised 1500 / 2000 / 2500 kcal (BD plans use locally available foods and brands — Agora, Arong, Meena Bazaar, etc.). Each plan shows three meals and a snack section with calorie counts.
@@ -114,6 +118,8 @@ All data is stored in the browser's `localStorage` under these keys:
 | `fitdash_plan` | Selected nutrition plan |
 | `fitdash_level` | Selected training level |
 | `fitdash_profile` | Height, age, gender, activity level |
+| `fitdash_fav_foods` | Foods pinned to the dashboard Quick Log |
+| `fitdash_fav_exercises` | Exercises pinned to the dashboard Quick Log |
 
 Data is never sent anywhere. Clearing your browser's site data will erase all history. Use **Progress → ⬇ CSV** to export a backup before clearing.
 
