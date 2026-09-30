@@ -197,9 +197,18 @@ function quickAddCardio(mins) {
 
 function quickLogWeight() {
   const input = document.getElementById('ql-weight');
-  if(!input || !recordWeight(parseFloat(input.value))) return;
+  if(!input) return;
+  const today = getLocalDateStr();
+  const previous = weights.find(w => w.date === today);
+  if(!recordWeight(parseFloat(input.value))) return;
   renderDashboard();
-  showUndoToast(`Weight logged: ${input.value} kg`, () => {});
+  showUndoToast(`Weight logged: ${input.value} kg`, () => {
+    weights = weights.filter(w => w.date !== today);
+    if(previous) weights.push(previous);
+    save('fitdash_weights', weights);
+    renderProgress();
+    renderDashboard();
+  });
 }
 
 function quickLogSleepLikeLast() {
@@ -232,25 +241,28 @@ function quickLogFood(button) {
 
 function getTodayQuickSession() {
   const today = getLocalDateStr();
-  let session = sessions.find(s => s.quick && s.date === today);
-  if(!session) {
-    session = { date: today, notes: 'Quick log', quick: true, exercises: {}, setsCompleted: 0, volumeKg: 0, id: Date.now() };
-    sessions.push(session);
-  }
-  return session;
+  const existing = sessions.find(s => s.quick && s.date === today);
+  if(existing) return { session: existing, created: false };
+  const session = { date: today, notes: 'Quick log', quick: true, exercises: {}, setsCompleted: 0, volumeKg: 0, id: Date.now() };
+  sessions.push(session);
+  return { session, created: true };
 }
 
 function quickMarkWorkoutDone() {
-  const session = getTodayQuickSession();
+  const { session, created } = getTodayQuickSession();
+  const wasChecked = checklist.workout;
   save('fitdash_sessions', sessions);
   checklist.workout = true;
   save('fitdash_check', checklist);
   renderDashboard();
   renderTrainingHistory();
   showUndoToast('Workout marked done', () => {
-    if(Object.keys(session.exercises).length) return;
-    sessions = sessions.filter(s => s !== session);
-    save('fitdash_sessions', sessions);
+    checklist.workout = wasChecked;
+    save('fitdash_check', checklist);
+    if(created && !Object.keys(session.exercises).length) {
+      sessions = sessions.filter(s => s !== session);
+      save('fitdash_sessions', sessions);
+    }
     renderDashboard();
     renderTrainingHistory();
   });
@@ -274,7 +286,7 @@ function quickLogSet() {
   const reps = parseInt(document.getElementById('ql-set-reps').value, 10) || 0;
   if(weight < 0 || reps <= 0) { alert('Enter the reps you completed.'); return; }
 
-  const session = getTodayQuickSession();
+  const { session, created } = getTodayQuickSession();
   const key = `Q-${Date.now()}`;
   session.exercises[key] = { weight, reps, exName: name, setLabel: 'Quick set' };
   session.setsCompleted = Object.keys(session.exercises).length;
@@ -294,6 +306,7 @@ function quickLogSet() {
 
   showUndoToast(`${name}: ${formatSet(weight, reps)}`, () => {
     delete session.exercises[key];
+    if(created && !Object.keys(session.exercises).length) sessions = sessions.filter(s => s !== session);
     session.setsCompleted = Object.keys(session.exercises).length;
     session.volumeKg = Math.round(Object.values(session.exercises).reduce((sum, e) => sum + (e.weight || 0) * (e.reps || 0), 0));
     if(prevPR) prs[prKey] = prevPR; else if(prs[prKey] && prs[prKey].weight === weight) delete prs[prKey];

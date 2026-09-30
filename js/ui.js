@@ -391,7 +391,7 @@ function renderExerciseProgression() {
   const maxV = Math.max(1, ...recent.map(h => h.volume));
   const volTotalLabel = totalVolume >= 10000 ? (totalVolume/1000).toFixed(1) + 't' : totalVolume + 'kg';
 
-  output.innerHTML = `<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px">
+  output.innerHTML = `<div class="progression-stats">
     <div class="stat-card"><div class="stat-num">${setCount}</div><div class="stat-label">Sets logged</div></div>
     <div class="stat-card"><div class="stat-num">${bestWeight}</div><div class="stat-label">Best kg</div></div>
     <div class="stat-card"><div class="stat-num">${bestE1RM || '—'}</div><div class="stat-label">Best e1RM</div></div>
@@ -403,7 +403,7 @@ function renderExerciseProgression() {
       <div style="flex:1;height:${Math.max(4, Math.round(h.bestE1RM / maxE * 100))}%;background:var(--yellow);border-radius:2px 2px 0 0"></div>
       <div style="flex:1;height:${Math.max(4, Math.round(h.volume / maxV * 100))}%;background:var(--blue);border-radius:2px 2px 0 0"></div>
     </div>`).join('')}</div>` : ''}
-  <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:4px 12px;font-size:12px;align-items:center">
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:4px 10px;font-size:12px;align-items:center;overflow-wrap:anywhere">
     <span style="color:var(--muted);font-size:10px">Date</span><span style="color:var(--muted);font-size:10px">Top set</span><span style="color:var(--muted);font-size:10px">e1RM</span><span style="color:var(--muted);font-size:10px">Volume</span>
     ${hist.slice(-8).reverse().map(h => `<span>${escapeHtml(h.date)} <span style="color:var(--muted)">(${h.sets.length} sets)</span></span><strong>${formatSet(h.topSet.weight, h.topSet.reps)}</strong><span>${h.bestE1RM || '—'}</span><span>${h.volume} kg</span>`).join('')}
   </div>`;
