@@ -931,18 +931,19 @@ async function testAIConnection() {
 }
 
 function clearStoredApiKey() {
-  aiConfig.apiKey = '';
-  aiConfig.apiKeys = {};
-  aiConfig.storeKey = false;
-  save('fitdash_ai_config', aiConfig);
-  ['groq', 'gemini', 'openrouter'].forEach(p => {
-    const inp = document.getElementById('s-api-key-' + p);
-    if(inp) inp.value = '';
-  });
-  const cb = document.getElementById('s-api-store'); if(cb) cb.checked = false;
-  alert('Stored API keys cleared from this browser.');
-} catch(err) {
-    if(FITDASH_DEBUG) console.error('Failed clearing API key', err);
+  try {
+    aiConfig.apiKey = '';
+    aiConfig.apiKeys = {};
+    aiConfig.storeKey = false;
+    save('fitdash_ai_config', aiConfig);
+    ['groq', 'gemini', 'openrouter'].forEach(p => {
+      const inp = document.getElementById('s-api-key-' + p);
+      if(inp) inp.value = '';
+    });
+    const cb = document.getElementById('s-api-store'); if(cb) cb.checked = false;
+    alert('Stored API keys cleared from this browser.');
+  } catch(err) {
+    console.error('Failed clearing API key', err);
     alert('Failed to clear stored API key. See console for details.');
   }
 }
@@ -1937,6 +1938,8 @@ function renderBFChart() {
     ctx.fillText('Target', W-pad.r-35, ty-5);
   }
 }
+
+
 
 
 
