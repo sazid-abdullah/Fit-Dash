@@ -12,7 +12,7 @@ FitDash covers four areas in one file:
 
 **Quick Log** — one-tap logging from the dashboard: water (+250 ml / +500 ml / +1 L), weight, sleep ("same as last night"), cardio (+10/20/30 min), pinned and frequently eaten foods, and single sets for pinned or frequently trained exercises. Every quick action shows an undo toast. Pin foods with ☆ in today's food log and exercises with ☆ in the Training blocks.
 
-**Personalized progression** — each exercise gets a next weight/reps suggestion from your last session using double progression (add reps until the top of the level's rep range, then add 2.5 kg, or 1 kg under 20 kg). The guided workout pre-fills the suggestion and shows your last set and estimated 1-rep max (Epley). Progress → Exercise Progression shows best e1RM, total volume, and per-session e1RM/volume bars.
+**Personalized progression** — each exercise gets a next weight/reps suggestion from your last session using double progression (add reps until the top of the level's rep range, then add 2.5 kg, or 1 kg under 20 kg). The guided workout pre-fills the suggestion and shows your last set and estimated 1-rep max (Epley). If you miss the bottom of the rep range at the same weight two sessions running, it suggests dropping ~10% and building back up. Set a fixed weight step (0.5–5 kg) in Settings → Progression. Finishing a guided workout lists new e1RM, top-weight, and per-exercise volume PRs plus volume versus your last workout; Quick Log flags e1RM PRs in the toast. Progress → Exercise Progression shows best e1RM, total volume, 4-week e1RM change, and per-session e1RM/volume bars; Progress → Weekly Training Volume charts total kg lifted per week for the last 8 weeks.
 
 **Training** — a structured Full Body Protocol (Legs & Calves superset → Back/Chest/Back giant set → Full Body Circuit) with three difficulty levels. The guided workout overlay walks you set by set, runs a rest timer, logs weight and reps, auto-detects personal records, and calculates calories burned using the Mifflin–St Jeor BMR formula with a MET/volume-load adjustment. Sessions can also be logged manually from a free-form entry modal.
 
@@ -120,6 +120,7 @@ All data is stored in the browser's `localStorage` under these keys:
 | `fitdash_profile` | Height, age, gender, activity level |
 | `fitdash_fav_foods` | Foods pinned to the dashboard Quick Log |
 | `fitdash_fav_exercises` | Exercises pinned to the dashboard Quick Log |
+| `fitdash_progression_prefs` | Progression settings (weight step) |
 
 Data is never sent anywhere. Clearing your browser's site data will erase all history. Use **Progress → ⬇ CSV** to export a backup before clearing.
 

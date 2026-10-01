@@ -286,6 +286,7 @@ function quickLogSet() {
   const reps = parseInt(document.getElementById('ql-set-reps').value, 10) || 0;
   if(weight < 0 || reps <= 0) { alert('Enter the reps you completed.'); return; }
 
+  const priorBest = getExerciseBests()[name];
   const { session, created } = getTodayQuickSession();
   const key = `Q-${Date.now()}`;
   session.exercises[key] = { weight, reps, exName: name, setLabel: 'Quick set' };
@@ -304,7 +305,9 @@ function quickLogSet() {
   if (soundEnabled) playSound();
   if (hapticsEnabled) playHaptic();
 
-  showUndoToast(`${name}: ${formatSet(weight, reps)}`, () => {
+  const e1rm = estimate1RM(weight, reps);
+  const prNote = priorBest && priorBest.e1rm > 0 && e1rm > priorBest.e1rm ? ` · 🏆 e1RM PR ${e1rm} kg` : '';
+  showUndoToast(`${name}: ${formatSet(weight, reps)}${prNote}`, () => {
     delete session.exercises[key];
     if(created && !Object.keys(session.exercises).length) sessions = sessions.filter(s => s !== session);
     session.setsCompleted = Object.keys(session.exercises).length;
