@@ -274,23 +274,28 @@ function renderWeightChart() {
   });
 }
 
-function logWeight() {
-  const val = parseFloat(document.getElementById('weight-input').value);
+function recordWeight(val) {
   if(isNaN(val)) {
     alert('Please enter a valid weight number.');
-    return;
+    return false;
   }
   if(val < 30 || val > 300) {
     alert('Weight must be between 30 and 300 kg.');
-    return;
+    return false;
   }
   const today = getLocalDateStr();
   weights = weights.filter(w => w.date !== today);
   weights.push({date:today, val});
   save('fitdash_weights', weights);
-  document.getElementById('weight-input').value = '';
   document.getElementById('stat-weight').textContent = val;
   renderProgress();
+  return true;
+}
+
+function logWeight() {
+  if(!recordWeight(parseFloat(document.getElementById('weight-input').value))) return;
+  document.getElementById('weight-input').value = '';
+  if(typeof renderQuickLog === 'function') renderQuickLog();
 }
 
 function deleteWeight(date) {
@@ -360,38 +365,48 @@ function renderNutritionHistory() {
   el.innerHTML = days.map(day => `<div style="flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px"><span style="font-size:10px;color:var(--muted)">${day.calories || ''}</span><div style="width:100%;height:${Math.max(4, Math.round(day.calories / max * 82))}px;background:var(--green);border-radius:4px 4px 0 0"></div><span style="font-size:10px;color:var(--muted)">${day.label}</span></div>`).join('');
 }
 
-function getLoggedExerciseNames() {
-  const names = new Set();
-  sessions.forEach(session => Object.values(session.exercises || {}).forEach(entry => {
-    if(entry && entry.exName) names.add(entry.exName);
-    if(entry && typeof entry === 'object' && !entry.exName) Object.keys(entry).forEach(() => {});
-  }));
-  return [...names].sort();
-}
-
 function renderExerciseProgression() {
   const select = document.getElementById('progress-exercise-select');
   const output = document.getElementById('exercise-progression-output');
   if(!select || !output) return;
-  const names = getLoggedExerciseNames();
+  const names = getAllLoggedExerciseNames();
   const previous = select.value;
   select.innerHTML = names.length
     ? names.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('')
-    : '<option value="">No guided exercise logs yet</option>';
+    : '<option value="">No exercise logs yet</option>';
   if(names.includes(previous)) select.value = previous;
-  if(!names.length) { output.innerHTML = '<div style="font-size:12px;color:var(--muted)">Complete a guided workout to see exercise progression.</div>'; return; }
+  if(!names.length) {
+    output.innerHTML = '<div style="font-size:12px;color:var(--muted)">Complete a guided workout or log a set from Quick Log to see exercise progression.</div>';
+    return;
+  }
   const selected = select.value;
-  const rows = [];
-  sessions.forEach(session => Object.values(session.exercises || {}).forEach(entry => {
-    if(!entry || entry.exName !== selected) return;
-    rows.push({date:session.date, weight:Number(entry.weight)||0, reps:Number(entry.reps)||0});
-  }));
-  rows.sort((a,b) => a.date.localeCompare(b.date));
-  output.innerHTML = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
-    <div class="stat-card"><div class="stat-num">${rows.length}</div><div class="stat-label">Sets logged</div></div>
-    <div class="stat-card"><div class="stat-num">${rows.length ? Math.max(...rows.map(row => row.weight)) : 0}</div><div class="stat-label">Best weight</div></div>
-    <div class="stat-card"><div class="stat-num">${rows.length ? Math.max(...rows.map(row => row.reps)) : 0}</div><div class="stat-label">Best reps</div></div>
-  </div>${rows.slice(-8).reverse().map(row => `<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px"><span>${row.date}</span><strong>${row.weight}kg × ${row.reps}</strong></div>`).join('')}`;
+  const hist = getExerciseHistory(selected);
+  const setCount = hist.reduce((n, h) => n + h.sets.length, 0);
+  const bestE1RM = Math.max(0, ...hist.map(h => h.bestE1RM));
+  const bestWeight = Math.max(0, ...hist.map(h => Math.max(...h.sets.map(set => set.weight))));
+  const totalVolume = hist.reduce((sum, h) => sum + h.volume, 0);
+  const sug = suggestTopSet(selected, LEVEL_CONFIG[trainingLevel]);
+  const recent = hist.slice(-12);
+  const maxE = Math.max(1, ...recent.map(h => h.bestE1RM));
+  const maxV = Math.max(1, ...recent.map(h => h.volume));
+  const volTotalLabel = totalVolume >= 10000 ? (totalVolume/1000).toFixed(1) + 't' : totalVolume + 'kg';
+
+  output.innerHTML = `<div class="progression-stats">
+    <div class="stat-card"><div class="stat-num">${setCount}</div><div class="stat-label">Sets logged</div></div>
+    <div class="stat-card"><div class="stat-num">${bestWeight}</div><div class="stat-label">Best kg</div></div>
+    <div class="stat-card"><div class="stat-num">${bestE1RM || '—'}</div><div class="stat-label">Best e1RM</div></div>
+    <div class="stat-card"><div class="stat-num">${volTotalLabel}</div><div class="stat-label">Total volume</div></div>
+  </div>
+  ${sug ? `<div class="wo-suggest">🎯 Next session: <strong style="color:var(--green)">${formatSet(sug.weight, sug.reps)}</strong> — ${escapeHtml(sug.reason)}</div>` : ''}
+  ${recent.length > 1 ? `<div style="display:flex;gap:12px;font-size:10px;color:var(--muted);margin:10px 0 4px"><span><span style="display:inline-block;width:8px;height:8px;background:var(--yellow);border-radius:2px"></span> e1RM</span><span><span style="display:inline-block;width:8px;height:8px;background:var(--blue);border-radius:2px"></span> Volume</span></div>
+  <div style="display:flex;align-items:flex-end;gap:4px;height:70px;margin-bottom:10px" aria-label="e1RM and volume per session">${recent.map(h => `<div style="flex:1;display:flex;gap:1px;align-items:flex-end;height:100%" title="${escapeHtml(h.date)}: e1RM ${h.bestE1RM} kg, volume ${h.volume} kg">
+      <div style="flex:1;height:${Math.max(4, Math.round(h.bestE1RM / maxE * 100))}%;background:var(--yellow);border-radius:2px 2px 0 0"></div>
+      <div style="flex:1;height:${Math.max(4, Math.round(h.volume / maxV * 100))}%;background:var(--blue);border-radius:2px 2px 0 0"></div>
+    </div>`).join('')}</div>` : ''}
+  <div style="display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:4px 10px;font-size:12px;align-items:center;overflow-wrap:anywhere">
+    <span style="color:var(--muted);font-size:10px">Date</span><span style="color:var(--muted);font-size:10px">Top set</span><span style="color:var(--muted);font-size:10px">e1RM</span><span style="color:var(--muted);font-size:10px">Volume</span>
+    ${hist.slice(-8).reverse().map(h => `<span>${escapeHtml(h.date)} <span style="color:var(--muted)">(${h.sets.length} sets)</span></span><strong>${formatSet(h.topSet.weight, h.topSet.reps)}</strong><span>${h.bestE1RM || '—'}</span><span>${h.volume} kg</span>`).join('')}
+  </div>`;
 }
 
 function renderProgressSummary() {
@@ -1097,6 +1112,7 @@ function renderWater() {
   const pct = Math.min(100, (waterLog.ml / goal) * 100);
   document.getElementById('water-fill').style.width = pct + '%';
   document.getElementById('water-fill').style.background = pct >= 100 ? 'var(--green)' : 'var(--blue)';
+  if(typeof renderQuickLog === 'function') renderQuickLog();
 }
 
 function addWater(ml) {
@@ -1133,9 +1149,11 @@ function renderSleep() {
   const wrap = document.getElementById('sleep-history-wrap');
   if(!sleepHistory.length) {
     wrap.style.display = 'none';
+    if(typeof renderQuickLog === 'function') renderQuickLog();
     return;
   }
   wrap.style.display = '';
+  if(typeof renderQuickLog === 'function') renderQuickLog();
   
   const sorted = [...sleepHistory].sort((a,b) => a.date.localeCompare(b.date)).slice(-7);
   const chart = document.getElementById('sleep-chart');

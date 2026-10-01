@@ -55,6 +55,11 @@
   </div>
 
   <div style="margin-bottom:16px">
+    <div class="dash-section-title">⚡ Quick Log</div>
+    <div class="card quick-log" id="quick-log"></div>
+  </div>
+
+  <div style="margin-bottom:16px">
     <div class="dash-section-title">Today's Plan</div>
     <div class="dash-quick" id="dash-quick-training" onclick="showPage('training')">
       <div class="dash-quick-icon red">🏋️</div>
@@ -1219,6 +1224,7 @@
       <div style="font-size:13px;color:var(--muted);margin-bottom:14px">
         Target: <strong id="wo-set-reps" style="color:var(--text)">20–25 reps</strong>
       </div>
+      <div id="wo-suggest" class="wo-suggest" style="display:none"></div>
       <div class="wo-inputs">
         <div class="wo-input-wrap">
           <label>Weight (kg)</label>
@@ -1376,10 +1382,12 @@
 </div>
 <script src="js/data.js"></script>
 <script src="js/state.js"></script>
+<script src="js/progression.js"></script>
 <script src="js/workout.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/nutrition.js"></script>
 <script src="js/ai.js"></script>
+<script src="js/quicklog.js"></script>
 <script src="js/app.js"></script>
   
 </body>

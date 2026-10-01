@@ -642,6 +642,7 @@ function renderCalorieTracker() {
           ${e.fat?`<span class="cal-macro-pill f">${e.fat}f</span>`:''}
         </div>
         <span class="cal-log-cals">${e.calories}</span>
+        <button onclick="toggleFavoriteFoodFromEntry(${i})" class="del-btn del-btn-sm" style="color:${isFavoriteFood(e.name) ? 'var(--yellow)' : 'var(--muted)'}" title="${isFavoriteFood(e.name) ? 'Unpin from' : 'Pin to'} Quick Log" aria-label="${isFavoriteFood(e.name) ? 'Unpin' : 'Pin'} ${escapeHtml(e.name)}">${isFavoriteFood(e.name) ? '★' : '☆'}</button>
         <button onclick="deleteFoodEntry(${i})" class="del-btn del-btn-sm">×</button>
       </div>`).join('');
   } else {
@@ -649,6 +650,7 @@ function renderCalorieTracker() {
   }
 
   el.innerHTML = html;
+  if(typeof renderQuickLog === 'function') renderQuickLog();
 }
 
 function renderMacroTargetBar(label, total, target, color) {
