@@ -158,7 +158,7 @@ function renderQuickLog() {
         ? `Last: ${formatSet(sug.last.weight, sug.last.reps)}${sug.lastE1RM ? ` (e1RM ${sug.lastE1RM} kg)` : ''} · Suggested: <strong style="color:var(--green)">${formatSet(sug.weight, sug.reps)}</strong> — ${escapeHtml(sug.reason)}`
         : 'No history yet — log your first set.'}</div>
       <div class="ql-actions">
-        <input type="number" id="ql-set-weight" class="ql-input" step="0.5" min="0" placeholder="kg" value="${sug ? sug.weight : ''}" aria-label="Weight in kg">
+        <input type="number" id="ql-set-weight" class="ql-input" step="0.25" min="0" placeholder="kg" value="${sug ? sug.weight : ''}" aria-label="Weight in kg">
         <input type="number" id="ql-set-reps" class="ql-input" step="1" min="0" placeholder="reps" value="${sug ? sug.reps : ''}" aria-label="Reps">
         <button class="pill-btn active" onclick="quickLogSet()">✓ Log set</button>
         <button class="pill-btn" onclick="toggleFavoriteExercise(this.dataset.ex)" data-ex="${escapeHtml(qlActiveExercise)}">${isFavoriteExercise(qlActiveExercise) ? '★ Unpin' : '☆ Pin'}</button>
