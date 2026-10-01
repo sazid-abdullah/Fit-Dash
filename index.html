@@ -709,6 +709,13 @@
   </div>
 
   <div class="card" style="padding:18px;margin-bottom:20px">
+    <div class="section-title" style="margin-bottom:4px">📦 Weekly Training Volume</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Total weight × reps across all logged sets, Monday to Sunday.</div>
+    <div id="weekly-volume-summary" style="font-size:13px;margin-bottom:10px"></div>
+    <div id="weekly-volume-chart" style="display:flex;align-items:flex-end;gap:6px;height:120px"></div>
+  </div>
+
+  <div class="card" style="padding:18px;margin-bottom:20px">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
       <div>
         <div class="section-title" style="margin-bottom:4px">🤖 Weekly AI Report</div>
@@ -922,6 +929,25 @@
       <label class="settings-label" for="s-limitations">Injuries or movement limitations</label>
       <textarea class="settings-input" id="s-limitations" rows="3" placeholder="Example: avoid deep knee flexion; left shoulder discomfort"></textarea>
       <button class="btn-red" onclick="saveTrainingPreferences()" style="margin-top:10px;max-width:220px">💾 Save Training Preferences</button>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title">📈 Progression</div>
+    <div class="settings-card">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6">Next-set suggestions add reps until you hit the top of the rep range, then add one weight step. Missing the bottom of the range two sessions in a row suggests a ~10% drop.</div>
+      <label class="settings-label" for="s-weight-increment">Weight step</label>
+      <select class="settings-select" id="s-weight-increment" style="max-width:320px">
+        <option value="auto">Auto (1 kg under 20 kg, else 2.5 kg)</option>
+        <option value="0.5">0.5 kg</option>
+        <option value="1">1 kg</option>
+        <option value="1.25">1.25 kg</option>
+        <option value="2">2 kg</option>
+        <option value="2.5">2.5 kg</option>
+        <option value="5">5 kg</option>
+      </select>
+      <button class="btn-red" onclick="saveProgressionPrefs()" style="margin-top:10px;max-width:220px">💾 Save Progression</button>
+      <div id="progression-settings-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
     </div>
   </div>
 
@@ -1277,6 +1303,7 @@
       <div class="pw-stat"><div class="pw-val" id="pw-sets" style="color:var(--blue)">--</div><div class="pw-key">Sets Done</div></div>
       <div class="pw-stat"><div class="pw-val" id="pw-volume" style="color:var(--green)">--</div><div class="pw-key">Volume kg</div></div>
     </div>
+    <div id="pw-prs"></div>
     <div class="calorie-breakdown" id="pw-breakdown"></div>
     <div class="form-row">
       <label>Session Notes</label>

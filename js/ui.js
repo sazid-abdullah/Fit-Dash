@@ -348,6 +348,7 @@ function renderProgress() {
   renderCircChart();
   renderPRVolumeChart();
   renderExerciseProgression();
+  renderWeeklyVolume();
   renderNutritionHistory();
   renderHistoryList();
 }
@@ -390,6 +391,7 @@ function renderExerciseProgression() {
   const maxE = Math.max(1, ...recent.map(h => h.bestE1RM));
   const maxV = Math.max(1, ...recent.map(h => h.volume));
   const volTotalLabel = totalVolume >= 10000 ? (totalVolume/1000).toFixed(1) + 't' : totalVolume + 'kg';
+  const trend = getE1RMTrend(selected);
 
   output.innerHTML = `<div class="progression-stats">
     <div class="stat-card"><div class="stat-num">${setCount}</div><div class="stat-label">Sets logged</div></div>
@@ -398,6 +400,7 @@ function renderExerciseProgression() {
     <div class="stat-card"><div class="stat-num">${volTotalLabel}</div><div class="stat-label">Total volume</div></div>
   </div>
   ${sug ? `<div class="wo-suggest">🎯 Next session: <strong style="color:var(--green)">${formatSet(sug.weight, sug.reps)}</strong> — ${escapeHtml(sug.reason)}</div>` : ''}
+  ${trend !== null ? `<div style="font-size:12px;color:var(--muted);margin:6px 0">e1RM last 4 weeks: <strong style="color:${trend >= 0 ? 'var(--green)' : 'var(--yellow)'}">${trend >= 0 ? '+' : ''}${trend} kg</strong></div>` : ''}
   ${recent.length > 1 ? `<div style="display:flex;gap:12px;font-size:10px;color:var(--muted);margin:10px 0 4px"><span><span style="display:inline-block;width:8px;height:8px;background:var(--yellow);border-radius:2px"></span> e1RM</span><span><span style="display:inline-block;width:8px;height:8px;background:var(--blue);border-radius:2px"></span> Volume</span></div>
   <div style="display:flex;align-items:flex-end;gap:4px;height:70px;margin-bottom:10px" aria-label="e1RM and volume per session">${recent.map(h => `<div style="flex:1;display:flex;gap:1px;align-items:flex-end;height:100%" title="${escapeHtml(h.date)}: e1RM ${h.bestE1RM} kg, volume ${h.volume} kg">
       <div style="flex:1;height:${Math.max(4, Math.round(h.bestE1RM / maxE * 100))}%;background:var(--yellow);border-radius:2px 2px 0 0"></div>
@@ -407,6 +410,28 @@ function renderExerciseProgression() {
     <span style="color:var(--muted);font-size:10px">Date</span><span style="color:var(--muted);font-size:10px">Top set</span><span style="color:var(--muted);font-size:10px">e1RM</span><span style="color:var(--muted);font-size:10px">Volume</span>
     ${hist.slice(-8).reverse().map(h => `<span>${escapeHtml(h.date)} <span style="color:var(--muted)">(${h.sets.length} sets)</span></span><strong>${formatSet(h.topSet.weight, h.topSet.reps)}</strong><span>${h.bestE1RM || '—'}</span><span>${h.volume} kg</span>`).join('')}
   </div>`;
+}
+
+function renderWeeklyVolume() {
+  const chart = document.getElementById('weekly-volume-chart');
+  const summary = document.getElementById('weekly-volume-summary');
+  if(!chart || !summary) return;
+  const weeks = getWeeklyVolume(8);
+  const cur = weeks[weeks.length - 1], prev = weeks[weeks.length - 2];
+  if(weeks.every(w => !w.volume)) {
+    summary.innerHTML = '<span style="color:var(--muted)">Log sets with weight to see weekly volume.</span>';
+    chart.innerHTML = '';
+    return;
+  }
+  const delta = prev.volume && cur.volume ? Math.round((cur.volume - prev.volume) / prev.volume * 100) : null;
+  summary.innerHTML = `This week: <strong>${formatVolume(cur.volume)}</strong> (${cur.sets} sets) · Last week: <strong>${formatVolume(prev.volume)}</strong>` +
+    (delta !== null ? ` · <strong style="color:${delta >= 0 ? 'var(--green)' : 'var(--yellow)'}">${delta >= 0 ? '+' : ''}${delta}%</strong>` : '');
+  const max = Math.max(1, ...weeks.map(w => w.volume));
+  chart.innerHTML = weeks.map(w => {
+    const label = parseLocalDate(w.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const short = w.volume >= 1000 ? (w.volume / 1000).toFixed(1) + 't' : (w.volume || '');
+    return `<div style="flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px" title="Week of ${label}: ${w.volume} kg, ${w.sets} sets"><span style="font-size:10px;color:var(--muted)">${short}</span><div style="width:100%;height:${Math.max(4, Math.round(w.volume / max * 82))}px;background:var(--blue);border-radius:4px 4px 0 0"></div><span style="font-size:10px;color:var(--muted);white-space:nowrap">${label}</span></div>`;
+  }).join('');
 }
 
 function renderProgressSummary() {
@@ -646,6 +671,7 @@ function renderSettings() {
   document.getElementById('s-reminder-enabled').checked = p.reminderEnabled !== false;
   document.getElementById('s-reminder-time').value = p.reminderTime || '18:00';
   document.getElementById('s-cardio-focus').value = p.cardioFocus || 'strength';
+  renderProgressionSettings();
   renderCardioPlan();
   renderSavedGroceryList();
   if(g.cuisinePref)  document.getElementById('s-cuisine').value = g.cuisinePref;

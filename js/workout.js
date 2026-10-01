@@ -922,6 +922,12 @@ function finishWorkout() {
   document.getElementById('pw-breakdown').innerHTML  = calData.breakdown;
   document.getElementById('pw-notes').value          = '';
 
+  const lastGuided = [...sessions].reverse().find(s => !s.quick && s.volumeKg > 0);
+  const volDelta = lastGuided && totalVolume > 0 ? Math.round((totalVolume - lastGuided.volumeKg) / lastGuided.volumeKg * 100) : null;
+  document.getElementById('pw-prs').innerHTML =
+    renderSessionPRs(findSessionPRs({ exercises: wo.log })) +
+    (volDelta !== null ? `<div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:12px">Volume vs last workout (${escapeHtml(lastGuided.date)}): <strong style="color:${volDelta >= 0 ? 'var(--green)' : 'var(--yellow)'}">${volDelta >= 0 ? '+' : ''}${volDelta}%</strong></div>` : '');
+
   wo.finishedData = { durationSecs, setsCount, totalVolume, calData, durationMins };
   document.getElementById('postworkout-modal').classList.add('open');
 }
