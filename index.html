@@ -37,6 +37,7 @@
         ▶ &nbsp;Start Today's Workout
       </button>
     </div>
+    <div id="dash-routine-picker" style="margin-top:12px"></div>
   </div>
 
   <div class="dash-grid-3" style="margin-top:4px">
@@ -64,8 +65,8 @@
     <div class="dash-quick" id="dash-quick-training" onclick="showPage('training')">
       <div class="dash-quick-icon red">🏋️</div>
       <div class="dash-quick-body">
-        <div class="dash-quick-title">Full Body Protocol</div>
-        <div class="dash-quick-sub">3 blocks · ~55–70 min · 2×/week</div>
+        <div class="dash-quick-title" id="dash-quick-training-title">Full Body Protocol</div>
+        <div class="dash-quick-sub" id="dash-quick-training-sub">3 blocks · ~55–70 min · 2×/week</div>
       </div>
       <div class="dash-quick-arrow">›</div>
     </div>
@@ -539,6 +540,7 @@
     <button class="btn-red" id="training-category-home" onclick="switchTrainingCategory('home')">🏠 Home</button>
     <button class="btn-ghost" id="training-category-gym" onclick="switchTrainingCategory('gym')">🏋️ Gym</button>
   </div>
+  <div class="card routine-picker" id="routine-picker" aria-label="Routines"></div>
   <div class="training-hero">
     <div class="tag tag-red" id="training-category-tag" style="margin-bottom:10px">Full Body · Home Gym</div>
     <h1>Full Body <span>Protocol</span></h1>
@@ -602,7 +604,7 @@
     </div>
     <div style="display:flex;gap:8px;margin-bottom:10px">
       <input class="settings-input" id="custom-exercise-search" placeholder="Search exercises..." oninput="renderCustomExercises()">
-      <button class="btn-ghost" onclick="saveCurrentWorkoutTemplate()" title="Save current category as a template">💾 Template</button>
+      <button class="btn-ghost" onclick="createRoutineFromActive()" title="Save the current setup as a new routine">💾 Save as routine</button>
     </div>
     
     <div id="custom-exercises-list">
@@ -924,6 +926,7 @@
         <label><input type="checkbox" value="cables"> Cables</label>
         <label><input type="checkbox" value="dumbbells"> Dumbbells</label>
         <label><input type="checkbox" value="barbell"> Barbell</label>
+        <label><input type="checkbox" value="bands"> Resistance bands</label>
         <label><input type="checkbox" value="cardio"> Cardio machines</label>
       </div>
       <label class="settings-label" for="s-limitations">Injuries or movement limitations</label>
@@ -1281,6 +1284,7 @@
     <!-- Bottom nav -->
     <div style="display:flex;gap:8px;margin-top:4px">
       <button class="btn-ghost" onclick="woPrev()" id="wo-prev-btn" style="flex:1">← Back</button>
+      <button class="btn-ghost" onclick="swapCurrentWorkoutExercise()" style="flex:1" title="Equipment busy or unavailable? Swap this exercise">🔁 Swap</button>
       <button class="btn-ghost" onclick="woSkipEx()" style="flex:1;color:var(--muted)">Skip Exercise</button>
     </div>
 
@@ -1410,6 +1414,7 @@
 <script src="js/data.js"></script>
 <script src="js/state.js"></script>
 <script src="js/progression.js"></script>
+<script src="js/routines.js"></script>
 <script src="js/workout.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/nutrition.js"></script>
