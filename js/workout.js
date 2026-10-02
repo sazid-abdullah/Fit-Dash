@@ -92,12 +92,20 @@ const GYM_WORKOUT_PLAN = [
   }
 ];
 
-let trainingCategory = (() => {
-  const saved = safeLoad('fitdash_training_category', 'home');
-  return saved === 'gym' ? 'gym' : 'home';
-})();
+let trainingCategory = getActiveRoutine().category;
 
 function switchTrainingCategory(category) {
+  const target = category === 'gym' ? 'gym' : 'home';
+  if(getActiveRoutine().category === target) { applyTrainingCategory(target); return; }
+  let r = routines.find(x => x.category === target);
+  if(!r) {
+    r = { id: newRoutineId(), name: target === 'gym' ? 'Gym' : 'Home', category: target, level: null, swaps: {}, skip: [] };
+    routines.push(r);
+  }
+  activateRoutine(r.id);
+}
+
+function applyTrainingCategory(category) {
   trainingCategory = category === 'gym' ? 'gym' : 'home';
   save('fitdash_training_category', trainingCategory);
   const isGym = trainingCategory === 'gym';
@@ -123,10 +131,11 @@ let _cachedFullPlan = null;
 let _cachedFullPlanDeps = '';
 
 function getFullWorkoutPlan() {
-  const deps = JSON.stringify({ c: trainingCategory, cx: customExercises, wo: workoutOverrides, vo: exerciseVideoOverrides });
+  const deps = JSON.stringify({ c: trainingCategory, cx: customExercises, wo: workoutOverrides, vo: exerciseVideoOverrides, r: getRoutinePlanDeps() });
   if (_cachedFullPlan && _cachedFullPlanDeps === deps) return _cachedFullPlan;
   _cachedFullPlanDeps = deps;
   const plan = JSON.parse(JSON.stringify(trainingCategory === 'gym' ? GYM_WORKOUT_PLAN : WORKOUT_PLAN));
+  applyRoutineToPlan(plan);
   
   // Create the dedicated Custom Block pool
   let customBlock = {
@@ -151,7 +160,7 @@ function getFullWorkoutPlan() {
   plan.forEach(b => {
     b.exercises.forEach(e => {
       e._originalBlock = b.id;
-      e.ytId = getSavedVideoId(e.code, e.ytId || '');
+      e.ytId = getSavedVideoId(e._videoKey || e.code, e.ytId || '');
       allEx.push({ ex: e, currentBlock: workoutOverrides[e.code] || b.id });
     });
   });
@@ -505,6 +514,7 @@ function beginWorkout() {
 
 // ── Start session ─────────────────────────────────────────
 function startWorkoutSession() {
+  clearSessionSwaps();
   wo = { ...wo, active:true, startTime:Date.now(), totalSecs:0,
     blockIdx:0, exIdx:0, setIdx:0, log:{}, finishedData:null,
     totalInterval:null, restInterval:null, restSecsLeft:0 };
@@ -882,6 +892,7 @@ function discardAndExit() {
   document.getElementById('workout-overlay').style.display = 'none';
   document.body.style.overflow = '';
   wo.active = false;
+  endSessionSwaps();
 }
 
 function saveAndExit() {
@@ -1035,6 +1046,13 @@ function closePostWorkout() {
   document.getElementById('postworkout-modal').classList.remove('open');
   document.body.style.overflow = '';   // ← restore scroll now that ALL overlays are gone
   wo.active = false;
+  endSessionSwaps();
+}
+
+function endSessionSwaps() {
+  if(!Object.keys(sessionSwaps).length) return;
+  clearSessionSwaps();
+  refreshRoutineViews();
 }
 
 // close log modal on backdrop click (was missing — pre/post workout had this but #modal did not)
@@ -1145,6 +1163,8 @@ document.getElementById('setup-weight').addEventListener('input', updateWeightNo
 function switchLevel(level) {
   trainingLevel = level;
   save('fitdash_level', level); // use save() for consistent QuotaExceededError handling
+  rememberRoutineLevel(level);
+  renderRoutinePickers();
 
   // update button states
   ['beginner','amateur','master'].forEach(l => {
@@ -1202,11 +1222,13 @@ function renderTrainingBlocks(cfg) {
               <span class="ex-code" ${ex._isCustom ? 'style="background:var(--green)"' : ''}>${ex.code}</span>
               <div style="min-width:0">
                 <span class="ex-name">${escapeHtml(ex.name)}</span>
+                ${ex._swappedFrom ? `<div class="ex-swapped-note">⇄ instead of ${escapeHtml(ex._swappedFrom)}</div>` : ''}
                 ${renderNextSetHint(ex.name, cfg)}
               </div>
             </div>
             <div style="display:flex;gap:4px;">
               <button class="btn-ghost" style="padding:4px 8px;font-size:12px;border:1px solid var(--border);color:${isFavoriteExercise(ex.name) ? 'var(--yellow)' : 'var(--muted)'}" onclick="toggleFavoriteExercise(this.dataset.ex)" data-ex="${escapeHtml(ex.name)}" title="Pin to dashboard Quick Log" aria-label="Pin ${escapeHtml(ex.name)} to Quick Log">${isFavoriteExercise(ex.name) ? '★' : '☆'}</button>
+              ${ex._isCustom ? '' : `<button class="btn-ghost" style="padding:4px 8px;font-size:12px;color:var(--text);border:1px solid var(--border);" onclick="openSwapModal('${ex.code}')" title="Swap for an alternative (e.g. equipment unavailable)" aria-label="Swap ${escapeHtml(ex.name)}">🔁 Swap</button>`}
               <button class="btn-ghost" style="padding:4px 8px;font-size:12px;color:var(--text);border:1px solid var(--border);" onclick="promptMoveExercise('${ex.code}')">⇄ Move</button>
               ${ex._isCustom && block.id === '🛠️' ? `<button class="btn-ghost" style="padding:4px 8px;font-size:12px;color:var(--red);border:1px solid var(--border);" onclick="deleteCustomExercise(${ex._id})">✕</button>` : ''}
             </div>
@@ -1223,8 +1245,9 @@ function renderTrainingBlocks(cfg) {
   container.innerHTML = html;
 }
 
-// ── Init training category and level on page load ─────────
-switchTrainingCategory(trainingCategory);
+// ── Init routine, training category and level on page load ─
+migrateLegacyTemplates();
+activateRoutine(activeRoutineId);
 
 // Populate training history on startup — without this, the Training tab
 // shows an empty history list until the user navigates away and back,
@@ -1332,14 +1355,6 @@ function renderCustomExercises() {
       <button class="del-btn" onclick="deleteCustomExercise(${cx.id})">×</button>
     </div>
   `).join('');
-}
-
-function saveCurrentWorkoutTemplate() {
-  const templates = safeLoad('fitdash_workout_templates', []);
-  const plan = getFullWorkoutPlan().filter(block => block.id !== '🛠️').map(block => ({ name:block.name, type:block.type, exercises:block.exercises.map(ex => ex.name) }));
-  templates.unshift({ name:`${trainingCategory === 'gym' ? 'Gym' : 'Home'} Template ${new Date().toLocaleDateString()}`, category:trainingCategory, plan });
-  save('fitdash_workout_templates', templates.slice(0,10));
-  alert('Workout template saved.');
 }
 
 function renderVideoCodeLibrary() {

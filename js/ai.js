@@ -455,7 +455,7 @@ function parseAIActions(content) {
   if(templateMatch) {
     try {
       const template = JSON.parse(templateMatch[1]);
-      if(template && template.name && Array.isArray(template.plan)) addActionButton('✅ Save workout template', btn => { const templates=safeLoad('fitdash_workout_templates',[]); templates.unshift({...template,category:trainingCategory}); save('fitdash_workout_templates',templates.slice(0,10)); btn.textContent='✓ Template saved'; btn.disabled=true; }, 'template');
+      if(template && template.name && Array.isArray(template.plan)) addActionButton('✅ Save as routine', btn => { const r = saveTemplateAsRoutine(template); if(!r) return; btn.textContent=`✓ Saved routine "${r.name}" — pick it on Training`; btn.disabled=true; }, 'template');
     } catch(e) { if(FITDASH_DEBUG) console.warn('Failed to parse template data:', e); }
   }
 }

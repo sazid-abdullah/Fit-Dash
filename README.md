@@ -14,6 +14,8 @@ FitDash covers four areas in one file:
 
 **Personalized progression** — each exercise gets a next weight/reps suggestion from your last session using double progression (add reps until the top of the level's rep range, then add 2.5 kg, or 1 kg under 20 kg). The guided workout pre-fills the suggestion and shows your last set and estimated 1-rep max (Epley). If you miss the bottom of the rep range at the same weight two sessions running, it suggests dropping ~10% and building back up. Set a fixed weight step (0.5–5 kg) in Settings → Progression. Finishing a guided workout lists new e1RM, top-weight, and per-exercise volume PRs plus volume versus your last workout; Quick Log flags e1RM PRs in the toast. Progress → Exercise Progression shows best e1RM, total volume, 4-week e1RM change, and per-session e1RM/volume bars; Progress → Weekly Training Volume charts total kg lifted per week for the last 8 weeks.
 
+**Routine templates** — keep several routines (Home, Gym, and a short Busy Day by default) and switch with one tap from the dashboard or Training page. Each routine remembers its Home/Gym program, level, exercise swaps, and skipped exercises. Tap 🔁 Swap on any exercise to pick an equipment-based alternative (matches for your Settings → Equipment are highlighted), one of your custom exercises, or any name you type; swaps keep their own progression history. Mid-workout, 🔁 Swap replaces the current exercise for that session only, with an option to save it to the routine. "+ New" copies the current routine; AI-generated workout templates are saved as routines.
+
 **Training** — a structured Full Body Protocol (Legs & Calves superset → Back/Chest/Back giant set → Full Body Circuit) with three difficulty levels. The guided workout overlay walks you set by set, runs a rest timer, logs weight and reps, auto-detects personal records, and calculates calories burned using the Mifflin–St Jeor BMR formula with a MET/volume-load adjustment. Sessions can also be logged manually from a free-form entry modal.
 
 **Nutrition** — Greg Doucette's Circle Diet meal plans rendered as expandable cards. Six plans are included: International 1500 / 2000 / 2500 kcal and Bangladesh-localised 1500 / 2000 / 2500 kcal (BD plans use locally available foods and brands — Agora, Arong, Meena Bazaar, etc.). Each plan shows three meals and a snack section with calorie counts.
@@ -121,6 +123,8 @@ All data is stored in the browser's `localStorage` under these keys:
 | `fitdash_fav_foods` | Foods pinned to the dashboard Quick Log |
 | `fitdash_fav_exercises` | Exercises pinned to the dashboard Quick Log |
 | `fitdash_progression_prefs` | Progression settings (weight step) |
+| `fitdash_routines` | Routine templates (program, level, swaps, skipped exercises) |
+| `fitdash_active_routine` | ID of the selected routine |
 
 Data is never sent anywhere. Clearing your browser's site data will erase all history. Use **Progress → ⬇ CSV** to export a backup before clearing.
 
