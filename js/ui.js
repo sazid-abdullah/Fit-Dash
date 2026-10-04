@@ -160,6 +160,7 @@ function renderDashboard() {
 
   renderChecklist();
   renderCardio();
+  if(typeof renderWeekStrip === 'function') renderWeekStrip();
   applyPlan(activePlan); // applyPlan = UI only; switchPlan also saves — don't write localStorage on every render
 }
 
@@ -668,8 +669,6 @@ function renderSettings() {
   const equipment = p.equipment || [];
   document.querySelectorAll('#equipment-options input').forEach(input => { input.checked = equipment.includes(input.value); });
   document.getElementById('s-limitations').value = p.limitations || '';
-  document.getElementById('s-reminder-enabled').checked = p.reminderEnabled !== false;
-  document.getElementById('s-reminder-time').value = p.reminderTime || '18:00';
   document.getElementById('s-cardio-focus').value = p.cardioFocus || 'strength';
   renderProgressionSettings();
   renderCardioPlan();
@@ -681,11 +680,7 @@ function renderSettings() {
   document.getElementById('s-ai-share-health').checked = a.shareHealthData !== false;
   loadModelOptions(a.model);
   renderVideoCodeLibrary();
-  
-  const sched = p.schedule || [0,1,2,3,4,5,6]; // default all days
-  document.querySelectorAll('.day-toggle-btn').forEach(btn => {
-    btn.classList.toggle('active', sched.includes(parseInt(btn.dataset.day)));
-  });
+  if(typeof renderWeekPlanSettings === 'function') { renderWeekPlanSettings(); renderReminderSettings(); }
 }
 
 function saveProfileSettings() {
@@ -711,22 +706,9 @@ function saveProfileSettings() {
   alert('Profile saved!');
 }
 
-function saveScheduleSettings() {
-  const sched = [];
-  document.querySelectorAll('.day-toggle-btn').forEach(btn => {
-    if(btn.classList.contains('active')) sched.push(parseInt(btn.dataset.day));
-  });
-  userProfile.schedule = sched;
-  save('fitdash_profile', userProfile);
-  alert('Schedule saved!');
-  renderDashboard(); // Update dashboard if today became a rest day
-}
-
 function saveTrainingPreferences() {
   userProfile.equipment = [...document.querySelectorAll('#equipment-options input:checked')].map(input => input.value);
   userProfile.limitations = document.getElementById('s-limitations').value.trim();
-  userProfile.reminderEnabled = document.getElementById('s-reminder-enabled').checked;
-  userProfile.reminderTime = document.getElementById('s-reminder-time').value || '18:00';
   userProfile.cardioFocus = document.getElementById('s-cardio-focus').value;
   save('fitdash_profile', userProfile);
   renderCardioPlan();

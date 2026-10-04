@@ -1509,11 +1509,16 @@ function renderTrainingReminder() {
   if(!el) return;
   const day = new Date().getDay();
   const scheduled = (userProfile.schedule || [0,1,2,3,4,5,6]).includes(day);
-  if(!userProfile.reminderEnabled || !scheduled) {
-    el.innerHTML = '<div style="font-size:12px;color:var(--muted);text-align:center">Rest or active recovery day. Adjust your schedule in Settings.</div>';
+  if(!scheduled) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--muted);text-align:center">Rest or active recovery day. Adjust your weekly schedule in Settings.</div>';
     return;
   }
-  el.innerHTML = `<div class="card" style="padding:12px 16px;border-color:var(--red)"><strong>Today is a training day.</strong> Suggested reminder: ${escapeHtml(userProfile.reminderTime || '18:00')}. Warm up, train with control, and follow your selected Home/Gym plan.</div>`;
+  const hasReminders = typeof workoutTimeFor === 'function';
+  const planned = hasReminders ? scheduledRoutineFor(day) : null;
+  const reminder = hasReminders && reminderPrefs.enabled && reminderPrefs.workout.on
+    ? `Reminder at ${escapeHtml(workoutTimeFor(day))}.`
+    : 'Turn on workout reminders in Settings → Reminders.';
+  el.innerHTML = `<div class="card" style="padding:12px 16px;border-color:var(--red)"><strong>Today is a training day${planned ? ` · ${escapeHtml(planned.name)}` : ''}.</strong> ${reminder} Warm up, train with control, and follow your selected routine.</div>`;
 }
 
 // ══ PR TRACKER ════════════════════════════════════════════════

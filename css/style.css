@@ -968,3 +968,41 @@ canvas { width:100%!important; }
 .swap-section-title { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin:14px 0 6px; }
 .swap-option { width:100%; display:flex; justify-content:space-between; align-items:center; gap:8px; text-align:left; margin-bottom:6px; color:var(--text); }
 .swap-save-toggle { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted2); margin-top:12px; }
+
+/* ── WEEKLY SCHEDULE & REMINDERS ─────────────────────────── */
+.week-strip-card { padding:12px; }
+.week-strip { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+.week-day { background:var(--card2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:6px 2px; text-align:center; min-width:0; }
+.week-day.rest { opacity:.7; }
+.week-day.today { border-color:var(--red); opacity:1; }
+.week-day.done { border-color:var(--green); }
+.week-day.missed .week-day-icon { opacity:.4; }
+.week-day-name { font-size:10px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+.week-day.today .week-day-name { color:var(--red); }
+.week-day-icon { font-size:15px; margin:2px 0; }
+.week-day.done .week-day-icon { color:var(--green); font-weight:800; }
+.week-day-label { font-size:10px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.week-strip-foot { display:flex; justify-content:space-between; gap:8px; margin-top:10px; font-size:12px; color:var(--muted); }
+.week-strip-foot a { color:var(--blue); text-decoration:none; }
+.week-plan { display:flex; flex-direction:column; gap:6px; }
+.week-plan-row { display:grid; grid-template-columns:44px 1fr 120px; gap:8px; align-items:center; }
+.week-plan-day { font-size:13px; font-weight:700; }
+.week-plan-row .settings-input, .week-plan-row .settings-select { padding:8px 10px; }
+.rem-toggle { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; cursor:pointer; flex-wrap:wrap; }
+.rem-master { font-size:15px; font-weight:700; }
+.rem-sub { font-size:11px; color:var(--muted); font-weight:400; }
+.rem-row { border-top:1px solid var(--border); padding:12px 0; }
+.rem-fields { display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; }
+.rem-fields > div { min-width:110px; }
+.rem-days { display:flex; gap:4px; width:232px; max-width:100%; }
+.reminder-banner { position:fixed; top:72px; left:50%; transform:translateX(-50%); width:min(460px, calc(100vw - 24px)); background:var(--card); border:1px solid var(--red); border-radius:var(--radius); padding:14px 16px; box-shadow:0 10px 25px rgba(0,0,0,0.5); z-index:99998; display:flex; flex-direction:column; gap:10px; }
+.reminder-banner[hidden] { display:none; }
+.reminder-banner-text { font-size:13px; line-height:1.5; }
+.reminder-banner-text strong { font-size:14px; }
+.reminder-more { font-size:11px; color:var(--muted); margin-left:6px; }
+.reminder-banner-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.reminder-banner-actions button { width:auto; padding:7px 12px; font-size:13px; }
+@media (max-width: 480px) {
+  .week-strip { gap:3px; }
+  .week-plan-row { grid-template-columns:36px 1fr 96px; gap:6px; }
+}

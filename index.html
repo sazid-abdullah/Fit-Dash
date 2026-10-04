@@ -61,6 +61,11 @@
   </div>
 
   <div style="margin-bottom:16px">
+    <div class="dash-section-title">📅 This Week</div>
+    <div class="card week-strip-card" id="dash-week-strip"></div>
+  </div>
+
+  <div style="margin-bottom:16px">
     <div class="dash-section-title">Today's Plan</div>
     <div class="dash-quick" id="dash-quick-training" onclick="showPage('training')">
       <div class="dash-quick-icon red">🏋️</div>
@@ -899,21 +904,65 @@
     </div>
   </div>
 
-  <!-- Training Schedule -->
-  <div class="settings-section">
-    <div class="settings-section-title">📅 Training Schedule</div>
+  <!-- Weekly Schedule -->
+  <div class="settings-section" id="s-schedule">
+    <div class="settings-section-title">📅 Weekly Schedule</div>
     <div class="settings-card">
-      <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Select the days you plan to work out. Unselected days will be treated as Rest/Active Recovery days.</div>
-      <div style="display:flex;gap:4px;margin-bottom:12px" id="s-schedule-days">
-        <button class="day-toggle-btn active" data-day="0" onclick="this.classList.toggle('active')">S</button>
-        <button class="day-toggle-btn active" data-day="1" onclick="this.classList.toggle('active')">M</button>
-        <button class="day-toggle-btn active" data-day="2" onclick="this.classList.toggle('active')">T</button>
-        <button class="day-toggle-btn active" data-day="3" onclick="this.classList.toggle('active')">W</button>
-        <button class="day-toggle-btn active" data-day="4" onclick="this.classList.toggle('active')">T</button>
-        <button class="day-toggle-btn active" data-day="5" onclick="this.classList.toggle('active')">F</button>
-        <button class="day-toggle-btn active" data-day="6" onclick="this.classList.toggle('active')">S</button>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5">Plan each day as a rest day or a training day with a routine. FitDash switches to that day's routine the first time you open it that day. Leave the time blank to use the default workout reminder time.</div>
+      <div id="s-week-plan" class="week-plan"></div>
+      <button class="btn-red" onclick="saveScheduleSettings()" style="margin-top:12px;max-width:200px">💾 Save Schedule</button>
+      <div id="schedule-settings-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- Reminders -->
+  <div class="settings-section" id="s-reminders">
+    <div class="settings-section-title">⏰ Reminders</div>
+    <div class="settings-card">
+      <label class="rem-toggle rem-master"><input type="checkbox" id="s-rem-enabled"> Reminders on</label>
+      <div id="s-rem-permission" style="font-size:12px;color:var(--muted);margin:6px 0 14px;line-height:1.5"></div>
+      <div class="rem-row">
+        <label class="rem-toggle"><input type="checkbox" id="s-rem-workout-on"> 🏋️ Workout <span class="rem-sub">training days only, skipped once you log a session</span></label>
+        <div class="rem-fields"><div><label class="settings-label" for="s-rem-workout-time">Default time</label><input type="time" class="settings-input" id="s-rem-workout-time"></div></div>
       </div>
-      <button class="btn-red" onclick="saveScheduleSettings()" style="max-width:200px">💾 Save Schedule</button>
+      <div class="rem-row">
+        <label class="rem-toggle"><input type="checkbox" id="s-rem-water-on"> 💧 Water <span class="rem-sub">stops once you hit your water goal</span></label>
+        <div class="rem-fields">
+          <div><label class="settings-label" for="s-rem-water-start">From</label><input type="time" class="settings-input" id="s-rem-water-start"></div>
+          <div><label class="settings-label" for="s-rem-water-end">Until</label><input type="time" class="settings-input" id="s-rem-water-end"></div>
+          <div><label class="settings-label" for="s-rem-water-every">Every</label><select class="settings-select" id="s-rem-water-every"><option value="30">30 min</option><option value="60">1 h</option><option value="90">1.5 h</option><option value="120">2 h</option><option value="180">3 h</option></select></div>
+        </div>
+      </div>
+      <div class="rem-row">
+        <label class="rem-toggle"><input type="checkbox" id="s-rem-meals-on"> 🍽️ Meals <span class="rem-sub">skipped if you've already logged that many foods today</span></label>
+        <div class="rem-fields"><div style="flex:1"><label class="settings-label" for="s-rem-meals-times">Times (24h, comma-separated)</label><input type="text" class="settings-input" id="s-rem-meals-times" placeholder="08:30, 13:30, 20:00"></div></div>
+      </div>
+      <div class="rem-row">
+        <label class="rem-toggle"><input type="checkbox" id="s-rem-weighin-on"> ⚖️ Weigh-in <span class="rem-sub">skipped if you've logged weight today</span></label>
+        <div class="rem-fields">
+          <div><label class="settings-label" for="s-rem-weighin-time">Time</label><input type="time" class="settings-input" id="s-rem-weighin-time"></div>
+          <div><span class="settings-label">Days</span><div class="rem-days" id="s-rem-weighin-days">
+        <button class="day-toggle-btn" data-day="0" onclick="this.classList.toggle('active')" aria-label="Sunday">S</button>
+        <button class="day-toggle-btn" data-day="1" onclick="this.classList.toggle('active')" aria-label="Monday">M</button>
+        <button class="day-toggle-btn" data-day="2" onclick="this.classList.toggle('active')" aria-label="Tuesday">T</button>
+        <button class="day-toggle-btn" data-day="3" onclick="this.classList.toggle('active')" aria-label="Wednesday">W</button>
+        <button class="day-toggle-btn" data-day="4" onclick="this.classList.toggle('active')" aria-label="Thursday">T</button>
+        <button class="day-toggle-btn" data-day="5" onclick="this.classList.toggle('active')" aria-label="Friday">F</button>
+        <button class="day-toggle-btn" data-day="6" onclick="this.classList.toggle('active')" aria-label="Saturday">S</button>
+          </div></div>
+        </div>
+      </div>
+      <div class="rem-row">
+        <label class="rem-toggle"><input type="checkbox" id="s-rem-sleep-on"> 😴 Bedtime</label>
+        <div class="rem-fields"><div><label class="settings-label" for="s-rem-sleep-time">Wind-down time</label><input type="time" class="settings-input" id="s-rem-sleep-time"></div></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+        <button class="btn-red" onclick="saveReminderSettings()" style="max-width:200px">💾 Save Reminders</button>
+        <button class="btn-ghost" onclick="testReminder()">🔔 Test</button>
+        <button class="btn-ghost" onclick="downloadReminderCalendar()" title="Recurring calendar events with alerts, for when FitDash is closed">📆 Add to calendar (.ics)</button>
+      </div>
+      <div id="reminder-settings-status" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5">Browser reminders only fire while FitDash is open (a background tab or the installed app is fine). For reminders when it's closed, use "Add to calendar" — your calendar app will alert you. Everything stays on this device.</div>
     </div>
   </div>
 
@@ -955,14 +1004,12 @@
   </div>
 
   <div class="settings-section">
-    <div class="settings-section-title">⏰ Workout Reminders &amp; Cardio Plan</div>
+    <div class="settings-section-title">🏃 Cardio Plan</div>
     <div class="settings-card">
-      <label style="font-size:13px"><input type="checkbox" id="s-reminder-enabled" style="margin-right:8px"> Show workout reminder on scheduled days</label>
-      <div class="settings-row" style="margin-top:10px">
-        <div><label class="settings-label">Reminder time</label><input type="time" class="settings-input" id="s-reminder-time" value="18:00"></div>
+      <div class="settings-row">
         <div><label class="settings-label">Weekly focus</label><select class="settings-select" id="s-cardio-focus"><option value="strength">Strength / hypertrophy · 150 min cardio</option><option value="cardio">Cardio focus · 300 min cardio</option></select></div>
       </div>
-      <button class="btn-red" onclick="saveTrainingPreferences()" style="margin-top:10px;max-width:220px">💾 Save Reminder &amp; Cardio Plan</button>
+      <button class="btn-red" onclick="saveTrainingPreferences()" style="margin-top:10px;max-width:220px">💾 Save Cardio Plan</button>
       <div id="cardio-plan-preview" style="margin-top:14px"></div>
     </div>
   </div>
@@ -1359,6 +1406,8 @@
 </div>
 
 
+<div id="reminder-banner" class="reminder-banner" role="alert" hidden></div>
+
 <!-- Undo Toast -->
 <div id="undo-toast" style="position:fixed;bottom:-100px;left:50%;transform:translateX(-50%);background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 24px;display:flex;align-items:center;gap:16px;box-shadow:0 10px 25px rgba(0,0,0,0.5);z-index:99999;transition:bottom 0.3s ease;">
   <span id="undo-text" style="font-size:14px;color:var(--text)">Item deleted.</span>
@@ -1420,6 +1469,7 @@
 <script src="js/nutrition.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/quicklog.js"></script>
+<script src="js/reminders.js"></script>
 <script src="js/app.js"></script>
   
 </body>
