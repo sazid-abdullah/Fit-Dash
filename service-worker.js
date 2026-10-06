@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fitdash-shell-v2';
+const CACHE_NAME = 'fitdash-shell-v3';
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest'];
 
 self.addEventListener('install', event => {
@@ -16,7 +16,9 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if(event.request.method !== 'GET') return;
-  event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request)));
+  // Navigations may carry ?reminder=… from a notification click; serve the cached shell for them.
+  const opts = event.request.mode === 'navigate' ? { ignoreSearch: true } : undefined;
+  event.respondWith(caches.match(event.request, opts).then(cached => cached || fetch(event.request)));
 });
 
 // Reminder notifications: focus (or open) FitDash and hand the action to the page.
@@ -30,6 +32,9 @@ self.addEventListener('notificationclick', event => {
       client.postMessage(msg);
       return event.action === 'snooze' ? undefined : client.focus();
     }
-    return event.action === 'snooze' ? undefined : self.clients.openWindow('./index.html');
+    // Snooze state lives in the page's localStorage, so with no window open it can't be stored.
+    if(event.action === 'snooze') return undefined;
+    const qs = new URLSearchParams({ reminder: data.id || '', kind: data.kind || '' }).toString();
+    return self.clients.openWindow('./index.html?' + qs);
   }));
 });
