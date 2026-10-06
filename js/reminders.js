@@ -27,10 +27,12 @@ function normalizeReminders(raw) {
   const r = raw && typeof raw === 'object' ? raw : {};
   const pick = (k) => (r[k] && typeof r[k] === 'object') ? r[k] : {};
   const w = pick('workout'), wa = pick('water'), me = pick('meals'), wi = pick('weighin'), sl = pick('sleep');
-  const legacyTime = typeof userProfile !== 'undefined' ? userProfile.reminderTime : null;
+  const legacy = typeof userProfile !== 'undefined' ? userProfile : {};
+  const legacyTime = legacy.reminderTime;
   const every = parseInt(wa.every, 10);
   return {
-    enabled: !!r.enabled,
+    // Before fitdash_reminders existed, the workout reminder opt-in lived on the profile.
+    enabled: raw && typeof raw === 'object' ? !!r.enabled : legacy.reminderEnabled === true,
     workout: { on: w.on !== undefined ? !!w.on : d.workout.on, time: validTime(w.time, validTime(legacyTime, d.workout.time)) },
     water: { on: wa.on !== undefined ? !!wa.on : d.water.on, start: validTime(wa.start, d.water.start), end: validTime(wa.end, d.water.end),
              every: [30, 60, 90, 120, 180].includes(every) ? every : d.water.every },
@@ -169,7 +171,18 @@ function nextReminderToday() {
   return reminderSlotsFor(now).find(s => timeToMins(s.time) > nowMins && !log.fired[s.id] && !isReminderSatisfied(s)) || null;
 }
 
+// Every open tab runs this timer; a Web Lock makes tabs take turns so the log read below
+// already contains slots another tab just fired.
 function checkReminders() {
+  if(!reminderPrefs.enabled) return;
+  if(navigator.locks && navigator.locks.request) {
+    navigator.locks.request('fitdash-reminders', runReminderCheck).catch(() => {});
+  } else {
+    runReminderCheck();
+  }
+}
+
+function runReminderCheck() {
   if(!reminderPrefs.enabled) return;
   const now = new Date();
   const nowMins = now.getHours() * 60 + now.getMinutes();
@@ -454,8 +467,41 @@ function downloadReminderCalendar() {
 }
 
 // ── Init ────────────────────────────────────────────────────
+let reminderTickDate = getLocalDateStr();
+
+// Also handles a tab left open past midnight: pick the new day's routine and refresh day-based views.
+function reminderTick() {
+  const today = getLocalDateStr();
+  if(today !== reminderTickDate) {
+    reminderTickDate = today;
+    applyScheduledRoutine();
+    renderDashboard();
+    if(typeof renderTrainingReminder === 'function') renderTrainingReminder();
+  }
+  checkReminders();
+}
+
+// A notification clicked after every FitDash tab was closed opens index.html?reminder=<id>&kind=<kind>.
+function consumeReminderLaunchParams() {
+  const params = new URLSearchParams(location.search);
+  const id = params.get('reminder'), kind = params.get('kind');
+  if(!id) return;
+  params.delete('reminder'); params.delete('kind');
+  const qs = params.toString();
+  history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
+  if(REMINDER_ACTIONS[kind]) setTimeout(() => runReminderAction(id, kind), 300);
+}
+
+window.addEventListener('storage', e => {
+  if(e.key === 'fitdash_reminders') reminderPrefs = normalizeReminders(safeLoad('fitdash_reminders', null));
+  else if(e.key === 'fitdash_week_plan') weekPlan = normalizeWeekPlan(safeLoad('fitdash_week_plan', null));
+  else return;
+  renderWeekStrip();
+});
+
 applyScheduledRoutine();
 renderWeekStrip();
-setInterval(checkReminders, REMINDER_CHECK_MS);
-document.addEventListener('visibilitychange', () => { if(!document.hidden) { checkReminders(); renderWeekStrip(); } });
-setTimeout(checkReminders, 1500);
+consumeReminderLaunchParams();
+setInterval(reminderTick, REMINDER_CHECK_MS);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) { reminderTick(); renderWeekStrip(); } });
+setTimeout(reminderTick, 1500);
