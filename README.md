@@ -16,6 +16,8 @@ FitDash covers four areas in one file:
 
 **Routine templates** — keep several routines (Home, Gym, and a short Busy Day by default) and switch with one tap from the dashboard or Training page. Each routine remembers its Home/Gym program, level, exercise swaps, and skipped exercises. Tap 🔁 Swap on any exercise to pick an equipment-based alternative (matches for your Settings → Equipment are highlighted), one of your custom exercises, or any name you type; swaps keep their own progression history. Mid-workout, 🔁 Swap replaces the current exercise for that session only, with an option to save it to the routine. "+ New" copies the current routine; AI-generated workout templates are saved as routines.
 
+**Weekly schedule & reminders** — Settings → Weekly Schedule plans each weekday as a rest day or a training day with a routine (e.g. Mon Gym, Wed Home, Fri Busy Day) and an optional workout time; FitDash switches to that day's routine the first time you open it that day, and the dashboard's "This Week" strip shows planned, done (✓), and rest days. Settings → Reminders turns on browser reminders for workouts (training days only), water (every 30 min–3 h within a time window), meals, weigh-ins (chosen weekdays), and bedtime. Reminders are skipped when the thing is already logged (session today, water goal hit, weight logged, enough foods logged), can be snoozed 15 min, and missed ones fire once when you reopen the app (up to 3 h late). They appear as an in-app banner with a one-tap action (+250 ml, Log weight, …) and as a system notification when FitDash is in the background. Browsers can't schedule notifications for a closed web app, so "Add to calendar (.ics)" exports the same reminders as recurring calendar events with alerts.
+
 **Training** — a structured Full Body Protocol (Legs & Calves superset → Back/Chest/Back giant set → Full Body Circuit) with three difficulty levels. The guided workout overlay walks you set by set, runs a rest timer, logs weight and reps, auto-detects personal records, and calculates calories burned using the Mifflin–St Jeor BMR formula with a MET/volume-load adjustment. Sessions can also be logged manually from a free-form entry modal.
 
 **Nutrition** — Greg Doucette's Circle Diet meal plans rendered as expandable cards. Six plans are included: International 1500 / 2000 / 2500 kcal and Bangladesh-localised 1500 / 2000 / 2500 kcal (BD plans use locally available foods and brands — Agora, Arong, Meena Bazaar, etc.). Each plan shows three meals and a snack section with calorie counts.
@@ -125,6 +127,10 @@ All data is stored in the browser's `localStorage` under these keys:
 | `fitdash_progression_prefs` | Progression settings (weight step) |
 | `fitdash_routines` | Routine templates (program, level, swaps, skipped exercises) |
 | `fitdash_active_routine` | ID of the selected routine |
+| `fitdash_week_plan` | Weekly schedule: per weekday `rest`/`any`/routine ID and optional workout time |
+| `fitdash_schedule_applied` | Date the day's scheduled routine was last auto-selected |
+| `fitdash_reminders` | Reminder settings (on/off, times, water interval, weigh-in days) |
+| `fitdash_reminder_log` | Today's fired and snoozed reminders |
 
 Data is never sent anywhere. Clearing your browser's site data will erase all history. Use **Progress → ⬇ CSV** to export a backup before clearing.
 
