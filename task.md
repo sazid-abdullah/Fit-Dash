@@ -62,13 +62,13 @@ Below is the complete inventory of all development tasks implemented in **FitDas
 ---
 
 ## 🚀 Phase 3: Health Analytics & Data Visualization
-- [ ] **Historical JSON Data Generator**
-  - [ ] Write a Node/Python script to generate a rich 30-day mock dataset.
-  - [ ] Populate `fitdash_sessions`, `fitdash_pr`, `fitdash_recomp`, and `fitdash_circ` with trending values.
-  - [ ] Export as a valid `fitdash_backup.json` for user import.
-- [ ] **Dashboard Health Widgets**
-  - [ ] Build Daily Water intake tracking widget with UI fill-bar.
-  - [ ] Build Sleep tracking widget (hours and quality rating).
-- [ ] **Advanced Analytics Charts**
-  - [ ] Implement multi-line Canvas chart for Body Circumferences.
-  - [ ] Implement line Canvas chart for Volume / PR Progression over time.
+- [x] **Historical JSON Data Generator**
+  - [x] Write a Node/Python script to generate a rich 30-day mock dataset.
+  - [x] Populate `fitdash_sessions`, `fitdash_pr`, `fitdash_recomp`, and `fitdash_circ` with trending values.
+  - [x] Export as a valid `fitdash_backup.json` for user import.
+- [x] **Dashboard Health Widgets**
+  - [x] Build Daily Water intake tracking widget with UI fill-bar.
+  - [x] Build Sleep tracking widget (hours and quality rating).
+- [x] **Advanced Analytics Charts**
+  - [x] Implement multi-line Canvas chart for Body Circumferences.
+  - [x] Implement line Canvas chart for Volume / PR Progression over time.

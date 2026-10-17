@@ -937,7 +937,7 @@ async function testAIConnection() {
   aiConfig = { ...originalConfig, provider: provider, apiKey: testKey, apiKeys: { [provider]: testKey } };
   
   try {
-    const res = await callAI('Say the exact word "SUCCESS" and nothing else.');
+    const res = await callAI([{ role: 'user', content: 'Say the exact word "SUCCESS" and nothing else.' }]);
     if (res && res.includes('SUCCESS')) {
       statusEl.textContent = 'Connection successful! \u2705';
       statusEl.style.color = 'var(--green)';
