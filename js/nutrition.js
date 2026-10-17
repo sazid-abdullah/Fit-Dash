@@ -168,7 +168,7 @@ async function lookupIngredientMacros(button) {
     alert('Enter a custom ingredient name first.');
     return;
   }
-  if(providerRequiresApiKey(aiConfig.provider) && !aiConfig.apiKey) {
+  if(providerRequiresApiKey(aiConfig.provider) && !getProviderApiKey(aiConfig.provider)) {
     alert('Set your AI API key in Settings first.');
     return;
   }
@@ -373,7 +373,7 @@ async function logQuickFood() {
   const grams = Number.isFinite(gramsInput) && gramsInput > 0 ? gramsInput : gramsText;
   if(!name) { alert('Enter a food name.'); return; }
   if(!grams || grams <= 0) { alert('Enter valid grams.'); return; }
-  if(providerRequiresApiKey(aiConfig.provider) && !aiConfig.apiKey) {
+  if(providerRequiresApiKey(aiConfig.provider) && !getProviderApiKey(aiConfig.provider)) {
     alert('Set your AI API key in Settings first to estimate calories from grams.');
     return;
   }
@@ -702,7 +702,7 @@ async function estimateDailyMicronutrients() {
     status.style.color = 'var(--orange)';
     return;
   }
-  if(providerRequiresApiKey(aiConfig.provider) && !aiConfig.apiKey) {
+  if(providerRequiresApiKey(aiConfig.provider) && !getProviderApiKey(aiConfig.provider)) {
     status.textContent = 'Set up an AI provider in Settings first.';
     status.style.color = 'var(--orange)';
     return;
@@ -744,16 +744,13 @@ async function analyzeLabelPhoto(input) {
   const file = input.files?.[0];
   const status = document.getElementById('label-photo-status');
   if(!file) return;
-  if(aiConfig.provider !== 'gemini') {
-    status.textContent = 'Photo reading currently requires Gemini. Use manual entry with other providers.';
+  const geminiKey = getProviderApiKey('gemini');
+  if(!geminiKey) {
+    status.textContent = 'Photo reading uses Gemini. Add a Gemini API key in Settings (your current provider can stay selected).';
     status.style.color = 'var(--orange)';
     return;
   }
-  if(!aiConfig.apiKey) {
-    status.textContent = 'Set a Gemini API key in Settings first.';
-    status.style.color = 'var(--orange)';
-    return;
-  }
+  const geminiModel = aiConfig.provider === 'gemini' && aiConfig.model ? aiConfig.model : 'gemini-2.5-flash';
   status.textContent = 'Reading label...';
   status.style.color = 'var(--muted)';
   try {
@@ -766,7 +763,7 @@ async function analyzeLabelPhoto(input) {
     const comma = dataUrl.indexOf(',');
     const mimeType = dataUrl.slice(5, comma).split(';')[0];
     const base64 = dataUrl.slice(comma + 1);
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(aiConfig.model)}:generateContent?key=${encodeURIComponent(aiConfig.apiKey)}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(geminiModel)}:generateContent?key=${encodeURIComponent(geminiKey)}`;
     const response = await fetch(url, {
       method:'POST',
       headers:{'Content-Type':'application/json'},

@@ -471,7 +471,7 @@ async function generateWeeklyReport() {
   const button = document.getElementById('weekly-report-btn');
   const status = document.getElementById('weekly-report-status');
   const output = document.getElementById('weekly-report-output');
-  if(providerRequiresApiKey(aiConfig.provider) && !aiConfig.apiKey) {
+  if(providerRequiresApiKey(aiConfig.provider) && !getProviderApiKey(aiConfig.provider)) {
     status.textContent = 'Set up an AI provider in Settings first.';
     status.style.color = 'var(--orange)';
     return;
@@ -881,7 +881,7 @@ function downloadText(filename, text, type='text/plain') {
 }
 
 async function generateGroceryList() {
-  if(providerRequiresApiKey(aiConfig.provider) && !aiConfig.apiKey) { setPlanningStatus('Set up an AI provider first.', 'var(--orange)'); return; }
+  if(providerRequiresApiKey(aiConfig.provider) && !getProviderApiKey(aiConfig.provider)) { setPlanningStatus('Set up an AI provider first.', 'var(--orange)'); return; }
   setPlanningStatus('Generating grocery list...');
   try {
     const response = await callAI([{role:'system',content:'Create a concise grocery list. Group items by protein, produce, grains, dairy, and pantry. Return plain text only.'},{role:'user',content:`Build a grocery list from my selected ${activePlan} meal plan and ${userGoals.cuisinePref || 'both'} cuisine preference. Include practical quantities for one week.`}]);
