@@ -13,6 +13,7 @@ function toggleChat() {
   if(isOpen) {
     renderChatMessages();
     updateChatModelLabel();
+    refreshProviderModels(aiConfig.provider).then(list => { if(list) updateChatModelLabel(); }).catch(() => {});
     setTimeout(() => document.getElementById('chat-input').focus(), 300);
   }
 }
@@ -20,9 +21,19 @@ function toggleChat() {
 function updateChatModelLabel() {
   const el = document.getElementById('chat-model-label');
   if(!el) return;
-  const models = AI_MODELS[aiConfig.provider] || [];
-  const m = models.find(m => m.id === aiConfig.model);
-  el.textContent = m ? m.name : aiConfig.model || 'No model';
+  const models = getModelsForProvider(aiConfig.provider);
+  let html = modelOptionsHtml(models, aiConfig.model);
+  if(aiConfig.model && !models.some(m => m.id === aiConfig.model)) {
+    html = `<option value="${escapeHtml(aiConfig.model)}" selected>${escapeHtml(aiConfig.model)}</option>` + html;
+  }
+  if(!html) html = '<option value="">No model</option>';
+  el.innerHTML = html;
+  el.value = aiConfig.model || '';
+  el.title = 'Model: ' + (aiConfig.model || 'none');
+}
+
+function onChatModelChange(model) {
+  if(model) setActiveModel(model);
 }
 
 function renderChatMessages() {
@@ -231,7 +242,7 @@ async function callAI(messages) {
     const statusCode = statusMatch ? Number(statusMatch[1]) : 0;
     const canFallback = [400, 404, 408, 409, 429].includes(statusCode) || statusCode >= 500;
     const fallbackModels = canFallback
-      ? (AI_MODELS[primaryConfig.provider] || []).map(model => model.id).filter(model => model !== primaryConfig.model)
+      ? getRecommendedModels(primaryConfig.provider).map(model => model.id).filter(model => model !== primaryConfig.model)
       : [];
     if(!fallbackModels.length) throw primaryError;
 

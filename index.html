@@ -1048,7 +1048,7 @@
     <div class="settings-card">
       <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6">
         Get a free API key from <strong style="color:var(--text)">Groq</strong> (fastest) at <span style="color:var(--blue)">console.groq.com</span>, <strong style="color:var(--text)">Google Gemini</strong> at <span style="color:var(--blue)">aistudio.google.com</span>, or <strong style="color:var(--text)">OpenRouter</strong> (more models) at <span style="color:var(--blue)">openrouter.ai</span>. For private local AI, install <strong style="color:var(--text)">Ollama</strong> and download a model on your computer.
-        If a model gets decommissioned, choose <strong style="color:var(--text)">OpenRouter Auto</strong> or select <strong style="color:var(--text)">Custom model ID...</strong> and paste the latest model slug from your provider.
+        The model list is loaded from your provider (Groq and Gemini need your API key first), so new models appear and retired ones disappear automatically. You can also switch models from the AI Coach chat header.
         You can choose whether to store the API key in this browser; if unchecked the key will not be saved and will be cleared on reload.
       </div>
       <div class="settings-row">
@@ -1059,6 +1059,10 @@
           <label class="settings-label">Model</label>
           <select class="settings-select" id="s-ai-model" onchange="onModelChoiceChanged()"></select>
           <input type="text" class="settings-input" id="s-ai-model-custom" placeholder="Custom model ID (e.g. openrouter/auto)" style="margin-top:8px;display:none">
+          <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+            <button class="btn-ghost" style="font-size:12px;padding:6px 10px" onclick="refreshModelsFromSettings()">&#x21bb; Refresh models</button>
+            <span id="ai-models-status" style="font-size:11px;color:var(--muted)"></span>
+          </div>
         </div>
       </div>
       <div>
@@ -1159,7 +1163,7 @@
 <div id="ai-chat-panel">
   <div class="chat-header">
     <div class="chat-header-title">🤖 AI Coach</div>
-    <div class="chat-header-model" id="chat-model-label">—</div>
+    <select class="chat-header-model" id="chat-model-label" onchange="onChatModelChange(this.value)" aria-label="AI model"></select>
     <button class="chat-close-btn" onclick="toggleChat()">✕</button>
   </div>
   <div class="chat-messages" id="chat-messages">
