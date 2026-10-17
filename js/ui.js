@@ -618,6 +618,7 @@ function clearHistory() {
 let userProfile = safeLoad('fitdash_profile', {});
 let userGoals   = safeLoad('fitdash_goals', {});
 let aiConfig    = safeLoad('fitdash_ai_config', { provider:'groq', model:'llama-3.1-8b-instant', apiKey:'', apiKeys:{}, storeKey:false, shareHealthData:true });
+if(aiConfig.model === 'mistralai/mistral-7b-instruct') aiConfig.model = 'mistralai/mistral-nemo';
 
 function getProviderApiKey(provider) {
   if(!aiConfig.apiKeys || typeof aiConfig.apiKeys !== 'object') aiConfig.apiKeys = {};
@@ -640,7 +641,7 @@ var AI_MODELS = {
   openrouter: [
     { id:'openrouter/auto', name:'OpenRouter Auto (recommended)' },
     { id:'meta-llama/llama-3.1-8b-instruct', name:'Llama 3.1 8B' },
-    { id:'mistralai/mistral-7b-instruct', name:'Mistral 7B' },
+    { id:'mistralai/mistral-nemo', name:'Mistral Nemo' },
     { id:'deepseek/deepseek-r1', name:'DeepSeek R1' },
   ],
   ollama: [
@@ -934,11 +935,17 @@ async function testAIConnection() {
   
   // Temporarily override the config to test
   const originalConfig = { ...aiConfig };
-  aiConfig = { ...originalConfig, provider: provider, apiKey: testKey, apiKeys: { [provider]: testKey } };
+  const model = getSelectedModelValue();
+  if (!model) {
+    statusEl.textContent = 'Please select a model or enter a custom model ID.';
+    statusEl.style.color = 'var(--red)';
+    return;
+  }
+  aiConfig = { ...originalConfig, provider: provider, model: model, apiKey: testKey, apiKeys: { [provider]: testKey } };
   
   try {
-    const res = await callAI([{ role: 'user', content: 'Say the exact word "SUCCESS" and nothing else.' }]);
-    if (res && res.includes('SUCCESS')) {
+    const res = await callAIRequest([{ role: 'user', content: 'Say the exact word "SUCCESS" and nothing else.' }]);
+    if (res && res.toUpperCase().includes('SUCCESS')) {
       statusEl.textContent = 'Connection successful! \u2705';
       statusEl.style.color = 'var(--green)';
     } else {
