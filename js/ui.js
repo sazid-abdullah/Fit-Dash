@@ -651,6 +651,139 @@ var AI_MODELS = {
   ]
 };
 
+const AI_MODEL_CACHE_KEY = 'fitdash_ai_models';
+const AI_MODEL_CACHE_TTL = 12 * 60 * 60 * 1000;
+let liveModelCache = safeLoad(AI_MODEL_CACHE_KEY, {});
+const liveModelRequests = {};
+
+function getLiveModels(provider) {
+  const entry = liveModelCache[provider];
+  return entry && Array.isArray(entry.models) && entry.models.length ? entry.models : null;
+}
+
+// Curated picks still offered by the provider; also used as the fallback chain in callAI.
+function getRecommendedModels(provider) {
+  const curated = AI_MODELS[provider] || [];
+  const live = getLiveModels(provider);
+  if(!live) return curated;
+  const liveIds = new Set(live.map(m => m.id));
+  return curated.filter(m => liveIds.has(m.id));
+}
+
+function getModelsForProvider(provider) {
+  const recommended = getRecommendedModels(provider);
+  const live = getLiveModels(provider) || [];
+  const recIds = new Set(recommended.map(m => m.id));
+  return [
+    ...recommended.map(m => ({ ...m, group:'Recommended' })),
+    ...live.filter(m => !recIds.has(m.id)).map(m => ({ ...m, group: m.free ? 'Free' : 'All models' })),
+  ];
+}
+
+function modelOptionsHtml(models, selected) {
+  const groups = {};
+  models.forEach(m => { (groups[m.group || 'Models'] = groups[m.group || 'Models'] || []).push(m); });
+  const order = ['Recommended', 'Free', 'All models'];
+  return Object.entries(groups).sort(([a], [b]) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99)).map(([label, list]) =>
+    `<optgroup label="${escapeHtml(label)}">${list.map(m =>
+      `<option value="${escapeHtml(m.id)}"${m.id === selected ? ' selected' : ''}>${escapeHtml(m.name || m.id)}</option>`).join('')}</optgroup>`
+  ).join('');
+}
+
+const NON_CHAT_MODEL_RE = /whisper|tts|guard|embed|imagen|veo|aqa|image-generation|playai|orpheus|transcribe/i;
+
+async function fetchProviderModels(provider, apiKey) {
+  if(provider === 'openrouter') {
+    const res = await fetch('https://openrouter.ai/api/v1/models');
+    if(!res.ok) throw new Error(`${res.status}`);
+    const data = await res.json();
+    return (data.data || [])
+      .filter(m => !m.architecture?.output_modalities || m.architecture.output_modalities.includes('text'))
+      .map(m => ({ id:m.id, name:m.name || m.id, free: m.id.endsWith(':free') || (m.pricing?.prompt === '0' && m.pricing?.completion === '0') }));
+  }
+  if(provider === 'groq') {
+    if(!apiKey) return null;
+    const res = await fetch('https://api.groq.com/openai/v1/models', { headers:{ Authorization:`Bearer ${apiKey}` } });
+    if(!res.ok) throw new Error(`${res.status}`);
+    const data = await res.json();
+    return (data.data || []).filter(m => m.active !== false && !NON_CHAT_MODEL_RE.test(m.id)).map(m => ({ id:m.id, name:m.id }));
+  }
+  if(provider === 'gemini') {
+    if(!apiKey) return null;
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000&key=${encodeURIComponent(apiKey)}`);
+    if(!res.ok) throw new Error(`${res.status}`);
+    const data = await res.json();
+    return (data.models || [])
+      .filter(m => (m.supportedGenerationMethods || []).includes('generateContent') && !NON_CHAT_MODEL_RE.test(m.name))
+      .map(m => ({ id:m.name.replace(/^models\//, ''), name:m.displayName || m.name }));
+  }
+  if(provider === 'ollama') {
+    const res = await fetch('http://localhost:11434/api/tags');
+    if(!res.ok) throw new Error(`${res.status}`);
+    const data = await res.json();
+    return (data.models || []).map(m => ({ id:m.name, name:`${m.name} (local)` }));
+  }
+  return null;
+}
+
+// Fetches the provider's live model list (cached), drops retired curated models and switches
+// away from a retired curated model. Custom IDs are never auto-replaced.
+async function refreshProviderModels(provider, { force = false, apiKey } = {}) {
+  const key = apiKey !== undefined ? apiKey : getProviderApiKey(provider);
+  const entry = liveModelCache[provider];
+  if(!force && entry && Date.now() - entry.fetchedAt < AI_MODEL_CACHE_TTL) return getLiveModels(provider);
+  if(liveModelRequests[provider]) return liveModelRequests[provider];
+  liveModelRequests[provider] = (async () => {
+    try {
+      const models = await fetchProviderModels(provider, key);
+      if(!models || !models.length) return getLiveModels(provider);
+      models.sort((a, b) => (a.name || a.id).localeCompare(b.name || b.id));
+      liveModelCache[provider] = { fetchedAt: Date.now(), models };
+      save(AI_MODEL_CACHE_KEY, liveModelCache);
+      replaceRetiredModel(provider);
+      return models;
+    } finally {
+      delete liveModelRequests[provider];
+    }
+  })();
+  return liveModelRequests[provider];
+}
+
+function replaceRetiredModel(provider) {
+  if(aiConfig.provider !== provider) return;
+  const live = getLiveModels(provider);
+  if(!live || live.some(m => m.id === aiConfig.model)) return;
+  if(!(AI_MODELS[provider] || []).some(m => m.id === aiConfig.model)) return;
+  const replacement = getRecommendedModels(provider)[0] || live[0];
+  if(replacement) setActiveModel(replacement.id);
+}
+
+function setActiveModel(model) {
+  aiConfig.model = model;
+  const stored = safeLoad('fitdash_ai_config', {});
+  if(stored && typeof stored === 'object') save('fitdash_ai_config', { ...stored, provider: aiConfig.provider, model });
+  if(typeof updateChatModelLabel === 'function') updateChatModelLabel();
+  const providerSelect = document.getElementById('s-ai-provider');
+  if(providerSelect && providerSelect.value === aiConfig.provider) loadModelOptions(model);
+}
+
+async function refreshModelsFromSettings() {
+  const provider = document.getElementById('s-ai-provider').value;
+  const keyEl = document.getElementById('s-api-key-' + provider);
+  const apiKey = provider === 'ollama' ? '' : (keyEl ? keyEl.value.trim() : '');
+  const statusEl = document.getElementById('ai-models-status');
+  if(statusEl) statusEl.textContent = 'Refreshing models...';
+  try {
+    const models = await refreshProviderModels(provider, { force:true, apiKey });
+    if(statusEl) statusEl.textContent = models
+      ? `${models.length} models available from your provider.`
+      : 'Enter an API key to load this provider\u2019s model list.';
+  } catch(err) {
+    if(statusEl) statusEl.textContent = 'Could not load the model list (' + err.message + '). Showing built-in models.';
+  }
+  loadModelOptions(getSelectedModelValue());
+}
+
 function renderSettings() {
   const p = userProfile;
   const g = userGoals;
@@ -840,13 +973,16 @@ function loadModelOptions(selectedModel) {
 
   const storeInput = document.getElementById('s-api-store');
   if(storeInput) storeInput.checked = aiConfig.storeKey;
-  const models = AI_MODELS[provider] || [];
+  const models = getModelsForProvider(provider);
   const modelToApply = selectedModel || aiConfig.model || '';
 
-  select.innerHTML = [
-    ...models.map(m => `<option value="${m.id}">${m.name}</option>`),
-    `<option value="${CUSTOM_MODEL_VALUE}">Custom model ID...</option>`
-  ].join('');
+  select.innerHTML = modelOptionsHtml(models) + `<option value="${CUSTOM_MODEL_VALUE}">Custom model ID...</option>`;
+  updateModelsStatus(provider, modelToApply);
+  if(!selectedModel || !liveModelCache[provider]) {
+    refreshProviderModels(provider).then(list => {
+      if(list && document.getElementById('s-ai-provider').value === provider) loadModelOptions(getSelectedModelValue() || modelToApply);
+    }).catch(() => {});
+  }
 
   if(models.some(m => m.id === modelToApply)) {
     select.value = modelToApply;
@@ -861,6 +997,17 @@ function loadModelOptions(selectedModel) {
     customInput.style.display = select.value === CUSTOM_MODEL_VALUE ? 'block' : 'none';
     if(select.value !== CUSTOM_MODEL_VALUE) customInput.value = '';
   }
+}
+
+function updateModelsStatus(provider, model) {
+  const statusEl = document.getElementById('ai-models-status');
+  if(!statusEl) return;
+  const live = getLiveModels(provider);
+  if(!live) { statusEl.textContent = 'Showing built-in models. Click Refresh models to load the latest list from your provider.'; return; }
+  const retired = model && !live.some(m => m.id === model);
+  statusEl.textContent = retired
+    ? `"${model}" is not in ${provider}'s current model list and may be retired.`
+    : `${live.length} models available from your provider.`;
 }
 
 function onModelChoiceChanged() {

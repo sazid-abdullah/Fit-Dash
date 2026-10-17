@@ -777,7 +777,9 @@ canvas { width:100%!important; }
 .chat-header-model {
   font-size:10px; color:var(--muted); background:var(--card2);
   padding:3px 8px; border-radius:4px; font-weight:600;
+  border:1px solid var(--border); max-width:160px; cursor:pointer; font-family:inherit;
 }
+.chat-header-model:hover, .chat-header-model:focus { color:var(--text); outline:none; border-color:var(--muted); }
 .chat-close-btn {
   background:none; border:none; color:var(--muted); cursor:pointer;
   font-size:20px; padding:4px; transition:color .15s;
