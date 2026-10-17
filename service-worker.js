@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fitdash-shell-v3';
+const CACHE_NAME = 'fitdash-shell-v4';
 const APP_SHELL = ['./', './index.html', './manifest.webmanifest'];
 
 self.addEventListener('install', event => {
@@ -14,11 +14,29 @@ self.addEventListener('activate', event => {
   );
 });
 
+// Network-first for same-origin files (revalidated, so a deploy shows up on the next load);
+// the cached shell is only an offline fallback.
 self.addEventListener('fetch', event => {
-  if(event.request.method !== 'GET') return;
-  // Navigations may carry ?reminder=… from a notification click; serve the cached shell for them.
-  const opts = event.request.mode === 'navigate' ? { ignoreSearch: true } : undefined;
-  event.respondWith(caches.match(event.request, opts).then(cached => cached || fetch(event.request)));
+  const req = event.request;
+  if(req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  const isNav = req.mode === 'navigate';
+  event.respondWith((async () => {
+    try {
+      const res = await fetch(req, { cache: 'no-cache' });
+      if(res.ok && (isNav || APP_SHELL.some(p => new URL(p, self.location).href === req.url))) {
+        const cache = await caches.open(CACHE_NAME);
+        cache.put(isNav ? './index.html' : req, res.clone());
+      }
+      return res;
+    } catch(err) {
+      // Navigations may carry ?reminder=… from a notification click; fall back to the cached shell.
+      const cached = isNav
+        ? (await caches.match(req, { ignoreSearch: true })) || (await caches.match('./index.html'))
+        : await caches.match(req);
+      if(cached) return cached;
+      throw err;
+    }
+  })());
 });
 
 // Reminder notifications: focus (or open) FitDash and hand the action to the page.
