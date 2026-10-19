@@ -24,7 +24,10 @@ function showPage(id) {
   _cachedPages.forEach(p => p.classList.remove('active'));
   _cachedTabs.forEach(t => t.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  if(_cachedTabs[_tabMap[id]]) _cachedTabs[_tabMap[id]].classList.add('active');
+  if(_cachedTabs[_tabMap[id]]) {
+    _cachedTabs[_tabMap[id]].classList.add('active');
+    _cachedTabs[_tabMap[id]].scrollIntoView({ block:'nearest', inline:'nearest' });
+  }
   // update aria-selected on tabs for screen readers
   _cachedTabs.forEach((t, idx) => {
     const sel = (idx === _tabMap[id]);

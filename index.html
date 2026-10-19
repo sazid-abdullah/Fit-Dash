@@ -207,10 +207,10 @@
   <div style="margin-top:20px">
     <div class="section-title">Today's Calories</div>
     <div class="card" style="padding:18px">
-      <div style="display:flex;gap:8px;margin-bottom:12px">
-        <input type="text" id="food-name-input" placeholder="What did you eat?" style="flex:1;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;outline:none">
+      <div class="food-entry-row" style="display:flex;gap:8px;margin-bottom:12px">
+        <input type="text" id="food-name-input" placeholder="What did you eat?" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;outline:none">
         <button class="btn-ghost" onclick="startVoiceFoodInput()" title="Speak food name">🎙️</button>
-        <input type="number" id="food-grams-input" placeholder="g" min="1" style="width:80px;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;outline:none">
+        <input type="number" id="food-grams-input" placeholder="g" min="1" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;outline:none">
         <button class="btn-ghost" onclick="logQuickFood()">+ Log</button>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:16px">
