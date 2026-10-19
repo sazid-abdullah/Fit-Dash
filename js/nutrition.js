@@ -367,26 +367,47 @@ function deleteFoodEntry(idx) {
 }
 
 async function logQuickFood() {
-  const name = document.getElementById('food-name-input').value.trim();
-  const gramsInput = parseFloat(document.getElementById('food-grams-input').value);
+  const nameInput = document.getElementById('food-name-input');
+  const gramsEl = document.getElementById('food-grams-input');
+  const name = nameInput.value.trim();
+  const gramsInput = parseFloat(gramsEl.value);
   const gramsText = parseGramsFromText(name);
   const grams = Number.isFinite(gramsInput) && gramsInput > 0 ? gramsInput : gramsText;
   if(!name) { alert('Enter a food name.'); return; }
-  if(!grams || grams <= 0) { alert('Enter valid grams.'); return; }
   if(providerRequiresApiKey(aiConfig.provider) && !getProviderApiKey(aiConfig.provider)) {
     alert(missingApiKeyMessage());
     return;
   }
 
   const country = document.getElementById('label-country')?.value || 'INT';
+  const logBtn = document.getElementById('food-log-btn');
+  const logBtnText = logBtn ? logBtn.textContent : '';
+  if(logBtn) { logBtn.disabled = true; logBtn.textContent = grams ? 'Counting…' : 'Looking up…'; }
 
   try {
     const macros = await estimateFoodMacros(name, grams, country);
-    addFoodEntry(name, grams, macros.calories, macros.protein, macros.carbs, macros.fat, 'ai', country);
-    document.getElementById('food-name-input').value = '';
-    document.getElementById('food-grams-input').value = '';
+    const loggedGrams = grams || macros.grams || 0;
+    addFoodEntry(name, loggedGrams, macros.calories, macros.protein, macros.carbs, macros.fat, 'ai', country);
+    const today = getLocalDateStr();
+    const entry = calorieLog[today][calorieLog[today].length - 1];
+    if(!grams && loggedGrams) entry.gramsEstimated = true;
+    if(macros.note) entry.note = macros.note;
+    if(macros.sources.length) entry.sources = macros.sources;
+    save('fitdash_calorie_log', calorieLog);
+    renderCalorieTracker();
+    nameInput.value = '';
+    gramsEl.value = '';
+    const via = macros.webSearch ? 'web search' : 'AI estimate';
+    showUndoToast(`Logged ${Math.round(macros.calories)} kcal${!grams && loggedGrams ? ` (~${Math.round(loggedGrams)} g)` : ''} · ${via}`, () => {
+      const idx = calorieLog[today].indexOf(entry);
+      if(idx >= 0) calorieLog[today].splice(idx, 1);
+      save('fitdash_calorie_log', calorieLog);
+      renderCalorieTracker();
+    });
   } catch(err) {
-    alert('Auto count failed: ' + err.message + ' Use Ask AI to count instead.');
+    alert('Auto count failed: ' + err.message + ' Use Count calories + macros instead.');
+  } finally {
+    if(logBtn) { logBtn.disabled = false; logBtn.textContent = logBtnText; }
   }
 }
 
@@ -402,6 +423,8 @@ function startVoiceFoodInput() {
   recognition.start();
 }
 
+const FOOD_PORTION_GUIDANCE = 'If no weight is given, estimate it from the description: count the pieces, cups or plates mentioned and use the typical weight per piece or pack serving for that product (for a named brand, use its package nutrition label). Respect the cooking method (e.g. "cooked without oil" means no added oil; fried means add the absorbed oil).';
+
 async function estimateFoodMacros(name, grams, country) {
   const cuisineHint = (userGoals.cuisinePref || 'both').toLowerCase();
   const countryHint = country === 'BD'
@@ -413,12 +436,14 @@ async function estimateFoodMacros(name, grams, country) {
     ? 'Prefer international ingredients and globally available brands.'
     : 'Use both Bangladeshi and international ingredients as applicable.';
 
+  const weightLine = grams ? `Weight: ${grams} g` : 'Weight: not measured — estimate it from the description.';
   const messages = [
-    { role: 'system', content: 'You are a nutrition assistant. Provide only JSON with calories, protein, carbs, and fat for the described food and weight. Do not add any extra explanation.' },
-    { role: 'user', content: `Food: ${name}\nWeight: ${grams} g\n${countryHint} ${preferenceHint}\nReturn only JSON like {"calories": number, "protein": number, "carbs": number, "fat": number}.` }
+    { role: 'system', content: `You are a nutrition assistant. If you can search the web, look up the product's or dish's published nutrition facts (brand website, package label, nutrition databases) before answering. ${FOOD_PORTION_GUIDANCE} Answer with only one JSON object and no other text.` },
+    { role: 'user', content: `Food: ${name}\n${weightLine}\n${countryHint} ${preferenceHint}\nReturn only JSON like {"grams": number, "calories": number, "protein": number, "carbs": number, "fat": number, "note": "short note on the portion and source you used"}. The values must be totals for the whole amount eaten.` }
   ];
 
-  const response = await callAI(messages);
+  const result = await callAIWithWebSearch(messages, { temperature:0.2 });
+  const response = result.text;
   const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || response.match(/(\{[\s\S]*\})/);
   if(!jsonMatch) throw new Error('AI response did not contain JSON.');
 
@@ -433,11 +458,12 @@ async function estimateFoodMacros(name, grams, country) {
   const protein = Number(macros.protein);
   const carbs = Number(macros.carbs);
   const fat = Number(macros.fat);
+  const estimatedGrams = Number(macros.grams);
 
   if(!Number.isFinite(calories) || !Number.isFinite(protein) || !Number.isFinite(carbs) || !Number.isFinite(fat)) {
     throw new Error('Incomplete nutrition data from AI.');
   }
-  if(grams > 0 && calories <= 0) {
+  if(calories <= 0) {
     throw new Error('AI returned zero calories for a food item.');
   }
 
@@ -446,6 +472,10 @@ async function estimateFoodMacros(name, grams, country) {
     protein,
     carbs,
     fat,
+    grams: Number.isFinite(estimatedGrams) && estimatedGrams > 0 ? estimatedGrams : 0,
+    note: typeof macros.note === 'string' ? macros.note.slice(0, 200) : '',
+    sources: result.sources || [],
+    webSearch: result.webSearch,
   };
 }
 
@@ -455,7 +485,6 @@ function askAIToCount() {
   const gramsText = parseGramsFromText(desc);
   const grams = gramsInput || gramsText;
   if(!desc) { alert('Describe what you ate first.'); return; }
-  if(!grams || grams <= 0) { alert('Enter the ingredient weight in grams, either in the grams field or inside the description.'); return; }
   const country = document.getElementById('label-country')?.value || 'INT';
   const cuisineHint = (userGoals.cuisinePref || 'both').toLowerCase();
   const countryHint = country === 'BD'
@@ -474,8 +503,9 @@ function askAIToCount() {
   if(!panel.classList.contains('open')) toggleChat();
   setTimeout(() => {
     const input = document.getElementById('chat-input');
-    input.value = `Count the calories and macros for: ${desc} ${grams} g. Include a per-item breakdown table and total. ${countryHint} ${preferenceHint} ${recentHint}`;
-    sendChatMessage();
+    const amount = grams > 0 ? ` (${grams} g)` : ' (weight not measured — estimate the portion from the description)';
+    input.value = `Count the calories and macros for: ${desc}${amount}. Look up the brand's or dish's nutrition facts online if you can. ${FOOD_PORTION_GUIDANCE} Include a per-item breakdown table with the estimated grams and the total. ${countryHint} ${preferenceHint} ${recentHint}`;
+    sendChatMessage({ webSearch:true });
   }, 400);
 }
 
@@ -632,7 +662,7 @@ function renderCalorieTracker() {
             ${escapeHtml(e.name)}${e.country ? `<span style="margin-left:8px;font-size:10px;color:var(--muted)">(${escapeHtml(e.country)})</span>` : ''}
           </div>
           <div style="display:flex;gap:6px;margin-top:2px">
-            ${e.grams ? `<span class="cal-log-amount">${e.grams}g</span>` : ''}
+            ${e.grams ? `<span class="cal-log-amount"${e.gramsEstimated ? ' title="Estimated by AI"' : ''}>${e.gramsEstimated ? '~' : ''}${e.grams}g</span>` : ''}
             <span style="font-size:10px;color:var(--muted)">${e.time||''}</span>
           </div>
         </div>
