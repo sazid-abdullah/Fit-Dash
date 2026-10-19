@@ -621,7 +621,7 @@ function clearHistory() {
 let userProfile = safeLoad('fitdash_profile', {});
 let userGoals   = safeLoad('fitdash_goals', {});
 let aiConfig    = safeLoad('fitdash_ai_config', { provider:'groq', model:'llama-3.1-8b-instant', apiKey:'', apiKeys:{}, storeKey:false, shareHealthData:true });
-if(aiConfig.model === 'mistralai/mistral-7b-instruct') aiConfig.model = 'mistralai/mistral-nemo';
+if(aiConfig.provider === 'openrouter' && aiConfig.model === 'mistralai/mistral-7b-instruct') aiConfig.model = 'mistralai/mistral-nemo';
 
 function getProviderApiKey(provider) {
   if(!aiConfig.apiKeys || typeof aiConfig.apiKeys !== 'object') aiConfig.apiKeys = {};
@@ -1102,7 +1102,7 @@ async function testAIConnection() {
   
   try {
     const res = await callAIRequest([{ role: 'user', content: 'Say the exact word "SUCCESS" and nothing else.' }]);
-    if (res && res.toUpperCase().includes('SUCCESS')) {
+    if (res && /\bSUCCESS\b/i.test(res)) {
       const saved = originalConfig.provider === provider && originalConfig.model === model && (originalConfig.apiKeys || {})[provider] === testKey;
       statusEl.textContent = 'Connection successful! \u2705' + (saved ? '' : ' Press Save AI Config to use this key and model in the app.');
       statusEl.style.color = 'var(--green)';
@@ -2129,8 +2129,6 @@ function renderBFChart() {
     ctx.fillText('Target', W-pad.r-35, ty-5);
   }
 }
-
-
 
 
 
