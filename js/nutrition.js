@@ -53,24 +53,24 @@ function renderIngredientBuilder() {
         </div>
         <button class="btn-ghost" onclick="clearIngredientBuilder()" style="font-size:11px;color:var(--muted);padding:6px 10px">Clear</button>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 100px 100px;gap:10px;margin-bottom:12px">
+      <div class="ib-grid ib-grid-pick">
         <select id="ingredient-select" class="settings-select" style="width:100%">${COMMON_INGREDIENTS.map(i => `<option value="${escapeHtml(i.name)}">${escapeHtml(i.name)} — ${i.kcal} kcal/100g</option>`).join('')}</select>
-        <input id="ingredient-grams" type="number" min="1" value="100" placeholder="g" style="width:100px;background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;color:var(--text);outline:none">
-        <button class="btn-red" onclick="addIngredientToDish()" style="width:100px">Add</button>
+        <input id="ingredient-grams" type="number" min="1" value="100" placeholder="g" style="width:100%;background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;color:var(--text);outline:none">
+        <button class="btn-red" onclick="addIngredientToDish()" style="justify-content:center">Add</button>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 100px 100px 100px 100px;gap:10px;margin-bottom:12px">
+      <div class="ib-grid ib-grid-custom">
         <input id="custom-ingredient-name" class="settings-input" placeholder="Custom ingredient name" style="width:100%">
         <input id="custom-ingredient-kcal" class="settings-input" type="number" placeholder="kcal/100g">
         <input id="custom-ingredient-protein" class="settings-input" type="number" placeholder="protein/100g">
         <input id="custom-ingredient-carbs" class="settings-input" type="number" placeholder="carbs/100g">
         <input id="custom-ingredient-fat" class="settings-input" type="number" placeholder="fat/100g">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 120px 120px 120px 120px;gap:10px;margin-bottom:12px">
-        <input id="dish-name" class="settings-input" placeholder="Dish name" value="${escapeHtml(ingredientBuilder.name)}" style="flex:1">
-        <button class="btn-ghost" onclick="saveCurrentRecipe()" style="width:120px">Save recipe</button>
-        <button class="btn-ghost" onclick="lookupIngredientMacros(this)" style="width:120px">AI macros</button>
-        <button class="btn-red" onclick="addIngredientToDish()" style="width:120px">Add ingredient</button>
-        <button class="btn-ghost" onclick="createIngredientDish()" style="width:120px">Log dish</button>
+      <div class="ib-grid ib-grid-actions">
+        <input id="dish-name" class="settings-input" placeholder="Dish name" value="${escapeHtml(ingredientBuilder.name)}">
+        <button class="btn-ghost" onclick="saveCurrentRecipe()" style="justify-content:center">Save recipe</button>
+        <button class="btn-ghost" onclick="lookupIngredientMacros(this)" style="justify-content:center">AI macros</button>
+        <button class="btn-red" onclick="addIngredientToDish()" style="justify-content:center">Add ingredient</button>
+        <button class="btn-ghost" onclick="createIngredientDish()" style="justify-content:center">Log dish</button>
       </div>
       ${ingredientBuilder.items.length ? `<div style="margin-bottom:12px">
         <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Ingredients (${ingredientBuilder.items.length})</div>
@@ -168,8 +168,8 @@ async function lookupIngredientMacros(button) {
     alert('Enter a custom ingredient name first.');
     return;
   }
-  if(providerRequiresApiKey(aiConfig.provider) && !aiConfig.apiKey) {
-    alert('Set your AI API key in Settings first.');
+  if(providerRequiresApiKey(aiConfig.provider) && !getProviderApiKey(aiConfig.provider)) {
+    alert(missingApiKeyMessage());
     return;
   }
   const btn = button || { disabled: false, textContent: 'AI macros' };
@@ -373,8 +373,8 @@ async function logQuickFood() {
   const grams = Number.isFinite(gramsInput) && gramsInput > 0 ? gramsInput : gramsText;
   if(!name) { alert('Enter a food name.'); return; }
   if(!grams || grams <= 0) { alert('Enter valid grams.'); return; }
-  if(providerRequiresApiKey(aiConfig.provider) && !aiConfig.apiKey) {
-    alert('Set your AI API key in Settings first to estimate calories from grams.');
+  if(providerRequiresApiKey(aiConfig.provider) && !getProviderApiKey(aiConfig.provider)) {
+    alert(missingApiKeyMessage());
     return;
   }
 
@@ -702,7 +702,7 @@ async function estimateDailyMicronutrients() {
     status.style.color = 'var(--orange)';
     return;
   }
-  if(providerRequiresApiKey(aiConfig.provider) && !aiConfig.apiKey) {
+  if(providerRequiresApiKey(aiConfig.provider) && !getProviderApiKey(aiConfig.provider)) {
     status.textContent = 'Set up an AI provider in Settings first.';
     status.style.color = 'var(--orange)';
     return;
@@ -744,16 +744,13 @@ async function analyzeLabelPhoto(input) {
   const file = input.files?.[0];
   const status = document.getElementById('label-photo-status');
   if(!file) return;
-  if(aiConfig.provider !== 'gemini') {
-    status.textContent = 'Photo reading currently requires Gemini. Use manual entry with other providers.';
+  const geminiKey = getProviderApiKey('gemini');
+  if(!geminiKey) {
+    status.textContent = 'Photo reading uses Gemini. Add a Gemini API key in Settings (your current provider can stay selected).';
     status.style.color = 'var(--orange)';
     return;
   }
-  if(!aiConfig.apiKey) {
-    status.textContent = 'Set a Gemini API key in Settings first.';
-    status.style.color = 'var(--orange)';
-    return;
-  }
+  const geminiModel = aiConfig.provider === 'gemini' && aiConfig.model ? aiConfig.model : 'gemini-2.5-flash';
   status.textContent = 'Reading label...';
   status.style.color = 'var(--muted)';
   try {
@@ -766,7 +763,7 @@ async function analyzeLabelPhoto(input) {
     const comma = dataUrl.indexOf(',');
     const mimeType = dataUrl.slice(5, comma).split(';')[0];
     const base64 = dataUrl.slice(comma + 1);
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(aiConfig.model)}:generateContent?key=${encodeURIComponent(aiConfig.apiKey)}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(geminiModel)}:generateContent?key=${encodeURIComponent(geminiKey)}`;
     const response = await fetch(url, {
       method:'POST',
       headers:{'Content-Type':'application/json'},
