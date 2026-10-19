@@ -109,10 +109,6 @@ function applyTrainingCategory(category) {
   trainingCategory = category === 'gym' ? 'gym' : 'home';
   save('fitdash_training_category', trainingCategory);
   const isGym = trainingCategory === 'gym';
-  const homeBtn = document.getElementById('training-category-home');
-  const gymBtn = document.getElementById('training-category-gym');
-  if(homeBtn) homeBtn.className = isGym ? 'btn-ghost' : 'btn-red';
-  if(gymBtn) gymBtn.className = isGym ? 'btn-red' : 'btn-ghost';
   const tag = document.getElementById('training-category-tag');
   if(tag) tag.textContent = isGym ? 'Full Body · Gym Program' : 'Full Body · Home Gym';
   const warmup = document.getElementById('training-warmup-desc');
