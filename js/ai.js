@@ -173,7 +173,7 @@ async function sendChatMessage() {
   if(!text || chatStreaming) return;
 
   if(providerRequiresApiKey(aiConfig.provider) && !getProviderApiKey(aiConfig.provider)) {
-    chatHistory.push({ role:'assistant', content:'⚠️ Please set up your API key first! Go to **Settings → AI Coach Setup** to enter your provider key.' });
+    chatHistory.push({ role:'assistant', content:'⚠️ ' + missingApiKeyMessage() });
     save('fitdash_chat', chatHistory);
     renderChatMessages();
     return;

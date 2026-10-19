@@ -169,7 +169,7 @@ async function lookupIngredientMacros(button) {
     return;
   }
   if(providerRequiresApiKey(aiConfig.provider) && !getProviderApiKey(aiConfig.provider)) {
-    alert('Set your AI API key in Settings first.');
+    alert(missingApiKeyMessage());
     return;
   }
   const btn = button || { disabled: false, textContent: 'AI macros' };
@@ -374,7 +374,7 @@ async function logQuickFood() {
   if(!name) { alert('Enter a food name.'); return; }
   if(!grams || grams <= 0) { alert('Enter valid grams.'); return; }
   if(providerRequiresApiKey(aiConfig.provider) && !getProviderApiKey(aiConfig.provider)) {
-    alert('Set your AI API key in Settings first to estimate calories from grams.');
+    alert(missingApiKeyMessage());
     return;
   }
 
