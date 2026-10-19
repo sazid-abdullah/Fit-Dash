@@ -620,7 +620,7 @@ function clearHistory() {
 // ══ SETTINGS ═════════════════════════════════════════════
 let userProfile = safeLoad('fitdash_profile', {});
 let userGoals   = safeLoad('fitdash_goals', {});
-let aiConfig    = safeLoad('fitdash_ai_config', { provider:'groq', model:'llama-3.1-8b-instant', apiKey:'', apiKeys:{}, storeKey:false, shareHealthData:true });
+let aiConfig    = safeLoad('fitdash_ai_config', { provider:'groq', model:'llama-3.1-8b-instant', apiKey:'', apiKeys:{}, storeKey:false, shareHealthData:true, webSearch:true });
 if(aiConfig.provider === 'openrouter' && aiConfig.model === 'mistralai/mistral-7b-instruct') aiConfig.model = 'mistralai/mistral-nemo';
 
 function getProviderApiKey(provider) {
@@ -819,6 +819,7 @@ function renderSettings() {
     if(el) el.value = getProviderApiKey(p) || '';
   });
   document.getElementById('s-ai-share-health').checked = a.shareHealthData !== false;
+  document.getElementById('s-ai-web-search').checked = a.webSearch !== false;
   loadModelOptions(a.model);
   renderVideoCodeLibrary();
   if(typeof renderWeekPlanSettings === 'function') { renderWeekPlanSettings(); renderReminderSettings(); }
@@ -1067,6 +1068,7 @@ function saveAISettings() {
     apiKeys: storeKey ? savedApiKeys : keys,
     storeKey,
     shareHealthData: document.getElementById('s-ai-share-health').checked,
+    webSearch: document.getElementById('s-ai-web-search').checked,
   };
   
   // Save stripped config to localStorage

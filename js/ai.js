@@ -56,6 +56,8 @@ function formatAIResponse(text) {
   let html = escapeHtml(text);
   // Bold
   html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  // Links (http/https only)
+  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color:var(--blue)">$1</a>');
   // Inline code
   html = html.replace(/`([^`]+)`/g, '<code style="background:var(--card2);padding:1px 5px;border-radius:3px;font-size:12px">$1</code>');
   // Tables: detect lines with | separators
@@ -167,7 +169,7 @@ INSTRUCTIONS:
 `;
 }
 
-async function sendChatMessage() {
+async function sendChatMessage(opts = {}) {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
   if(!text || chatStreaming) return;
@@ -203,7 +205,13 @@ async function sendChatMessage() {
       ...chatHistory.slice(-18).map(m => ({ role: m.role, content: m.content }))
     ];
 
-    const response = await callAI(messages);
+    let response;
+    if(opts.webSearch) {
+      const result = await callAIWithWebSearch(messages, { temperature:0.3 });
+      response = result.text + formatSourcesMarkdown(result.sources);
+    } else {
+      response = await callAI(messages);
+    }
     // Remove typing
     const typingEl = document.getElementById('chat-typing');
     if(typingEl) typingEl.remove();
@@ -260,19 +268,54 @@ async function callAI(messages) {
   }
 }
 
+const GROQ_WEB_SEARCH_MODEL = 'groq/compound-mini';
+
+function webSearchAvailable() {
+  return aiConfig.webSearch !== false && ['groq', 'gemini', 'openrouter'].includes(aiConfig.provider);
+}
+
+async function callAIWithWebSearch(messages, opts = {}) {
+  if(webSearchAvailable()) {
+    try {
+      const result = await callAIRequestDetailed(messages, { ...opts, webSearch:true });
+      return { ...result, webSearch:true };
+    } catch(err) {
+      console.warn('Web search lookup failed, falling back to model knowledge:', err.message);
+    }
+  }
+  return { text: await callAI(messages), sources: [], webSearch:false };
+}
+
+function dedupeSources(sources) {
+  const seen = new Set();
+  return sources.filter(src => {
+    if(!src || !/^https?:\/\//i.test(src.url || '') || seen.has(src.url)) return false;
+    seen.add(src.url);
+    return true;
+  }).slice(0, 5);
+}
+
+async function throwIfNotOk(res) {
+  if(res.ok) return;
+  const errText = await res.text().catch(() => '');
+  throw new Error(`${res.status}: ${errText.slice(0,200)}`);
+}
+
 async function callAIRequest(messages) {
+  return (await callAIRequestDetailed(messages)).text;
+}
+
+async function callAIRequestDetailed(messages, opts = {}) {
+  const temperature = opts.temperature ?? 0.7;
   if(aiConfig.provider === 'ollama') {
     const res = await fetch('http://localhost:11434/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model:aiConfig.model, messages, temperature:0.7, max_tokens:2048, stream:false })
+      body: JSON.stringify({ model:aiConfig.model, messages, temperature, max_tokens:2048, stream:false })
     });
-    if(!res.ok) {
-      const errText = await res.text().catch(() => '');
-      throw new Error(`${res.status}: ${errText.slice(0,200)}`);
-    }
+    await throwIfNotOk(res);
     const data = await res.json();
-    return data.choices?.[0]?.message?.content || 'No response received.';
+    return { text: data.choices?.[0]?.message?.content || 'No response received.', sources: [] };
   }
 
   if(aiConfig.provider === 'gemini') {
@@ -286,21 +329,25 @@ async function callAIRequest(messages) {
       }));
     const body = {
       contents,
-      generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+      generationConfig: { temperature, maxOutputTokens: 2048 },
     };
     if(systemMessage) body.systemInstruction = { parts: [{ text: systemMessage.content }] };
+    if(opts.webSearch) body.tools = [{ google_search: {} }];
 
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    if(!res.ok) {
-      const errText = await res.text().catch(() => '');
-      throw new Error(`${res.status}: ${errText.slice(0,200)}`);
-    }
+    await throwIfNotOk(res);
     const data = await res.json();
-    return data.candidates?.[0]?.content?.parts?.map(part => part.text || '').join('') || 'No response received.';
+    const candidate = data.candidates?.[0];
+    const sources = (candidate?.groundingMetadata?.groundingChunks || [])
+      .map(chunk => chunk.web && { url: chunk.web.uri, title: chunk.web.title });
+    return {
+      text: candidate?.content?.parts?.map(part => part.text || '').join('') || 'No response received.',
+      sources: dedupeSources(sources),
+    };
   }
 
   const isGroq = aiConfig.provider === 'groq';
@@ -315,25 +362,30 @@ async function callAIRequest(messages) {
     headers['X-Title'] = 'FitDash Coach';
   }
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      model: aiConfig.model,
-      messages,
-      temperature: 0.7,
-      max_tokens: 2048,
-      stream: false, // non-streaming for simplicity first
-    })
-  });
+  const body = {
+    model: opts.webSearch && isGroq ? GROQ_WEB_SEARCH_MODEL : aiConfig.model,
+    messages,
+    temperature,
+    max_tokens: 2048,
+    stream: false,
+  };
+  if(opts.webSearch && !isGroq) body.plugins = [{ id:'web', max_results:3 }];
 
-  if(!res.ok) {
-    const errText = await res.text().catch(() => '');
-    throw new Error(`${res.status}: ${errText.slice(0,200)}`);
-  }
+  const res = await fetch(url, { method:'POST', headers, body:JSON.stringify(body) });
+  await throwIfNotOk(res);
 
   const data = await res.json();
-  return data.choices?.[0]?.message?.content || 'No response received.';
+  const message = data.choices?.[0]?.message || {};
+  const sources = [
+    ...(message.annotations || []).map(a => a.url_citation && { url: a.url_citation.url, title: a.url_citation.title }),
+    ...(message.executed_tools || []).flatMap(tool => (tool.search_results?.results || []).map(r => ({ url: r.url, title: r.title }))),
+  ];
+  return { text: message.content || 'No response received.', sources: dedupeSources(sources) };
+}
+
+function formatSourcesMarkdown(sources) {
+  if(!sources || !sources.length) return '';
+  return '\n\nSources:\n' + sources.map(src => `- [${(src.title || src.url).replace(/[\[\]]/g, '')}](${src.url})`).join('\n');
 }
 
 function parseAIActions(content) {

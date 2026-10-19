@@ -208,10 +208,10 @@
     <div class="section-title">Today's Calories</div>
     <div class="card" style="padding:18px">
       <div class="food-entry-row" style="display:flex;gap:8px;margin-bottom:12px">
-        <input type="text" id="food-name-input" placeholder="What did you eat?" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;outline:none">
+        <input type="text" id="food-name-input" placeholder="What did you eat? e.g. 2 parathas, no oil" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;outline:none">
         <button class="btn-ghost" onclick="startVoiceFoodInput()" title="Speak food name">🎙️</button>
-        <input type="number" id="food-grams-input" placeholder="g" min="1" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;outline:none">
-        <button class="btn-ghost" onclick="logQuickFood()">+ Log</button>
+        <input type="number" id="food-grams-input" placeholder="g (opt.)" title="Grams (optional — AI estimates the portion if left empty)" min="1" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:9px 12px;font-size:13px;outline:none">
+        <button class="btn-ghost" id="food-log-btn" onclick="logQuickFood()">+ Log</button>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:16px">
         <button class="btn-ghost" onclick="askAIToCount()" style="font-size:11px;flex:1">🤖 Count calories + macros</button>
@@ -1076,6 +1076,8 @@
           <button class="btn-ghost" style="font-size:12px;padding:6px 10px" onclick="clearStoredApiKey()">Clear stored key</button>
         </div>
         <label style="display:block;margin-top:10px;font-size:13px"><input type="checkbox" id="s-ai-share-health" style="margin-right:8px"> Include my health and progress data in AI prompts</label>
+        <label style="display:block;margin-top:10px;font-size:13px"><input type="checkbox" id="s-ai-web-search" style="margin-right:8px"> Search the web for food nutrition (brands, local foods)</label>
+        <div style="font-size:11px;color:var(--muted);margin:4px 0 0 24px">Gemini uses Google Search, Groq uses its Compound web-search model, OpenRouter's web plugin uses paid credits. Ollama has no web search. If a search fails, the AI answers from its own knowledge.</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:14px">
         <button class="btn-red" onclick="saveAISettings()" style="max-width:200px">💾 Save AI Config</button>
