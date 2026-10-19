@@ -142,7 +142,7 @@ function suggestNextSet(exName, setIdx, repTarget) {
     reason = 'Same weight as last time';
   } else if(range && ref.reps >= range.max) {
     const inc = weightIncrement(ref.weight);
-    weight = roundToHalf(ref.weight + inc);
+    weight = Math.round((ref.weight + inc) * 100) / 100;
     reps = range.min;
     reason = `Hit ${range.max} reps last time — add ${inc} kg`;
   } else if(range && ref.reps < range.min) {
