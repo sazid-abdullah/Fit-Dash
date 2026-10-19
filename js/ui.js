@@ -1103,8 +1103,8 @@ async function testAIConnection() {
   try {
     const res = await callAIRequest([{ role: 'user', content: 'Say the exact word "SUCCESS" and nothing else.' }]);
     if (res && res.toUpperCase().includes('SUCCESS')) {
-      const saved = originalConfig.provider === provider && (originalConfig.apiKeys || {})[provider] === testKey;
-      statusEl.textContent = 'Connection successful! \u2705' + (saved ? '' : ' Press Save AI Config to use this key in the app.');
+      const saved = originalConfig.provider === provider && originalConfig.model === model && (originalConfig.apiKeys || {})[provider] === testKey;
+      statusEl.textContent = 'Connection successful! \u2705' + (saved ? '' : ' Press Save AI Config to use this key and model in the app.');
       statusEl.style.color = 'var(--green)';
     } else {
       statusEl.textContent = 'Failed: Unexpected response.';
