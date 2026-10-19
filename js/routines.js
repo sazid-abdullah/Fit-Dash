@@ -268,16 +268,28 @@ function routineChipsHtml() {
   return routines.map(r => `<button class="pill-btn${r.id === activeRoutineId ? ' active' : ''}" onclick="activateRoutine(this.dataset.id)" data-id="${escapeHtml(r.id)}" aria-pressed="${r.id === activeRoutineId}">${escapeHtml(r.name)}</button>`).join('');
 }
 
+function routineTabsHtml() {
+  const icon = category => category === 'gym' ? '🏋️' : '🏠';
+  const tabs = routines.map(r => `<button class="${r.id === activeRoutineId ? 'btn-red' : 'btn-ghost'}" onclick="activateRoutine(this.dataset.id)" data-id="${escapeHtml(r.id)}" aria-pressed="${r.id === activeRoutineId}">${icon(r.category)} ${escapeHtml(r.name)}</button>`);
+  // Keep both programs reachable even if every routine of one category was deleted.
+  ['home', 'gym'].filter(c => !routines.some(r => r.category === c)).forEach(c => {
+    tabs.push(`<button class="btn-ghost" onclick="switchTrainingCategory('${c}')">${icon(c)} ${c === 'gym' ? 'Gym' : 'Home'}</button>`);
+  });
+  tabs.push('<button class="btn-ghost routine-tab-new" onclick="createRoutineFromActive()" title="Save the current setup as a new routine">+ New</button>');
+  return tabs.join('');
+}
+
 function renderRoutinePickers() {
   const r = getActiveRoutine();
+  const tabs = document.getElementById('training-routine-tabs');
+  if(tabs) tabs.innerHTML = routineTabsHtml();
   const card = document.getElementById('routine-picker');
   if(card) {
     const plan = r.category === 'gym' ? GYM_WORKOUT_PLAN : WORKOUT_PLAN;
     const skipped = plan.flatMap(b => b.exercises).filter(ex => r.skip.includes(ex.code));
     const hasChanges = Object.keys(r.swaps).length || r.skip.length;
     card.innerHTML = `
-      <div class="routine-chips">${routineChipsHtml()}<button class="pill-btn" onclick="createRoutineFromActive()" title="Save the current setup as a new routine">+ New</button></div>
-      <div class="routine-meta">${escapeHtml(routineSummary(r))}</div>
+      <div class="routine-meta" style="margin-top:0">${escapeHtml(routineSummary(r))}</div>
       ${skipped.length ? `<div class="routine-skipped">Skipped: ${skipped.map(ex => `<button class="pill-btn routine-skip-pill" onclick="unskipExercise('${ex.code}')" title="Add back" aria-label="Add ${escapeHtml(ex.name)} back">${escapeHtml(ex.name)} ↩</button>`).join('')}</div>` : ''}
       <div class="routine-actions">
         <button class="btn-ghost" onclick="renameActiveRoutine()">✏️ Rename</button>
