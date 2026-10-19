@@ -811,6 +811,10 @@ function renderSettings() {
   selectGoal(g.goalType || 'recomp');
   if(a.provider) document.getElementById('s-ai-provider').value = a.provider;
   document.getElementById('s-api-store').checked = !!a.storeKey;
+  ['groq', 'gemini', 'openrouter'].forEach(p => {
+    const el = document.getElementById('s-api-key-' + p);
+    if(el) el.value = getProviderApiKey(p) || '';
+  });
   document.getElementById('s-ai-share-health').checked = a.shareHealthData !== false;
   loadModelOptions(a.model);
   renderVideoCodeLibrary();
@@ -962,17 +966,12 @@ function loadModelOptions(selectedModel) {
   const select = document.getElementById('s-ai-model');
   const customInput = document.getElementById('s-ai-model-custom');
   
-  // Update multi-provider inputs
+  // Only toggle visibility: this also runs after model lists load, and must not wipe a key the user hasn't saved yet.
   ['groq', 'gemini', 'openrouter', 'ollama'].forEach(p => {
     const el = document.getElementById('s-api-key-' + p);
-    if(el) {
-      el.style.display = p === provider ? 'block' : 'none';
-      if(p !== 'ollama') el.value = getProviderApiKey(p) || '';
-    }
+    if(el) el.style.display = p === provider ? 'block' : 'none';
   });
 
-  const storeInput = document.getElementById('s-api-store');
-  if(storeInput) storeInput.checked = aiConfig.storeKey;
   const models = getModelsForProvider(provider);
   const modelToApply = selectedModel || aiConfig.model || '';
 
@@ -1026,6 +1025,14 @@ function getSelectedModelValue() {
 
 function providerRequiresApiKey(provider) {
   return provider !== 'ollama';
+}
+
+function missingApiKeyMessage() {
+  const name = { groq:'Groq', gemini:'Gemini', openrouter:'OpenRouter' }[aiConfig.provider] || aiConfig.provider;
+  const sessionOnly = !aiConfig.storeKey && safeLoad('fitdash_ai_config', null);
+  return sessionOnly
+    ? `No ${name} API key saved. Keys saved without "Store API key in this browser" are cleared when the app reloads. Re-enter it in Settings \u2192 AI Coach Setup, tick that box and press Save AI Config.`
+    : `No ${name} API key saved. Enter it in Settings \u2192 AI Coach Setup and press Save AI Config.`;
 }
 
 function saveAISettings() {
@@ -1093,7 +1100,8 @@ async function testAIConnection() {
   try {
     const res = await callAIRequest([{ role: 'user', content: 'Say the exact word "SUCCESS" and nothing else.' }]);
     if (res && res.toUpperCase().includes('SUCCESS')) {
-      statusEl.textContent = 'Connection successful! \u2705';
+      const saved = originalConfig.provider === provider && (originalConfig.apiKeys || {})[provider] === testKey;
+      statusEl.textContent = 'Connection successful! \u2705' + (saved ? '' : ' Press Save AI Config to use this key in the app.');
       statusEl.style.color = 'var(--green)';
     } else {
       statusEl.textContent = 'Failed: Unexpected response.';
