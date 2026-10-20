@@ -2,6 +2,7 @@ const CACHE_NAME = 'fitdash-shell-v6';
 const APP_SHELL = [
   './', './index.html', './manifest.webmanifest', './css/style.css',
   './icons/logo.svg', './icons/favicon.svg', './icons/favicon-32.png', './icons/icon-192.png',
+  './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon.ico',
   './js/data.js', './js/state.js', './js/progression.js', './js/routines.js', './js/workout.js',
   './js/ui.js', './js/nutrition.js', './js/ai.js', './js/quicklog.js', './js/reminders.js', './js/app.js'
 ];
