@@ -50,6 +50,7 @@ body {
   white-space: nowrap;
 }
 .nav-brand span { color: var(--text); }
+.nav-logo { width: 24px; height: 24px; margin-right: 8px; vertical-align: -6px; border-radius: 6px; }
 .nav-tabs { display: flex; gap: 2px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
 .nav-tabs::-webkit-scrollbar { display: none; }
 .nav-tab {

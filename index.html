@@ -6,6 +6,10 @@
 <title>Fitness Dashboard</title>
 <meta name="description" content="FitDash — Personal fitness dashboard with workout tracking, nutrition plans, progress logging, and calorie calculations.">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="icons/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="theme-color" content="#08080e">
 <link rel="stylesheet" href="css/style.css">
 </head>
@@ -15,7 +19,7 @@
 
 <!-- ══ NAV ════════════════════════════════════════════════════ -->
 <nav id="nav" role="navigation" aria-label="Main navigation">
-  <div class="nav-brand">FIT<span>DASH</span></div>
+  <div class="nav-brand"><img class="nav-logo" src="icons/favicon.svg" alt="" width="24" height="24">FIT<span>DASH</span></div>
   <div class="nav-tabs" role="tablist">
     <button class="nav-tab active" role="tab" aria-selected="true" onclick="showPage('dashboard')">Dashboard</button>
     <button class="nav-tab" role="tab" aria-selected="false" onclick="showPage('training')">Training</button>
