@@ -202,7 +202,8 @@ function generateExpressWorkout(seed = 0) {
 // Fit any workout (offline or AI) into the base program's slots: 3 blocks, capacity per block.
 function fitWorkoutToSlots(blocks, category) {
   const cap = slotCapacity(category);
-  const out = [0, 1, 2].map(i => ({ ...(blocks[i] || {}), exercises: [] }));
+  const defaults = ['Superset', 'Giant Set', 'Circuit'];
+  const out = [0, 1, 2].map(i => ({ name: `Block ${'ABC'[i]}`, info: '', ...(blocks[i] || {}), type: (blocks[i] && blocks[i].type) || defaults[i], exercises: [] }));
   let carry = [];
   blocks.forEach((b, i) => {
     const list = [...carry, ...(b.exercises || [])];
