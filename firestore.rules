@@ -1,11 +1,14 @@
 rules_version = '2';
 
-// FitDash: each signed-in user can only read/write their own data at
-// users/{userId}/fitdash/state. Everything else is denied.
+// FitDash: each signed-in user can only read/write their own sync data at
+// users/{userId}/fitdash/state (plus its keys/ subcollection). Everything else is denied.
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId}/{document=**} {
+    match /users/{userId}/fitdash/state {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+      match /keys/{chunkId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
     }
     match /{document=**} {
       allow read, write: if false;

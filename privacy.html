@@ -55,8 +55,8 @@
   <p>Signing in is optional. If you create an account with email/password or Google Sign-In, FitDash uses Google Firebase:</p>
   <ul>
     <li><strong>Firebase Authentication</strong> stores your email address, display name and profile photo (for Google sign-in), and a unique user ID.</li>
-    <li><strong>Cloud Firestore</strong> stores one document, <code>users/{your user ID}/fitdash/state</code>, containing the training, nutrition, body, profile and goal data listed above so it can be restored on your other devices.</li>
-    <li>Security rules only allow the signed-in owner of an account to read or write that document.</li>
+    <li><strong>Cloud Firestore</strong> stores your data under <code>users/{your user ID}/fitdash/state</code> (an index document plus one or more documents per data type in its <code>keys</code> subcollection), containing the training, nutrition, body, profile and goal data listed above so it can be restored on your other devices.</li>
+    <li>Security rules only allow the signed-in owner of an account to read or write those documents.</li>
     <li><strong>Never uploaded:</strong> your AI Coach configuration and API keys, AI chat history, and app settings that only matter on one device.</li>
   </ul>
   <p>Firebase is operated by Google LLC. See the <a href="https://firebase.google.com/support/privacy" rel="noopener">Firebase privacy information</a> and <a href="https://policies.google.com/privacy" rel="noopener">Google Privacy Policy</a>. Data is encrypted in transit (HTTPS/TLS) and at rest by Google.</p>

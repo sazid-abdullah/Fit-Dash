@@ -2,7 +2,7 @@
 // FitDash stays local-first: with no Firebase config, or while signed out, everything
 // lives in localStorage exactly as before ("Local Mode"). When the owner supplies a
 // Firebase web config (window.FITDASH_FIREBASE_CONFIG or Settings → Firebase config),
-// signed-in users get their data mirrored to Firestore at users/{uid}/fitdash/state.
+// signed-in users get their data mirrored to Firestore under users/{uid}/fitdash/state.
 // The Firebase v10 modular SDK is loaded from the gstatic ESM CDN with dynamic import(),
 // so there is still no build step and nothing is downloaded until a config exists.
 const FIREBASE_SDK_BASE = 'https://www.gstatic.com/firebasejs/10.12.2/';
@@ -11,6 +11,11 @@ const CLOUD_SYNC_KEYS = [
   'fitdash_bodycomp', 'fitdash_circ', 'fitdash_check', 'fitdash_water', 'fitdash_sleep',
   'fitdash_cardio', 'fitdash_cardio_week', 'fitdash_cardio_log', 'fitdash_profile', 'fitdash_goals',
   'fitdash_saved_ai_plans',
+  // Durable training + nutrition setup, so a new device looks the same as the old one.
+  'fitdash_routines', 'fitdash_active_routine', 'fitdash_training_category', 'fitdash_level',
+  'fitdash_progression_prefs', 'fitdash_overrides', 'fitdash_video_codes', 'fitdash_fav_exercises',
+  'fitdash_week_plan', 'fitdash_reminders', 'fitdash_plan', 'fitdash_ai_plan', 'fitdash_custom_dishes',
+  'fitdash_saved_recipes', 'fitdash_fav_foods', 'fitdash_micronutrient_log', 'fitdash_grocery_list',
 ];
 // fitdash_ai_config holds private provider API keys — it must never leave the device.
 const CLOUD_NEVER_SYNC = ['fitdash_ai_config', 'fitdash_firebase_config', 'fitdash_sync_meta'];
@@ -19,13 +24,13 @@ const CLOUD_NEVER_SYNC = ['fitdash_ai_config', 'fitdash_firebase_config', 'fitda
 const CLOUD_MERGE_RULES = {
   fitdash_sessions: 'byId', fitdash_custom_ex: 'byId', fitdash_saved_ai_plans: 'byId', fitdash_cardio_log: 'byId',
   fitdash_weights: 'byDate', fitdash_bodycomp: 'byDate', fitdash_circ: 'byDate',
-  fitdash_calorie_log: 'byKey', fitdash_prs: 'maxPR',
+  fitdash_routines: 'byId', fitdash_calorie_log: 'byKey', fitdash_micronutrient_log: 'byKey', fitdash_prs: 'maxPR',
 };
 const CLOUD_PUSH_DELAY_MS = 1500;
 
 const cloud = {
   configured: false, ready: false, sdk: null, auth: null, db: null, user: null,
-  status: 'local', statusDetail: '', pushTimer: null, pushing: false, pushAgain: false,
+  status: 'local', statusDetail: '', pushTimer: null, syncing: false, syncAgain: false,
   deleting: false, initPromise: null,
 };
 
@@ -81,7 +86,7 @@ function fitdashCloudOnSave(key) {
 function scheduleCloudPush() {
   if(!cloud.user || cloud.deleting) return;
   clearTimeout(cloud.pushTimer);
-  cloud.pushTimer = setTimeout(() => { cloud.pushTimer = null; pushToCloud(); }, CLOUD_PUSH_DELAY_MS);
+  cloud.pushTimer = setTimeout(() => { cloud.pushTimer = null; syncWithCloud(); }, CLOUD_PUSH_DELAY_MS);
 }
 
 // ── Status pill / account UI ────────────────────────────────
@@ -348,14 +353,20 @@ async function cloudSignOut() {
   if(!cloud.user) return;
   if(!confirm('Sign out of FitDash? Your data stays safe in your account.')) return;
   const wipe = confirm('Also remove your synced data from this device?\n\nOK = remove it from this device (recommended on shared phones).\nCancel = keep a local copy here.');
-  if(cloud.pushTimer) { clearTimeout(cloud.pushTimer); cloud.pushTimer = null; await pushToCloud(); }
+  clearTimeout(cloud.pushTimer); cloud.pushTimer = null;
+  const synced = await syncWithCloud();
+  let keepCopy = !wipe;
+  if(wipe && !synced && hasUnsyncedChanges()) {
+    alert('Some changes on this device have not reached your account yet (you may be offline), so FitDash will keep them on this device. Sign in again when you are online to upload them.');
+    keepCopy = true;
+  }
   try { await cloud.sdk.auth.signOut(cloud.auth); } catch(err) { alert(friendlyAuthError(err)); return; }
   authModalView = 'signin';
   renderAuthModal();
   const meta = loadSyncMeta();
   meta.uid = null; meta.lastSyncAt = 0; meta.cloudMod = {};
   storeSyncMeta(meta);
-  if(wipe) {
+  if(!keepCopy) {
     CLOUD_SYNC_KEYS.forEach(k => localStorage.removeItem(k));
     location.reload();
   }
@@ -363,49 +374,129 @@ async function cloudSignOut() {
 
 async function cloudSyncNow() {
   if(!cloud.user) { openAuthModal(); return; }
-  await pullAndMerge(cloud.user, { reloadIfChanged: true });
+  await syncWithCloud({ reloadIfChanged: true });
 }
 
-// ── Firestore document ──────────────────────────────────────
+// ── Firestore layout ────────────────────────────────────────
+// users/{uid}/fitdash/state                 → index { schema: 2, modified: {key: ts}, chunks: {key: n}, updatedAt }
+// users/{uid}/fitdash/state/keys/{key}__{i} → { v: slice i of the raw localStorage JSON for key }
+// Each key lives in its own documents (split into chunks when large), so long histories never hit
+// Firestore's 1 MiB document limit. Schema 1 (all values inline in state.data) is still read and is
+// migrated on the next sync.
+const CLOUD_CHUNK_CHARS = 200000; // ≤ 800 KB even if every character needs 4 UTF-8 bytes
+
 function cloudStateDoc(uid) {
   return cloud.sdk.firestore.doc(cloud.db, 'users', uid, 'fitdash', 'state');
 }
-
-function readLocalSyncData() {
-  const data = {};
-  CLOUD_SYNC_KEYS.forEach(key => {
-    const raw = localStorage.getItem(key);
-    if(raw !== null) data[key] = raw;
-  });
-  return data;
+function cloudChunkDoc(uid, key, i) {
+  return cloud.sdk.firestore.doc(cloud.db, 'users', uid, 'fitdash', 'state', 'keys', `${key}__${i}`);
 }
 
-async function pushToCloud() {
+function splitChunks(raw) {
+  const out = [];
+  let i = 0;
+  while(i < raw.length) {
+    let end = Math.min(i + CLOUD_CHUNK_CHARS, raw.length);
+    // Never split a surrogate pair (emoji) across two documents.
+    if(end < raw.length && /[\uD800-\uDBFF]/.test(raw[end - 1])) end--;
+    out.push(raw.slice(i, end));
+    i = end;
+  }
+  return out.length ? out : [''];
+}
+
+async function readCloudKey(get, uid, index, key) {
+  if(index.data) return index.data[key];
+  const n = (index.chunks || {})[key] || 0;
+  if(!n) return undefined;
+  const snaps = await Promise.all(Array.from({ length: n }, (_, i) => get(cloudChunkDoc(uid, key, i))));
+  if(snaps.some(sn => !sn.exists())) throw Object.assign(new Error('Cloud data is incomplete; try again.'), { code: 'fitdash/partial' });
+  return snaps.map(sn => (sn.data() || {}).v || '').join('');
+}
+
+function hasUnsyncedChanges() {
+  const meta = loadSyncMeta();
+  const uid = cloud.user && cloud.user.uid;
+  return CLOUD_SYNC_KEYS.some(k => localStorage.getItem(k) !== null &&
+    (meta.uid !== uid || (meta.localMod[k] || 0) > (meta.lastSyncAt || 0)));
+}
+
+// One round trip: pull what other devices changed, merge it with this device's edits, upload the result.
+// It runs in a Firestore transaction, so two devices syncing at once can't overwrite each other (Firestore
+// retries the callback with fresh data if the index changed underneath it). Resolves true on success.
+async function syncWithCloud({ reloadIfChanged = false } = {}) {
   const user = cloud.user;
-  if(!user || cloud.deleting) return;
-  if(cloud.pushing) { cloud.pushAgain = true; return; }
-  if(navigator.onLine === false) { setCloudStatus('offline'); return; }
-  cloud.pushing = true;
+  if(!user || cloud.deleting) return false;
+  if(cloud.syncing) { cloud.syncAgain = true; return false; }
+  if(navigator.onLine === false) { setCloudStatus('offline'); return false; }
+  cloud.syncing = true;
   setCloudStatus('syncing');
   const startedAt = Date.now();
+  let ok = false;
   try {
-    const meta = loadSyncMeta();
-    const data = readLocalSyncData();
-    const modified = {};
-    Object.keys(data).forEach(k => { modified[k] = Math.max(meta.localMod[k] || 0, meta.cloudMod[k] || 0) || startedAt; });
-    await cloud.sdk.firestore.setDoc(cloudStateDoc(user.uid), { schema: 1, data, modified, updatedAt: startedAt });
+    const result = await cloud.sdk.firestore.runTransaction(cloud.db, async tx => {
+      const meta = loadSyncMeta();
+      const snap = await tx.get(cloudStateDoc(user.uid));
+      const index = snap.exists() ? (snap.data() || {}) : {};
+      const legacy = !!index.data;
+      const remoteMod = index.modified || {};
+      const remoteChunks = legacy ? {} : { ...(index.chunks || {}) };
+      const firstSyncOnDevice = meta.uid !== user.uid;
+      const plan = await Promise.all(CLOUD_SYNC_KEYS.map(async key => {
+        const localRaw = localStorage.getItem(key);
+        const inCloud = legacy ? index.data[key] !== undefined : !!remoteChunks[key];
+        const remoteChanged = inCloud && (firstSyncOnDevice || remoteMod[key] !== meta.cloudMod[key]);
+        const localDirty = localRaw !== null && (firstSyncOnDevice || (meta.localMod[key] || 0) > (meta.lastSyncAt || 0));
+        const cloudRaw = (remoteChanged || legacy) ? await readCloudKey(ref => tx.get(ref), user.uid, index, key) : undefined;
+        const merged = remoteChanged
+          ? mergeSyncKey(key, localRaw, cloudRaw, { meta, cloudModified: remoteMod, firstSyncOnDevice, localDirty })
+          : localRaw;
+        const hasValue = merged !== null && merged !== undefined;
+        const upload = hasValue && (legacy || !inCloud || (remoteChanged ? merged !== cloudRaw : localDirty));
+        return { key, localRaw, merged, upload, remoteChanged };
+      }));
+      const modified = { ...remoteMod };
+      const chunks = { ...remoteChunks };
+      plan.forEach(item => {
+        if(!item.upload) return;
+        const parts = splitChunks(item.merged);
+        parts.forEach((v, i) => tx.set(cloudChunkDoc(user.uid, item.key, i), { v }));
+        for(let i = parts.length; i < (remoteChunks[item.key] || 0); i++) tx.delete(cloudChunkDoc(user.uid, item.key, i));
+        chunks[item.key] = parts.length;
+        modified[item.key] = startedAt;
+      });
+      if(legacy || plan.some(item => item.upload)) {
+        tx.set(cloudStateDoc(user.uid), { schema: 2, modified, chunks, updatedAt: startedAt });
+      }
+      return { plan, modified };
+    });
+    const cloudMod = { ...result.modified };
+    let changed = false;
+    result.plan.forEach(item => {
+      if(!item.remoteChanged || item.merged === null || item.merged === undefined || item.merged === item.localRaw) return;
+      if(localStorage.getItem(item.key) === item.localRaw) {
+        localStorage.setItem(item.key, item.merged);
+        changed = true;
+      } else {
+        // Edited again while syncing: keep that edit and merge this key again next time.
+        delete cloudMod[item.key];
+      }
+    });
     const after = loadSyncMeta();
     after.uid = user.uid;
     after.lastSyncAt = startedAt;
-    after.cloudMod = modified;
+    after.cloudMod = cloudMod;
     storeSyncMeta(after);
     setCloudStatus('synced');
+    ok = true;
+    if(changed) refreshAfterCloudMerge(reloadIfChanged);
   } catch(err) {
     setCloudStatus(navigator.onLine === false || err.code === 'unavailable' ? 'offline' : 'error', friendlyAuthError(err));
   } finally {
-    cloud.pushing = false;
-    if(cloud.pushAgain) { cloud.pushAgain = false; scheduleCloudPush(); }
+    cloud.syncing = false;
+    if(cloud.syncAgain) { cloud.syncAgain = false; scheduleCloudPush(); }
   }
+  return ok;
 }
 
 function parseRaw(raw) {
@@ -445,70 +536,32 @@ function mergePRs(local, remote) {
   return out;
 }
 
-// Combine one key. Returns the raw string to keep locally.
+// Combine one key that another device changed. Returns the raw string to keep (and upload).
 function mergeSyncKey(key, localRaw, cloudRaw, ctx) {
   if(cloudRaw === undefined || cloudRaw === null) return localRaw;
-  if(localRaw === null) return cloudRaw;
-  if(localRaw === cloudRaw) return localRaw;
+  if(localRaw === null || localRaw === cloudRaw) return cloudRaw;
   const local = parseRaw(localRaw), remote = parseRaw(cloudRaw);
   if(remote === undefined) return localRaw;
-  if(local === undefined || isEmptyValue(local)) return cloudRaw;
-  if(isEmptyValue(remote)) return localRaw;
-  const rule = CLOUD_MERGE_RULES[key];
-  const localChanged = ctx.firstSyncOnDevice || (ctx.meta.localMod[key] || 0) > (ctx.meta.lastSyncAt || 0);
+  if(local === undefined) return cloudRaw;
   // Nothing changed here since the last sync: take the cloud copy (this also carries deletions across devices).
-  if(!localChanged) return cloudRaw;
+  if(!ctx.localDirty) return cloudRaw;
+  // A device signing in for the first time with nothing of its own takes the account copy.
+  if(ctx.firstSyncOnDevice && isEmptyValue(local)) return cloudRaw;
+  const localNewer = (ctx.meta.localMod[key] || 0) >= (ctx.cloudModified[key] || 0);
+  // One side was deliberately cleared (e.g. Clear History): the newer action wins instead of resurrecting data.
+  if(isEmptyValue(local) || isEmptyValue(remote)) return localNewer ? localRaw : cloudRaw;
+  const rule = CLOUD_MERGE_RULES[key];
   if(rule === 'byId' && Array.isArray(local) && Array.isArray(remote)) return JSON.stringify(mergeById(local, remote));
   if(rule === 'byDate' && Array.isArray(local) && Array.isArray(remote)) return JSON.stringify(mergeByDate(local, remote));
   if(rule === 'byKey' && typeof local === 'object' && typeof remote === 'object' && !Array.isArray(local)) return JSON.stringify({ ...remote, ...local });
   if(rule === 'maxPR' && typeof local === 'object' && typeof remote === 'object') return JSON.stringify(mergePRs(local, remote));
   // Settings-like keys: on a device's first sign-in the account copy wins; afterwards the newer edit wins.
   if(ctx.firstSyncOnDevice) return cloudRaw;
-  return (ctx.meta.localMod[key] || 0) >= (ctx.cloudModified[key] || 0) ? localRaw : cloudRaw;
+  return localNewer ? localRaw : cloudRaw;
 }
 
 function workoutInProgress() {
   try { return typeof wo !== 'undefined' && !!wo.active; } catch(_) { return false; }
-}
-
-async function pullAndMerge(user, { reloadIfChanged = true } = {}) {
-  if(!user || cloud.deleting) return;
-  if(navigator.onLine === false) { setCloudStatus('offline'); return; }
-  setCloudStatus('syncing');
-  try {
-    const snap = await cloud.sdk.firestore.getDoc(cloudStateDoc(user.uid));
-    const remote = snap.exists() ? (snap.data() || {}) : {};
-    const cloudData = remote.data || {};
-    const meta = loadSyncMeta();
-    if(!Object.keys(cloudData).length) {
-      // First login for this account: upload everything already on the device.
-      meta.uid = user.uid;
-      storeSyncMeta(meta);
-      await pushToCloud();
-      return;
-    }
-    const ctx = { meta, cloudModified: remote.modified || {}, firstSyncOnDevice: meta.uid !== user.uid };
-    let changed = false, differsFromCloud = false;
-    CLOUD_SYNC_KEYS.forEach(key => {
-      const localRaw = localStorage.getItem(key);
-      const merged = mergeSyncKey(key, localRaw, cloudData[key], ctx);
-      if(merged !== null && merged !== undefined && merged !== localRaw) {
-        localStorage.setItem(key, merged);
-        changed = true;
-      }
-      if(merged !== cloudData[key]) differsFromCloud = true;
-    });
-    const after = loadSyncMeta();
-    after.uid = user.uid;
-    after.cloudMod = { ...(remote.modified || {}) };
-    after.lastSyncAt = Date.now();
-    storeSyncMeta(after);
-    if(differsFromCloud) await pushToCloud();
-    else setCloudStatus('synced');
-    if(changed) refreshAfterCloudMerge(reloadIfChanged);
-  } catch(err) {
-    setCloudStatus(navigator.onLine === false || err.code === 'unavailable' ? 'offline' : 'error', friendlyAuthError(err));
-  }
 }
 
 // In-memory state lives in globals across many scripts, so the simplest correct refresh is a reload.
@@ -540,6 +593,16 @@ async function reauthenticateForDeletion(user) {
   await a.reauthenticateWithCredential(user, a.EmailAuthProvider.credential(user.email, password));
 }
 
+async function deleteCloudData(uid) {
+  const fs = cloud.sdk.firestore;
+  const snap = await fs.getDoc(cloudStateDoc(uid));
+  const chunks = snap.exists() ? ((snap.data() || {}).chunks || {}) : {};
+  const refs = [];
+  Object.entries(chunks).forEach(([key, n]) => { for(let i = 0; i < n; i++) refs.push(cloudChunkDoc(uid, key, i)); });
+  await Promise.all(refs.map(ref => fs.deleteDoc(ref)));
+  await fs.deleteDoc(cloudStateDoc(uid));
+}
+
 async function cloudDeleteAccount() {
   const user = cloud.user;
   if(!user) { alert('Sign in first to delete your account.'); return; }
@@ -552,7 +615,7 @@ async function cloudDeleteAccount() {
   clearTimeout(cloud.pushTimer);
   let cloudDocDeleted = false;
   try {
-    await cloud.sdk.firestore.deleteDoc(cloudStateDoc(user.uid));
+    await deleteCloudData(user.uid);
     cloudDocDeleted = true;
     try {
       await cloud.sdk.auth.deleteUser(user);
@@ -630,7 +693,7 @@ function initCloud() {
         if(user) {
           const modal = document.getElementById('auth-modal');
           if(modal && modal.classList.contains('open') && authModalView !== 'account') closeAuthModal();
-          pullAndMerge(user);
+          syncWithCloud({ reloadIfChanged: true });
         } else {
           setCloudStatus('local');
         }
@@ -646,12 +709,12 @@ function initCloud() {
 window.addEventListener('online', () => {
   if(!cloud.configured) return;
   if(!cloud.ready) { initCloud(); return; }
-  if(cloud.user) pullAndMerge(cloud.user, { reloadIfChanged: false });
+  if(cloud.user) syncWithCloud();
 });
 window.addEventListener('offline', () => { if(cloud.user) setCloudStatus('offline'); });
 document.addEventListener('visibilitychange', () => {
   // Flush pending edits when the app is backgrounded (phones often kill hidden tabs).
-  if(document.visibilityState === 'hidden' && cloud.user && cloud.pushTimer) { clearTimeout(cloud.pushTimer); cloud.pushTimer = null; pushToCloud(); }
+  if(document.visibilityState === 'hidden' && cloud.user && cloud.pushTimer) { clearTimeout(cloud.pushTimer); cloud.pushTimer = null; syncWithCloud(); }
 });
 
 document.getElementById('auth-modal').addEventListener('click', e => {
