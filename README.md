@@ -171,7 +171,7 @@ Bangladesh meal plans designed around locally available foods and brands for use
 
 Clone or download this folder and open `fitdash.html` in your browser. For developer testing there are two options:
 
-- Native browser tests: open `test.html` in the same folder (file://) and click "Run tests". This runs vanilla JS checks against the app iframe and reports PASS/FAIL in the page.
+- Native browser tests: serve the repo root and open `dev-tools/test.html` and click "Run tests". This runs vanilla JS checks against the app iframe and reports PASS/FAIL in the page.
 - Node-based tests (optional): a Jest + jsdom scaffold is provided in `package.json` and `tests/`. To run:
 
 ```bash

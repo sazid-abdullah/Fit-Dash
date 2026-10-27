@@ -572,6 +572,7 @@ function renderHistoryList() {
         <div class="history-detail" style="color:var(--muted2);font-size:11px">${chips}</div>
         ${s.notes?`<div class="history-detail" style="margin-top:3px;color:var(--muted)">${escapeHtml(s.notes.slice(0,80))}</div>`:''}
       </div>
+      <button onclick="openShareCardForSession(${s.id})" title="Share workout card" aria-label="Share workout card" class="hist-share-btn" style="margin-left:8px">📤</button>
       <button onclick="deleteSession(${s.id})" title="Delete this session" class="del-btn del-btn-md" style="flex-shrink:0;margin-left:8px">×</button>
     </div>`;
   }).join('');
@@ -1262,7 +1263,8 @@ function generate30DayMockData() {
 }
 
 function clearAllData() {
-  if(!confirm('⚠️ Delete ALL FitDash data? This includes sessions, weight logs, PRs, settings, and AI config. This cannot be undone!')) return;
+  const signedIn = typeof cloud !== 'undefined' && cloud.user;
+  if(!confirm('⚠️ Delete ALL FitDash data on this device? This includes sessions, weight logs, PRs, settings, and AI config. This cannot be undone!' + (signedIn ? '\n\nYou are signed in, so your cloud copy is kept and will sync back. To erase it too, use "Delete Account & All Cloud/Local Data".' : ''))) return;
   const keys = [];
   for(let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
@@ -2151,3 +2153,12 @@ function renderBFChart() {
 
 
 
+
+// ══ PRIVACY & HEALTH DISCLAIMER ════════════════════════════════
+function openPrivacyModal() {
+  document.getElementById('privacy-modal').classList.add('open');
+}
+function closePrivacyModal() {
+  document.getElementById('privacy-modal').classList.remove('open');
+}
+document.getElementById('privacy-modal').addEventListener('click', e => { if(e.target.id === 'privacy-modal') closePrivacyModal(); });

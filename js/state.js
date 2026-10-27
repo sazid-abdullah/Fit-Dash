@@ -63,6 +63,8 @@ function mobileOpenPlan() { showPage('nutrition'); setTimeout(() => { const el =
 function save(key, val) {
   try {
     localStorage.setItem(key, JSON.stringify(val));
+    // Debounced cloud push when signed in (js/firebase-sync.js); a no-op in Local Mode.
+    if(typeof fitdashCloudOnSave === 'function') fitdashCloudOnSave(key);
     return true;
   } catch(e) {
     if(e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {

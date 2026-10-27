@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FitDash — Privacy Policy &amp; Health Disclaimer</title>
+<meta name="description" content="How FitDash handles your fitness, nutrition and account data.">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<style>
+  :root { color-scheme: dark; }
+  body { margin:0; background:#08080e; color:#e5e7eb; font:16px/1.65 Inter, "Segoe UI", Roboto, system-ui, sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:32px 20px 64px; }
+  h1 { font-size:28px; margin:0 0 4px; }
+  h1 span { color:#e63946; }
+  h2 { font-size:19px; margin:32px 0 8px; color:#fff; }
+  p, li { color:#c7c9d1; }
+  a { color:#60a5fa; }
+  .muted { color:#9ca3af; font-size:14px; }
+  .callout { border:1px solid rgba(250,204,21,.35); background:rgba(250,204,21,.07); border-radius:12px; padding:14px 16px; margin:20px 0; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  th, td { text-align:left; padding:8px; border-bottom:1px solid #23232f; vertical-align:top; }
+  th { color:#fff; }
+  code { background:#151520; padding:1px 5px; border-radius:4px; font-size:13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>FIT<span>DASH</span> Privacy Policy</h1>
+  <p class="muted">Effective date: 27 October 2026 · Applies to the FitDash web app (<a href="https://sazid-abdullah.github.io/Fit-Dash/">sazid-abdullah.github.io/Fit-Dash</a>) and the FitDash Android app (<code>com.sazidabdullah.fitdash</code>).</p>
+
+  <div class="callout"><strong>Health &amp; medical disclaimer.</strong> FitDash is a fitness and nutrition tracking tool. It is <strong>not a medical device</strong> and does not diagnose, treat, cure, or prevent any disease or condition. Calorie targets, body-fat estimates, training suggestions and AI Coach replies are estimates for general wellness only and may be wrong. Consult a doctor or qualified professional before starting a new diet or exercise program, especially if you are pregnant, injured, under 18, or have a medical condition. Stop exercising immediately if you feel pain, dizziness, or shortness of breath.</div>
+
+  <h2>1. Summary</h2>
+  <ul>
+    <li>FitDash works without an account. By default all your data stays on your device.</li>
+    <li>If you choose to sign in, a copy of your fitness data is stored in Google Firebase so you can sync between devices. Only you can access it.</li>
+    <li>Your AI provider API keys never leave your device.</li>
+    <li>We do not sell your data, show ads, or use third-party analytics or tracking.</li>
+    <li>You can delete your account and all data from inside the app at any time.</li>
+  </ul>
+
+  <h2>2. Data stored on your device</h2>
+  <p>FitDash saves what you enter in your browser's or the app's local storage (<code>localStorage</code>) on your device:</p>
+  <table>
+    <tr><th>Category</th><th>Examples</th></tr>
+    <tr><td>Training</td><td>Workout sessions, sets, reps, weights, personal records, custom exercises, routines, cardio sessions</td></tr>
+    <tr><td>Nutrition</td><td>Food and calorie logs, water intake, meal plans, saved AI plans, custom dishes, grocery lists</td></tr>
+    <tr><td>Body &amp; wellness</td><td>Body weight, body composition, body circumference, sleep, daily checklist</td></tr>
+    <tr><td>Profile &amp; settings</td><td>Height, age, gender, activity level, goals, schedule, reminders, theme</td></tr>
+    <tr><td>AI Coach</td><td>Chat history, chosen provider and model, and your API key (only if you choose to store it)</td></tr>
+  </table>
+  <p>This data is not sent anywhere unless you turn on cloud sync or use the AI Coach as described below. Clearing your browser/app data or using <em>Settings → Data Management → Clear All Data</em> removes it.</p>
+
+  <h2>3. Optional account &amp; cloud sync (Firebase)</h2>
+  <p>Signing in is optional. If you create an account with email/password or Google Sign-In, FitDash uses Google Firebase:</p>
+  <ul>
+    <li><strong>Firebase Authentication</strong> stores your email address, display name and profile photo (for Google sign-in), and a unique user ID.</li>
+    <li><strong>Cloud Firestore</strong> stores one document, <code>users/{your user ID}/fitdash/state</code>, containing the training, nutrition, body, profile and goal data listed above so it can be restored on your other devices.</li>
+    <li>Security rules only allow the signed-in owner of an account to read or write that document.</li>
+    <li><strong>Never uploaded:</strong> your AI Coach configuration and API keys, AI chat history, and app settings that only matter on one device.</li>
+  </ul>
+  <p>Firebase is operated by Google LLC. See the <a href="https://firebase.google.com/support/privacy" rel="noopener">Firebase privacy information</a> and <a href="https://policies.google.com/privacy" rel="noopener">Google Privacy Policy</a>. Data is encrypted in transit (HTTPS/TLS) and at rest by Google.</p>
+
+  <h2>4. AI Coach</h2>
+  <p>The AI Coach is optional and uses your own API key for the provider you choose (Groq, Google Gemini, OpenRouter, or a local Ollama server). When you send a message, FitDash sends it <strong>directly from your device</strong> to that provider, along with recent chat messages and, if <em>Share health data with AI</em> is turned on in Settings, a summary of your profile, goals and recent progress. FitDash has no server in between and never sees your API key. The provider's own privacy policy applies to those requests:</p>
+  <ul>
+    <li><a href="https://groq.com/privacy-policy/" rel="noopener">Groq</a> · <a href="https://policies.google.com/privacy" rel="noopener">Google Gemini</a> · <a href="https://openrouter.ai/privacy" rel="noopener">OpenRouter</a> · Ollama runs on your own computer.</li>
+  </ul>
+  <p>Do not enter information in the AI Coach that you would not want shared with your chosen provider.</p>
+
+  <h2>5. Permissions</h2>
+  <ul>
+    <li><strong>Notifications</strong> (optional): for workout, water and meal reminders you set up.</li>
+    <li><strong>Keep screen awake</strong>: during an active workout so the timer stays visible. Released when the workout ends.</li>
+    <li><strong>Internet</strong>: only for optional cloud sync, sign-in and the AI Coach.</li>
+  </ul>
+
+  <h2>6. Deleting your data and account</h2>
+  <ul>
+    <li><strong>With an account:</strong> open <em>Settings → Account &amp; Cloud Sync → 🗑️ Delete Account &amp; All Cloud/Local Data</em>. This permanently deletes your Firestore document, your Firebase Authentication account, and all FitDash data on that device. You may be asked to sign in again to confirm.</li>
+    <li><strong>Without an account:</strong> <em>Settings → Data Management → Clear All Data</em>, or clear the app's storage in your browser/Android settings.</li>
+    <li>If you can't access the app, open an issue at <a href="https://github.com/sazid-abdullah/Fit-Dash/issues" rel="noopener">github.com/sazid-abdullah/Fit-Dash/issues</a> asking for account deletion (don't post personal data publicly; we will contact you to verify the request). We will delete the account and its cloud data once the request is verified.</li>
+  </ul>
+
+  <h2>7. Children</h2>
+  <p>FitDash is not directed at children under 13, and we do not knowingly collect their data. If you believe a child has created an account, contact us and we will delete it.</p>
+
+  <h2>8. Data retention</h2>
+  <p>Local data stays until you delete it. Cloud data stays while your account exists and is deleted when you delete your account.</p>
+
+  <h2>9. Changes</h2>
+  <p>We will update this page and its effective date if this policy changes. Significant changes will be shown in the app.</p>
+
+  <h2>10. Contact</h2>
+  <p>Questions or requests: <a href="https://github.com/sazid-abdullah/Fit-Dash/issues" rel="noopener">github.com/sazid-abdullah/Fit-Dash/issues</a>.</p>
+
+  <p class="muted"><a href="./">← Back to FitDash</a></p>
+</main>
+</body>
+</html>
