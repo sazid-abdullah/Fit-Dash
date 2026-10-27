@@ -22,7 +22,8 @@ let checklist   = safeLoad('fitdash_check',    {});
 let cardioMins  = safeLoad('fitdash_cardio', 0);  // safeLoad handles JSON.parse; falls back to 0
 if(typeof cardioMins !== 'number' || isNaN(cardioMins)) cardioMins = 0;  // corrupted value guard
 let lastCardioReset = safeLoad('fitdash_cardio_week', '');
-let activePlan  = safeLoad('fitdash_plan', '1500');
+// Legacy calorie-tier plan ids ('1500', 'bd2000', ...) now map to the High-Volume recipe engine.
+let activePlan  = safeLoad('fitdash_plan', 'hv') === 'ai' ? 'ai' : 'hv';
 // Run any localStorage migrations (versioning) early on load.
 function migrateStorage() {
   try {

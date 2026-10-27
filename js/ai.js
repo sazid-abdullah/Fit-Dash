@@ -147,6 +147,7 @@ ${aiConfig.shareHealthData === false ? `PRIVACY MODE:
 - Activity: ${p.activity||'moderate'} | Goal: ${g.goalType||'recomp'}
 - Daily calorie target: ${g.calTarget||tdee||'?'} cal
 - Cuisine preference: ${g.cuisinePref||'both'}
+- Nutrition filters: ${JSON.stringify(typeof getNutritionPrefs === 'function' ? getNutritionPrefs() : {})}
 - Latest body fat: ${latestBC ? latestBC.bf + '%' : 'n/a'}
 
 TODAY:
@@ -164,7 +165,9 @@ INSTRUCTIONS:
 - Output special FitDash markers as instructed (FITDASH_PLAN, FITDASH_CAL, FITDASH_FOOD).
 - When the user asks to personalize app data, propose changes using approval markers only. Never claim a change was applied until the user presses Apply.
 - For goal edits, output |||FITDASH_GOALS|||JSON|||END_GOALS||| with only requested fields: calTarget, proteinTarget, carbTarget, fatTarget, waterTarget, goalType.
-- For a custom exercise, output |||FITDASH_EXERCISE|||JSON|||END_EXERCISE||| with name, muscle, tips, block, and optional ytId.
+- Nutrition follows FitDash's High-Volume Satiety Principle: lean protein, lots of low-calorie vegetables, measured starch, minimal oil.
+- For a single recipe, output |||FITDASH_PLAN|||{"kind":"recipe",name,kcal,protein,carbs,fat,costEstimate,ingredients:[{item,grams}],steps,volumeSwap}|||END_PLAN|||. For a one-off workout, output |||FITDASH_PLAN|||{"kind":"workout",name,blocks:[{name,type,exercises:[{name,muscle,reps,tips}]}]}|||END_PLAN||| with at most 3 blocks of 2, 3 and 6 exercises.
+- For a custom exercise, output |||FITDASH_EXERCISE|||JSON|||END_EXERCISE||| with name, muscle, tips, and block.
 - For a grocery list, output |||FITDASH_GROCERY|||JSON array|||END_GROCERY|||. For a workout template, output |||FITDASH_TEMPLATE|||JSON|||END_TEMPLATE|||.
 `;
 }
@@ -430,10 +433,49 @@ function formatSourcesMarkdown(sources) {
   return '\n\nSources:\n' + sources.map(src => `- [${(src.title || src.url).replace(/[\[\]]/g, '')}](${src.url})`).join('\n');
 }
 
+// Pulls the JSON payload out of an AI reply: FITDASH_PLAN markers first, then a ```json fence, then the first {...}.
+function extractFitdashPlanJSON(text) {
+  const str = String(text || '');
+  const candidates = [];
+  const marker = str.match(/\|\|\|FITDASH_PLAN\|\|\|([\s\S]*?)(?:\|\|\|END_PLAN\|\|\||$)/);
+  if(marker) candidates.push(marker[1]);
+  const fence = str.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if(fence) candidates.push(fence[1]);
+  const first = str.indexOf('{'), last = str.lastIndexOf('}');
+  if(first !== -1 && last > first) candidates.push(str.slice(first, last + 1));
+  for(const c of candidates) {
+    try { return JSON.parse(c.trim()); } catch(_) {}
+  }
+  return null;
+}
+
+function addActionButtonLater(label, action, actionKey) {
+  setTimeout(() => {
+    const msgs = document.querySelectorAll('.chat-msg.assistant');
+    const lastMsg = msgs[msgs.length - 1];
+    if(!lastMsg || lastMsg.querySelector(`[data-ai-action="${actionKey}"]`)) return;
+    const btn = document.createElement('button');
+    btn.className = 'apply-btn'; btn.dataset.aiAction = actionKey; btn.textContent = label;
+    btn.onclick = () => { action(btn); };
+    lastMsg.appendChild(btn);
+  }, 100);
+}
+
 function parseAIActions(content) {
   // Check for meal plan
   const planMatch = content.match(/\|\|\|FITDASH_PLAN\|\|\|([\s\S]*?)\|\|\|END_PLAN\|\|\|/);
-  if(planMatch) {
+  let planKind = null;
+  try { planKind = planMatch ? (JSON.parse(planMatch[1]) || {}).kind : null; } catch(_) {}
+  if(planMatch && planKind === 'recipe') {
+    const recipe = normalizeAIRecipe(extractFitdashPlanJSON(content));
+    if(recipe) addActionButtonLater("➕ Log to Today's Calories", btn => logAIRecipe(recipe, btn), 'recipe-log');
+  } else if(planMatch && planKind === 'workout') {
+    const workout = typeof normalizeAIWorkout === 'function' ? normalizeAIWorkout(extractFitdashPlanJSON(content)) : null;
+    if(workout) {
+      addActionButtonLater('▶ Start This Workout Now', () => { toggleChat(); startGeneratedWorkout(workout); }, 'workout-start');
+      addActionButtonLater('💾 Save to My Routines', btn => saveGeneratedWorkoutAsRoutine(workout, btn), 'workout-save');
+    }
+  } else if(planMatch) {
     try {
       const planData = JSON.parse(planMatch[1]);
       // Add apply button to last message
@@ -543,8 +585,8 @@ function parseAIActions(content) {
         const block = ['A','B','C'].includes(exercise.block) ? exercise.block : 'C';
         const existing = customExercises.filter(cx => cx.block === block);
         const baseCount = block === 'A' ? 2 : block === 'B' ? 3 : 6;
-        const item = { id:Date.now(), code:`${block}${baseCount + existing.length + 1}`, name:String(exercise.name).slice(0,80), muscle:String(exercise.muscle).slice(0,100), tips:String(exercise.tips).slice(0,240), ytId:normalizeYouTubeId(exercise.ytId || ''), block };
-        customExercises.push(item); save('fitdash_custom_ex', customExercises); renderCustomExercises(); renderVideoCodeLibrary(); btn.textContent = '✓ Exercise added'; btn.disabled = true;
+        const item = { id:Date.now(), code:`${block}${baseCount + existing.length + 1}`, name:String(exercise.name).slice(0,80), muscle:String(exercise.muscle).slice(0,100), tips:String(exercise.tips).slice(0,240), block };
+        customExercises.push(item); save('fitdash_custom_ex', customExercises); renderCustomExercises(); btn.textContent = '✓ Exercise added'; btn.disabled = true;
       }, 'exercise');
     } catch(e) { if(FITDASH_DEBUG) console.warn('Failed to parse exercise data:', e); }
   }
@@ -599,7 +641,7 @@ function suggestFoodSubstitution() {
 // ══ AI PLAN MANAGEMENT ═══════════════════════════════════
 let aiPlan = safeLoad('fitdash_ai_plan', null);
 let customDishes = safeLoad('fitdash_custom_dishes', []);
-if (activePlan === 'ai' && !aiPlan) activePlan = '1500';
+if (activePlan === 'ai' && !aiPlan) activePlan = 'hv';
 
 function renderSavedCustomDishes() {
   const el = document.getElementById('saved-custom-dishes');
@@ -725,7 +767,7 @@ function clearAIPlan() {
   if(!confirm('Clear your AI-generated meal plan?')) return;
   aiPlan = null;
   save('fitdash_ai_plan', null);
-  switchPlan('1500');
+  switchPlan('hv');
   renderAIPlan();
 }
 

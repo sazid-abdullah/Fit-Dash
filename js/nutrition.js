@@ -823,3 +823,234 @@ async function analyzeLabelPhoto(input) {
   }
 }
 
+
+// ══ HIGH-VOLUME SATIETY ENGINE ═══════════════════════════════
+const HV_FILTERS = {
+  region: { label:'📍 Region & Pantry', options:[['all','All'],['bd','🇧🇩 Bangladesh / Deshi'],['sa','🌏 South Asian'],['med','🥗 Mediterranean'],['west','🍳 Western / Global']] },
+  budget: { label:'💰 Budget Tier', options:[['all','All'],['budget','💸 Budget / Student-Friendly'],['moderate','⚖️ Moderate'],['premium','💎 Flexible / Premium']] },
+  diet:   { label:'🍗 Dietary Preference', options:[['halal','Halal All'],['veg','High-Protein Vegetarian'],['pesc','Eggetarian + Fish (Pescetarian)'],['dairyfree','Dairy-Free']] },
+  prep:   { label:'⏱️ Prep Time', options:[['all','Any'],['quick','⚡ Under 10 Mins'],['medium','🍳 15–25 Mins'],['prep','🥘 Meal Prep']] },
+};
+const HV_BUDGET_RANK = { budget:1, moderate:2, premium:3 };
+const HV_BUDGET_HINTS = {
+  budget: 'eggs, lentils/dal, seasonal gourds (lau, papaya), soya chunks, muri, oats, tilapia/pangash, tok doi',
+  moderate: 'chicken breast, rui/katla, paneer or cottage cheese, chia/flax, peanut butter',
+  premium: 'lean beef, salmon/tuna, whey isolate, Greek yogurt, berries',
+};
+const HV_SLOTS = [['breakfast','🌅 Breakfast'],['lunch','☀️ Lunch'],['dinner','🌙 Dinner'],['snack','🍬 Snacks']];
+
+function regionFromCuisinePref(pref) {
+  const p = String(pref || 'both').toLowerCase();
+  if(p === 'bangladeshi' || p === 'bd') return 'bd';
+  if(p.startsWith('int')) return 'west';
+  return 'all';
+}
+
+function getNutritionPrefs() {
+  const saved = safeLoad('fitdash_nutrition_prefs', null);
+  const prefs = { region: regionFromCuisinePref(userGoals.cuisinePref), budget:'all', diet:'halal', prep:'all', ...(saved && typeof saved === 'object' ? saved : {}) };
+  Object.keys(HV_FILTERS).forEach(k => {
+    if(!HV_FILTERS[k].options.some(([v]) => v === prefs[k])) prefs[k] = HV_FILTERS[k].options[0][0];
+  });
+  return prefs;
+}
+
+function setNutritionPref(group, value) {
+  if(!HV_FILTERS[group] || !HV_FILTERS[group].options.some(([v]) => v === value)) return;
+  const prefs = { ...getNutritionPrefs(), [group]: value };
+  save('fitdash_nutrition_prefs', prefs);
+  if(group === 'region') {
+    // Keep the quick food picker and AI prompts in step with the chosen pantry.
+    userGoals.cuisinePref = value === 'bd' ? 'bangladeshi' : (value === 'med' || value === 'west') ? 'international' : 'both';
+    save('fitdash_goals', userGoals);
+    if(typeof renderCalorieTracker === 'function') renderCalorieTracker();
+  }
+  renderHVFilters();
+  renderHVRecipes();
+}
+
+function recipeMatchesDiet(recipe, diet) {
+  const has = recipe.contains || [];
+  if(diet === 'veg') return !has.some(x => x === 'meat' || x === 'fish' || x === 'egg');
+  if(diet === 'pesc') return !has.includes('meat');
+  if(diet === 'dairyfree') return !has.includes('dairy');
+  return true;
+}
+
+function filterHVRecipes(prefs) {
+  return HV_RECIPES.filter(r =>
+    (prefs.region === 'all' || r.region.includes(prefs.region)) &&
+    (prefs.budget === 'all' || HV_BUDGET_RANK[r.budget] <= HV_BUDGET_RANK[prefs.budget]) &&
+    recipeMatchesDiet(r, prefs.diet) &&
+    (prefs.prep === 'all' || r.prep === prefs.prep));
+}
+
+function hvCostLabel(costBdt, costUsd, region) {
+  const useBdt = region === 'bd' || region === 'sa' || region === 'all';
+  if(useBdt && Number.isFinite(Number(costBdt))) return `≈ ৳${Math.round(costBdt)}`;
+  if(Number.isFinite(Number(costUsd))) return `≈ $${Number(costUsd).toFixed(costUsd < 10 ? 1 : 0)}`;
+  return '';
+}
+
+function renderHVFilters() {
+  const el = document.getElementById('hv-filters');
+  if(!el) return;
+  const prefs = getNutritionPrefs();
+  el.innerHTML = Object.entries(HV_FILTERS).map(([group, f]) => `
+    <div class="hv-filter-group">
+      <div class="hv-filter-label">${f.label}</div>
+      <div class="hv-chip-row" role="radiogroup" aria-label="${escapeHtml(f.label)}">
+        ${f.options.map(([v, label]) => `<button class="chip-btn${prefs[group] === v ? ' active' : ''}" role="radio" aria-checked="${prefs[group] === v}" onclick="setNutritionPref('${group}','${v}')">${escapeHtml(label)}</button>`).join('')}
+      </div>
+    </div>`).join('') +
+    (prefs.budget !== 'all' ? `<div class="hv-filter-hint">🛒 ${escapeHtml(prefs.budget === 'budget' ? HV_BUDGET_HINTS.budget : prefs.budget === 'moderate' ? HV_BUDGET_HINTS.budget + ' + ' + HV_BUDGET_HINTS.moderate : 'Everything, incl. ' + HV_BUDGET_HINTS.premium)}</div>` : '') +
+    (prefs.diet === 'halal' ? '<div class="hv-filter-hint">✅ Every FitDash recipe is pork- and alcohol-free.</div>' : '');
+}
+
+function hvRecipeCardHtml(r, region) {
+  const cost = hvCostLabel(r.costBdt, r.costUsd, region);
+  const prepLabel = (HV_FILTERS.prep.options.find(([v]) => v === r.prep) || [,''])[1];
+  return `
+    <div class="meal-card hv-card" id="hv-${r.id}">
+      <div class="meal-card-header" onclick="toggleMeal('hv-${r.id}')">
+        <div class="meal-icon">${r.emoji}</div>
+        <div class="meal-name">${escapeHtml(r.name)}<div class="hv-card-sub">P ${r.protein}g · ${escapeHtml(prepLabel)}${cost ? ' · ' + cost : ''}</div></div>
+        <div class="meal-cals">${r.kcal} cal</div>
+        <div class="meal-chevron">▼</div>
+      </div>
+      <div class="meal-card-body">
+        <div class="hv-macros"><span class="cal-macro-pill p">P ${r.protein}g</span><span class="cal-macro-pill c">C ${r.carbs}g</span><span class="cal-macro-pill f">F ${r.fat}g</span></div>
+        <div class="hv-section-title">Ingredients</div>
+        <ul class="hv-ingredients">${r.ingredients.map(([item, g]) => `<li><span>${escapeHtml(item)}</span><strong>${g} g</strong></li>`).join('')}</ul>
+        <div class="hv-section-title">Steps</div>
+        <ol class="hv-steps">${r.steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>
+        <div class="hv-swap">🔁 <strong>Volume Swap:</strong> ${escapeHtml(r.swap)}</div>
+        <div class="hv-log-row">
+          <select class="settings-select hv-portion" id="hv-portion-${r.id}" aria-label="Portion size">
+            <option value="0.75">¾ portion</option><option value="1" selected>1 portion</option><option value="1.25">1¼ portions</option><option value="1.5">1½ portions</option><option value="2">2 portions</option>
+          </select>
+          <button class="btn-red" onclick="logHVRecipe('${r.id}', this)">➕ Log to Today's Calories</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderHVRecipes() {
+  const el = document.getElementById('hv-recipes');
+  if(!el) return;
+  const prefs = getNutritionPrefs();
+  const list = filterHVRecipes(prefs);
+  el.innerHTML = HV_SLOTS.map(([slot, title]) => {
+    const items = list.filter(r => r.slot === slot);
+    const range = items.length ? `${items.length} recipe${items.length > 1 ? 's' : ''} · ${Math.min(...items.map(r => r.kcal))}–${Math.max(...items.map(r => r.kcal))} cal` : 'No match';
+    return `<div class="meal-section">
+      <div class="meal-header"><div class="meal-title">${title}</div><div class="meal-kcal">${range}</div></div>
+      ${items.length ? items.map(r => hvRecipeCardHtml(r, prefs.region)).join('') : '<div class="hv-empty">No recipe matches these filters. Loosen one filter or tap “🤖 Generate Custom High-Volume Meal with AI”.</div>'}
+    </div>`;
+  }).join('');
+  if(typeof renderPlanPreview === 'function') renderPlanPreview();
+}
+
+function logHVRecipe(id, btn) {
+  const r = HV_RECIPES.find(x => x.id === id);
+  if(!r) return;
+  const factor = Number(document.getElementById(`hv-portion-${id}`)?.value) || 1;
+  const grams = r.ingredients.reduce((s, [, g]) => s + g, 0) * factor;
+  const country = r.region.includes('bd') ? 'BD' : 'INT';
+  addFoodEntry(factor === 1 ? r.name : `${r.name} (×${factor})`, grams, r.kcal * factor, r.protein * factor, r.carbs * factor, r.fat * factor, 'recipe', country);
+  if(btn) { btn.textContent = `✓ Logged ${Math.round(r.kcal * factor)} cal`; setTimeout(() => { btn.textContent = "➕ Log to Today's Calories"; }, 2500); }
+}
+
+function hvRemainingToday() {
+  const entries = calorieLog[getLocalDateStr()] || [];
+  const eaten = entries.reduce((s, e) => s + (e.calories || 0), 0);
+  const protein = entries.reduce((s, e) => s + (e.protein || 0), 0);
+  const latestWeight = weights.length ? weights.reduce((l, e) => (!l || e.date > l.date) ? e : l, null) : null;
+  const proteinTarget = userGoals.proteinTarget || (latestWeight ? Math.round(latestWeight.val * 1.6) : 120);
+  return { kcal: Math.max(0, getTodayCalorieTarget() - eaten), protein: Math.max(0, proteinTarget - protein) };
+}
+
+function normalizeAIRecipe(raw) {
+  if(!raw || typeof raw !== 'object') return null;
+  const r = raw.recipe && typeof raw.recipe === 'object' ? raw.recipe : raw;
+  const num = v => { const n = Number(String(v ?? '').replace(/[^0-9.]/g, '')); return Number.isFinite(n) ? n : 0; };
+  const ingredients = (Array.isArray(r.ingredients) ? r.ingredients : []).map(i => {
+    if(typeof i === 'string') return [i, 0];
+    return [String(i.item || i.name || 'Ingredient'), num(i.grams ?? i.g ?? i.weight)];
+  }).filter(([item]) => item);
+  const steps = (Array.isArray(r.steps) ? r.steps : []).map(String).filter(Boolean);
+  if(!r.name || !ingredients.length) return null;
+  return {
+    name: String(r.name).slice(0, 80), emoji: r.emoji ? String(r.emoji).slice(0, 4) : '🤖',
+    kcal: Math.round(num(r.kcal ?? r.calories)), protein: Math.round(num(r.protein)), carbs: Math.round(num(r.carbs)), fat: Math.round(num(r.fat)),
+    cost: String(r.costEstimate || r.cost || '').slice(0, 40), ingredients, steps, swap: String(r.volumeSwap || r.swap || '').slice(0, 240),
+  };
+}
+
+let hvLastAIRecipe = null;
+
+function renderHVAIRecipe(recipe) {
+  const el = document.getElementById('hv-ai-result');
+  if(!el) return;
+  hvLastAIRecipe = recipe;
+  el.innerHTML = `<div class="hv-ai-card">
+    <div class="hv-ai-head"><span style="font-size:22px">${escapeHtml(recipe.emoji)}</span><div style="flex:1;min-width:0"><strong>${escapeHtml(recipe.name)}</strong>
+      <div class="hv-card-sub">${recipe.kcal} cal · P ${recipe.protein}g · C ${recipe.carbs}g · F ${recipe.fat}g${recipe.cost ? ' · ' + escapeHtml(recipe.cost) : ''}</div></div><span class="tag tag-blue">AI</span></div>
+    <div class="hv-section-title">Ingredients</div>
+    <ul class="hv-ingredients">${recipe.ingredients.map(([item, g]) => `<li><span>${escapeHtml(item)}</span><strong>${g ? g + ' g' : ''}</strong></li>`).join('')}</ul>
+    ${recipe.steps.length ? `<div class="hv-section-title">Steps</div><ol class="hv-steps">${recipe.steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : ''}
+    ${recipe.swap ? `<div class="hv-swap">🔁 <strong>Volume Swap:</strong> ${escapeHtml(recipe.swap)}</div>` : ''}
+    <div class="hv-log-row">
+      <button class="btn-red" onclick="logAIRecipe(hvLastAIRecipe, this)">➕ Log to Today's Calories</button>
+      <button class="btn-ghost" onclick="saveAIRecipeAsDish(hvLastAIRecipe, this)">💾 Save dish</button>
+    </div>
+  </div>`;
+}
+
+function logAIRecipe(recipe, btn) {
+  if(!recipe) return;
+  const grams = recipe.ingredients.reduce((s, [, g]) => s + (Number(g) || 0), 0);
+  addFoodEntry(recipe.name, grams, recipe.kcal, recipe.protein, recipe.carbs, recipe.fat, 'ai', regionFromCuisinePref(userGoals.cuisinePref) === 'bd' ? 'BD' : 'INT');
+  if(btn) { btn.textContent = '✓ Logged!'; btn.disabled = true; }
+}
+
+function saveAIRecipeAsDish(recipe, btn) {
+  if(!recipe) return;
+  customDishes.unshift({ name: recipe.name, servings: 1, ingredients: recipe.ingredients.map(([item, g]) => g ? `${g}g ${item}` : item), steps: recipe.steps, calories: recipe.kcal, protein: recipe.protein, carbs: recipe.carbs, fat: recipe.fat });
+  customDishes = customDishes.slice(0, 20);
+  save('fitdash_custom_dishes', customDishes);
+  renderSavedCustomDishes();
+  if(btn) { btn.textContent = '✓ Saved to Custom Dishes'; btn.disabled = true; }
+}
+
+function setHVStatus(text, color) {
+  const el = document.getElementById('hv-ai-status');
+  if(el) { el.textContent = text; el.style.color = color || 'var(--muted)'; }
+}
+
+async function generateHVMealAI() {
+  if(providerRequiresApiKey(aiConfig.provider) && !getProviderApiKey(aiConfig.provider)) { setHVStatus('⚠️ ' + missingApiKeyMessage(), 'var(--orange)'); return; }
+  if(aiOfflineBlocked()) { setHVStatus(AI_OFFLINE_MESSAGE, 'var(--orange)'); return; }
+  const prefs = getNutritionPrefs();
+  const label = (group) => (HV_FILTERS[group].options.find(([v]) => v === prefs[group]) || [,''])[1].replace(/^[^A-Za-z]+/, '');
+  const left = hvRemainingToday();
+  const share = aiConfig.shareHealthData !== false;
+  const target = share ? `Remaining today: about ${left.kcal} kcal and ${left.protein} g protein. Fit one meal into that (roughly 30–45% of the remaining calories, at least 30 g protein if possible).` : 'Aim for a 450–550 kcal meal with at least 30 g protein.';
+  const btn = document.getElementById('hv-ai-btn');
+  if(btn) btn.disabled = true;
+  setHVStatus('🤖 Building a high-volume meal for your pantry...');
+  try {
+    const response = await callAI([
+      { role:'system', content:'You are FitDash\'s nutrition coach. Follow the FitDash High-Volume Satiety Principle: lean protein plus a large volume of low-calorie vegetables, measured starch, minimal oil. Use locally available, affordable ingredients for the chosen region and budget. All food must be halal. Reply with one short sentence, then exactly |||FITDASH_PLAN|||{JSON}|||END_PLAN||| where JSON = {"kind":"recipe","name":string,"emoji":string,"kcal":number,"protein":number,"carbs":number,"fat":number,"costEstimate":string (local currency),"ingredients":[{"item":string,"grams":number}],"steps":[string],"volumeSwap":string}.' },
+      { role:'user', content:`Region & pantry: ${label('region')}. Budget: ${label('budget')}${prefs.budget !== 'all' ? ` (${HV_BUDGET_HINTS[prefs.budget]})` : ''}. Diet: ${label('diet')}. Prep time: ${label('prep')}. ${target} Give ingredient weights in grams, a cost estimate, 3–5 numbered steps and one practical volume swap.` },
+    ]);
+    const recipe = normalizeAIRecipe(extractFitdashPlanJSON(response));
+    if(!recipe) throw new Error('The AI reply did not include a recipe. Try again.');
+    renderHVAIRecipe(recipe);
+    setHVStatus('✅ Recipe ready. Review it, then log it in one tap.', 'var(--green)');
+  } catch(err) {
+    setHVStatus(typeof friendlyAIError === 'function' ? friendlyAIError(err) : `Meal generation failed: ${err.message}`, 'var(--red)');
+  } finally {
+    if(btn) btn.disabled = false;
+  }
+}

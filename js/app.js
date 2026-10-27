@@ -1,10 +1,6 @@
 ﻿// ══ INIT ════════════════════════════════════════════════════
-renderMeals(MEALS_1500,   '1500');
-renderMeals(MEALS_2000,   '2000');
-renderMeals(MEALS_2500,   '2500');
-renderMeals(MEALS_BD1500, 'bd1500');
-renderMeals(MEALS_BD2000, 'bd2000');
-renderMeals(MEALS_BD2500, 'bd2500');
+renderHVFilters();
+renderHVRecipes();
 if (!userProfile || !userProfile.height || !userProfile.weight) {
   document.getElementById('onboarding-modal').style.display = 'flex';
 } else {

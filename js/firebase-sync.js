@@ -15,7 +15,7 @@ const CLOUD_SYNC_KEYS = [
   'fitdash_routines', 'fitdash_active_routine', 'fitdash_training_category', 'fitdash_level',
   'fitdash_progression_prefs', 'fitdash_overrides', 'fitdash_video_codes', 'fitdash_fav_exercises',
   'fitdash_week_plan', 'fitdash_reminders', 'fitdash_plan', 'fitdash_ai_plan', 'fitdash_custom_dishes',
-  'fitdash_saved_recipes', 'fitdash_fav_foods', 'fitdash_micronutrient_log', 'fitdash_grocery_list',
+  'fitdash_saved_recipes', 'fitdash_fav_foods', 'fitdash_nutrition_prefs', 'fitdash_micronutrient_log', 'fitdash_grocery_list',
 ];
 // fitdash_ai_config holds private provider API keys — it must never leave the device.
 const CLOUD_NEVER_SYNC = ['fitdash_ai_config', 'fitdash_firebase_config', 'fitdash_sync_meta'];

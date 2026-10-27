@@ -90,23 +90,21 @@
         </div>
       </div>
       <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:5px">
-        <!-- Yoga with Adriene - 5 Min Morning Yoga (Very positive sentiment, famous) -->
-        <div class="dash-quick" style="min-width:180px;margin-top:0" onclick="openYouTubeDemo('4pKly2JojMw')">
-          <div class="dash-quick-icon" style="background:#ff0000;color:#fff">▶</div>
+        <div class="dash-quick" style="min-width:180px;margin-top:0" onclick="openRecoveryRoutine('mobility', 0)">
+          <div class="dash-quick-icon" style="background:rgba(76,175,80,0.2);color:#4CAF50">🧘</div>
           <div class="dash-quick-body">
-            <div class="dash-quick-title" style="font-size:12px">5 Min Morning Yoga</div>
-            <div class="dash-quick-sub" style="font-size:10px">Yoga with Adriene</div>
+            <div class="dash-quick-title" style="font-size:12px">5 Min Morning Mobility</div>
+            <div class="dash-quick-sub" style="font-size:10px">Guided timer · offline</div>
           </div>
         </div>
-        <!-- Tom Merrick - 15 Min Full Body Mobility (Famous, highly rated) -->
-        <div class="dash-quick" style="min-width:180px;margin-top:0" onclick="openYouTubeDemo('lbozu0DPcYI')">
-          <div class="dash-quick-icon" style="background:#ff0000;color:#fff">▶</div>
+        <div class="dash-quick" style="min-width:180px;margin-top:0" onclick="openRecoveryRoutine('stretch', 0)">
+          <div class="dash-quick-icon" style="background:rgba(76,175,80,0.2);color:#4CAF50">🦵</div>
           <div class="dash-quick-body">
-            <div class="dash-quick-title" style="font-size:12px">15 Min Mobility</div>
-            <div class="dash-quick-sub" style="font-size:10px">Tom Merrick</div>
+            <div class="dash-quick-title" style="font-size:12px">8 Min Hips &amp; Hamstrings</div>
+            <div class="dash-quick-sub" style="font-size:10px">Guided timer · offline</div>
           </div>
         </div>
-        <button class="btn-ghost" onclick="showRecoveryModal()" style="width:100%;margin-top:10px;font-size:12px">📺 Open Recovery Library</button>
+        <button class="btn-ghost" onclick="showRecoveryModal()" style="width:100%;margin-top:10px;font-size:12px">🧘 Open Recovery Library</button>
       </div>
     </div>
     <div class="dash-quick" onclick="showPage('nutrition')" style="margin-top:8px">
@@ -281,26 +279,33 @@
 <div id="page-nutrition" class="page" role="main" aria-label="Nutrition">
   <div style="margin-bottom:4px">
     <div style="font-size:24px;font-weight:800;letter-spacing:-0.5px;margin-bottom:4px">Nutrition</div>
-    <div style="font-size:13px;color:var(--muted)">Greg Doucette Circle Diet — Low calorie-dense, high protein</div>
+    <div style="font-size:13px;color:var(--muted)">FitDash High-Volume Satiety Principle: more food, fibre and protein per calorie</div>
   </div>
 
-  <div style="margin-top:16px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
-    <div style="display:flex;flex-direction:column;gap:6px;min-width:240px">
-      <span class="settings-label" style="margin-bottom:0">Cuisine preference</span>
-      <select id="nutrition-cuisine-pref" class="settings-select" onchange="saveNutritionPreference()" style="max-width:240px">
-        <option value="both">Both</option>
-        <option value="international">International</option>
-        <option value="bangladeshi">Bangladeshi 🇧🇩</option>
-      </select>
-    </div>
-    <div style="font-size:12px;color:var(--muted);max-width:600px;line-height:1.5">
-      This controls the quick food picker, AI meal prompts, and whether Bangladesh plans or international plans are highlighted on this page.
-    </div>
-    <div>
-      <button class="btn-ghost" onclick="openDishBuilderFromNutrition()" style="font-size:13px;min-height:36px">🍽️ Open Dish Builder</button>
-    </div>
+  <div class="card hv-filter-card" id="hv-filters" role="group" aria-label="Diet personalization filters"></div>
+
+  <div class="hv-actions">
+    <button class="btn-red" id="hv-ai-btn" onclick="generateHVMealAI()">🤖 Generate Custom High-Volume Meal with AI</button>
+    <button class="btn-ghost" onclick="openDishBuilderFromNutrition()" style="font-size:13px;min-height:36px">🍽️ Open Dish Builder</button>
+  </div>
+  <div id="hv-ai-status" class="hv-ai-status" aria-live="polite"></div>
+  <div id="hv-ai-result"></div>
+
+  <div class="plan-toggle" style="margin:14px 0 18px">
+    <button class="plan-btn active" onclick="switchPlan('hv')" id="btn-hv">🥗 Recipe Engine</button>
+    <button class="plan-btn" onclick="switchPlan('ai')" id="btn-ai">🤖 My AI Plan</button>
   </div>
 
+  <div id="plan-hv">
+    <div class="hv-principle">
+      <strong>🥗 High-Volume Satiety Principle:</strong> build every plate around lean protein and a big pile of low-calorie vegetables, then add a measured portion of rice, ruti or oats. You eat more food, stay full longer and still hit your calories. Every recipe below has a <strong style="color:var(--green)">Volume Swap</strong> you can use anywhere.
+    </div>
+    <div id="hv-recipes"></div>
+  </div>
+
+  <div id="plan-ai" style="display:none">
+    <div id="plan-ai-content"></div>
+  </div>
   <div class="card" style="padding:18px;margin-bottom:20px">
     <div class="section-title" style="margin-bottom:4px">🍳 Custom Dish Studio</div>
     <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Describe your ingredients, portions, cooking preferences, budget, or local foods. AI will create an editable recipe with nutrition and cooking steps.</div>
@@ -325,249 +330,20 @@
     <div id="custom-dish-result" style="margin-top:14px"></div>
     <div id="saved-custom-dishes" style="margin-top:14px"></div>
   </div>
-  <div id="plan-group-international">
-  <div style="margin-top:16px;margin-bottom:6px;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">🌍 International Plans</div>
-  <div class="plan-toggle" style="margin-bottom:6px">
-    <button class="plan-btn active" onclick="switchPlan('1500')" id="btn-1500">1500 kcal</button>
-    <button class="plan-btn" onclick="switchPlan('2000')" id="btn-2000">2000 kcal</button>
-    <button class="plan-btn" onclick="switchPlan('2500')" id="btn-2500">2500 kcal</button>
-  </div>
-  </div>
-  <div style="margin-bottom:6px;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">🤖 AI Generated</div>
-  <div class="plan-toggle" style="margin-bottom:20px">
-    <button class="plan-btn" onclick="switchPlan('ai')" id="btn-ai">🤖 My Plan</button>
-  </div>
-  <div id="plan-group-bd">
-  <div style="margin-bottom:6px;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted)">🇧🇩 Bangladesh Plans</div>
-  <div class="plan-toggle" style="margin-bottom:20px">
-    <button class="plan-btn" onclick="switchPlan('bd1500')" id="btn-bd1500">BD 1500 kcal</button>
-    <button class="plan-btn" onclick="switchPlan('bd2000')" id="btn-bd2000">BD 2000 kcal</button>
-    <button class="plan-btn" onclick="switchPlan('bd2500')" id="btn-bd2500">BD 2500 kcal</button>
-  </div>
-  </div>
 
-  <div id="plan-1500">
-    <div style="margin-bottom:16px">
-      <div style="font-size:12px;color:var(--muted);background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px">
-        📊 <strong style="color:var(--text)">1300–1700 cal range · 1500 avg</strong> &nbsp;·&nbsp; 3 meals + 1–2 snacks up to 225 cal
-      </div>
-    </div>
-
-    <div class="meal-section">
-      <div class="meal-header">
-        <div class="meal-title">🌅 Breakfast</div>
-        <div class="meal-kcal">400–460 cal</div>
-      </div>
-      <div id="meals-1500-1"></div>
-    </div>
-
-    <div class="meal-section">
-      <div class="meal-header">
-        <div class="meal-title">☀️ Lunch</div>
-        <div class="meal-kcal">400–460 cal</div>
-      </div>
-      <div id="meals-1500-2"></div>
-    </div>
-
-    <div class="meal-section">
-      <div class="meal-header">
-        <div class="meal-title">🌙 Dinner</div>
-        <div class="meal-kcal">400–460 cal</div>
-      </div>
-      <div id="meals-1500-3"></div>
-    </div>
-
-    <div class="meal-section">
-      <div class="meal-header">
-        <div class="meal-title">🍬 Snacks</div>
-        <div class="meal-kcal">up to 225 cal each</div>
-      </div>
-      <div class="snack-grid" id="snacks-1500"></div>
-    </div>
-  </div>
-
-  <div id="plan-2000" style="display:none">
-    <div style="margin-bottom:16px">
-      <div style="font-size:12px;color:var(--muted);background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px">
-        📊 <strong style="color:var(--text)">1750–2250 cal range · 2000 avg</strong> &nbsp;·&nbsp; 3 meals + 1–2 snacks up to 250 cal
-      </div>
-    </div>
-
-    <div class="meal-section">
-      <div class="meal-header">
-        <div class="meal-title">🌅 Breakfast</div>
-        <div class="meal-kcal">~585 cal</div>
-      </div>
-      <div id="meals-2000-1"></div>
-    </div>
-
-    <div class="meal-section">
-      <div class="meal-header">
-        <div class="meal-title">☀️ Lunch</div>
-        <div class="meal-kcal">~585 cal</div>
-      </div>
-      <div id="meals-2000-2"></div>
-    </div>
-
-    <div class="meal-section">
-      <div class="meal-header">
-        <div class="meal-title">🌙 Dinner</div>
-        <div class="meal-kcal">~585 cal</div>
-      </div>
-      <div id="meals-2000-3"></div>
-    </div>
-
-    <div class="meal-section">
-      <div class="meal-header">
-        <div class="meal-title">🍬 Snacks</div>
-        <div class="meal-kcal">up to 250 cal each</div>
-      </div>
-      <div class="snack-grid" id="snacks-2000"></div>
-    </div>
-  </div>
-
-  <!-- ── INTERNATIONAL 2500 PLAN ──────────────────────────── -->
-  <div id="plan-2500" style="display:none">
-    <div style="margin-bottom:16px">
-      <div style="font-size:12px;color:var(--muted);background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px">
-        📊 <strong style="color:var(--text)">2250–2750 cal range · 2500 avg</strong> &nbsp;·&nbsp; 3 meals + 1–2 snacks up to 300 cal
-      </div>
-    </div>
-
-    <div class="meal-section">
-      <div class="meal-header">
-        <div class="meal-title">🌅 Breakfast</div>
-        <div class="meal-kcal">~750 cal</div>
-      </div>
-      <div id="meals-2500-1"></div>
-    </div>
-
-    <div class="meal-section">
-      <div class="meal-header">
-        <div class="meal-title">☀️ Lunch</div>
-        <div class="meal-kcal">~750 cal</div>
-      </div>
-      <div id="meals-2500-2"></div>
-    </div>
-
-    <div class="meal-section">
-      <div class="meal-header">
-        <div class="meal-title">🌙 Dinner</div>
-        <div class="meal-kcal">~750 cal</div>
-      </div>
-      <div id="meals-2500-3"></div>
-    </div>
-
-    <div class="meal-section">
-      <div class="meal-header">
-        <div class="meal-title">🍬 Snacks</div>
-        <div class="meal-kcal">up to 300 cal each</div>
-      </div>
-      <div class="snack-grid" id="snacks-2500"></div>
-    </div>
-  </div>
-
-  <!-- ── BD 1500 PLAN ──────────────────────────────────────── -->
-  <div id="plan-bd1500" style="display:none">
-    <div style="margin-bottom:16px">
-      <div style="font-size:12px;color:var(--muted);background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px">
-        🇧🇩 <strong style="color:var(--text)">1300–1700 cal range · 1500 avg</strong> &nbsp;·&nbsp; Bangladeshi foods · 3 meals + 1–2 snacks up to 200 cal
-      </div>
-    </div>
-    <div style="background:var(--card2);border:1px solid #fbbf2444;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--muted2)">
-      🛒 <strong style="color:var(--yellow)">Where to buy:</strong> Agora · Meena Bazaar · Shwapno · Unimart · local bazar for fish & vegetables
-    </div>
-    <div class="meal-section">
-      <div class="meal-header"><div class="meal-title">🌅 সকালের নাস্তা · Breakfast</div><div class="meal-kcal">400–440 cal</div></div>
-      <div id="meals-bd1500-1"></div>
-    </div>
-    <div class="meal-section">
-      <div class="meal-header"><div class="meal-title">☀️ দুপুরের খাবার · Lunch</div><div class="meal-kcal">420–450 cal</div></div>
-      <div id="meals-bd1500-2"></div>
-    </div>
-    <div class="meal-section">
-      <div class="meal-header"><div class="meal-title">🌙 রাতের খাবার · Dinner</div><div class="meal-kcal">400–440 cal</div></div>
-      <div id="meals-bd1500-3"></div>
-    </div>
-    <div class="meal-section">
-      <div class="meal-header"><div class="meal-title">🍬 নাস্তা · Snacks</div><div class="meal-kcal">up to 200 cal each</div></div>
-      <div class="snack-grid" id="snacks-bd1500"></div>
-    </div>
-  </div>
-
-  <!-- ── BD 2000 PLAN ──────────────────────────────────────── -->
-  <div id="plan-bd2000" style="display:none">
-    <div style="margin-bottom:16px">
-      <div style="font-size:12px;color:var(--muted);background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px">
-        🇧🇩 <strong style="color:var(--text)">1750–2250 cal range · 2000 avg</strong> &nbsp;·&nbsp; Bangladeshi foods · 3 meals + 1–2 snacks up to 250 cal
-      </div>
-    </div>
-    <div style="background:var(--card2);border:1px solid #fbbf2444;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--muted2)">
-      🛒 <strong style="color:var(--yellow)">Where to buy:</strong> Agora · Meena Bazaar · Shwapno · Unimart · local bazar for fish & vegetables
-    </div>
-    <div class="meal-section">
-      <div class="meal-header"><div class="meal-title">🌅 সকালের নাস্তা · Breakfast</div><div class="meal-kcal">~570–590 cal</div></div>
-      <div id="meals-bd2000-1"></div>
-    </div>
-    <div class="meal-section">
-      <div class="meal-header"><div class="meal-title">☀️ দুপুরের খাবার · Lunch</div><div class="meal-kcal">~570–590 cal</div></div>
-      <div id="meals-bd2000-2"></div>
-    </div>
-    <div class="meal-section">
-      <div class="meal-header"><div class="meal-title">🌙 রাতের খাবার · Dinner</div><div class="meal-kcal">~570–590 cal</div></div>
-      <div id="meals-bd2000-3"></div>
-    </div>
-    <div class="meal-section">
-      <div class="meal-header"><div class="meal-title">🍬 নাস্তা · Snacks</div><div class="meal-kcal">up to 250 cal each</div></div>
-      <div class="snack-grid" id="snacks-bd2000"></div>
-    </div>
-  </div>
-
-  <!-- ── BD 2500 PLAN ──────────────────────────────────────── -->
-  <div id="plan-bd2500" style="display:none">
-    <div style="margin-bottom:16px">
-      <div style="font-size:12px;color:var(--muted);background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px">
-        🇧🇩 <strong style="color:var(--text)">2300–2700 cal range · 2500 avg</strong> &nbsp;·&nbsp; Bangladeshi foods · 3 meals + 1–2 snacks up to 250 cal
-      </div>
-    </div>
-    <div style="background:var(--card2);border:1px solid #fbbf2444;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--muted2)">
-      🛒 <strong style="color:var(--yellow)">Where to buy:</strong> Agora · Meena Bazaar · Shwapno · Unimart · local bazar for fish &amp; vegetables
-    </div>
-    <div class="meal-section">
-      <div class="meal-header"><div class="meal-title">🌅 সকালের নাস্তা · Breakfast</div><div class="meal-kcal">~755–790 cal</div></div>
-      <div id="meals-bd2500-1"></div>
-    </div>
-    <div class="meal-section">
-      <div class="meal-header"><div class="meal-title">☀️ দুপুরের খাবার · Lunch</div><div class="meal-kcal">~755–790 cal</div></div>
-      <div id="meals-bd2500-2"></div>
-    </div>
-    <div class="meal-section">
-      <div class="meal-header"><div class="meal-title">🌙 রাতের খাবার · Dinner</div><div class="meal-kcal">~755–790 cal</div></div>
-      <div id="meals-bd2500-3"></div>
-    </div>
-    <div class="meal-section">
-      <div class="meal-header"><div class="meal-title">🍬 নাস্তা · Snacks</div><div class="meal-kcal">up to 250 cal each</div></div>
-      <div class="snack-grid" id="snacks-bd2500"></div>
-    </div>
+  <div class="saved-plans-section" style="margin-top:24px">
+    <div class="section-title" style="margin-bottom:4px">📚 Saved AI Plans</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Plans you save from the AI Coach stay on this device, so they work offline in the gym.</div>
+    <div class="saved-ai-plans" data-plan-type="meal"></div>
   </div>
 
   <div style="margin-top:8px">
-    <div class="section-title">Diet Tips</div>
-    <div class="diet-tip"><strong>Weigh yourself 5–7×/week</strong> in the morning. Track the weekly <strong>median</strong> (middle number), not the daily reading. First week may show water weight loss — that's normal.</div>
-    <div class="diet-tip"><strong>On track:</strong> losing 0.25–1% of body weight/week → don't change anything. Losing faster? Eat more. Not losing? Reduce snacks, shrink one meal, or add 50 min cardio/week.</div>
-    <div class="diet-tip"><strong>Off-plan meals:</strong> stay within the calorie budget for that slot. Up to 450 cal (1500 plan), 600 cal (2000 plan) or 750 cal (2500 plan) swap is fine. Bigger meal? Skip the nearest meal and optional snacks.</div>
-    <div class="diet-tip"><strong>🇧🇩 BD low-density hacks:</strong> Plain Arong/Danish doi (unlimited) · boiled fish without oil · steamed vegetables · clear dal soup · cucumber & tomato salad · diet water (plain) · sugar-free Horlicks or Bournvita if craving something sweet.</div>
+    <div class="section-title">Satiety Tips</div>
+    <div class="diet-tip"><strong>Protein + volume first:</strong> fill half the plate with vegetables (lau, cabbage, cauliflower, shak, salad), a quarter with lean protein, then add rice, ruti or potato to fit your calories.</div>
+    <div class="diet-tip"><strong>Track the trend, not the day:</strong> weigh in most mornings and compare weekly averages. Losing 0.25–1% of body weight per week on a cut is on track; if you're losing faster, add a little food.</div>
+    <div class="diet-tip"><strong>Cook low-oil:</strong> 1 tsp of oil is ~45 kcal. Measure it, steam or bhuna with a splash of water, and use non-stick pans or an air fryer.</div>
+    <div class="diet-tip"><strong>Smart extras:</strong> plain strained doi, clear dal soup, cucumber-tomato salad, muri, guava, papaya and black tea or coffee add volume for very few calories.</div>
   </div>
-</div>
-
-<div id="plan-ai" style="display:none">
-  <div id="plan-ai-content"></div>
-</div>
-
-<div class="saved-plans-section" style="margin-top:24px">
-  <div class="section-title" style="margin-bottom:4px">📚 Saved AI Plans</div>
-  <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Plans you save from the AI Coach stay on this device, so they work offline in the gym.</div>
-  <div class="saved-ai-plans" data-plan-type="meal"></div>
 </div>
 
 <!-- ══ TRAINING ════════════════════════════════════════════════ -->
@@ -623,6 +399,8 @@
     </div>
   </div>
 
+  <div class="card gear-card" id="gear-studio" aria-label="My gear and express workout builder"></div>
+
   <div id="training-blocks-container"></div>
 
   <div class="progression-card">
@@ -659,10 +437,6 @@
       <div style="margin-bottom:10px">
         <label class="settings-label">Form Tips</label>
         <input type="text" class="settings-input" id="cx-tips" placeholder="e.g. Keep elbows pinned to sides">
-      </div>
-      <div style="margin-bottom:10px">
-        <label class="settings-label">YouTube Video ID (Optional)</label>
-        <input type="text" class="settings-input" id="cx-yt" placeholder="Paste a YouTube code or URL">
       </div>
       <div style="margin-bottom:14px">
         <label class="settings-label">Block Assignment</label>
@@ -1036,11 +810,16 @@
     <div class="settings-card">
       <div class="settings-label">Gym equipment available</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 14px" id="equipment-options">
-        <label><input type="checkbox" value="machines"> Machines</label>
-        <label><input type="checkbox" value="cables"> Cables</label>
+        <label><input type="checkbox" value="bodyweight"> Bodyweight only</label>
         <label><input type="checkbox" value="dumbbells"> Dumbbells</label>
-        <label><input type="checkbox" value="barbell"> Barbell</label>
+        <label><input type="checkbox" value="bench"> Bench</label>
+        <label><input type="checkbox" value="pullup_bar"> Pull-up bar</label>
         <label><input type="checkbox" value="bands"> Resistance bands</label>
+        <label><input type="checkbox" value="backpack"> Loaded backpack</label>
+        <label><input type="checkbox" value="chair"> Sturdy chair / step</label>
+        <label><input type="checkbox" value="barbell"> Barbell &amp; plates</label>
+        <label><input type="checkbox" value="kettlebell"> Kettlebell</label>
+        <label><input type="checkbox" value="machines"> Gym cables &amp; machines</label>
         <label><input type="checkbox" value="cardio"> Cardio machines</label>
       </div>
       <label class="settings-label" for="s-limitations">Injuries or movement limitations</label>
@@ -1152,14 +931,6 @@
         <button class="btn-ghost" id="test-ai-btn" onclick="testAIConnection()" style="font-size:12px">⚡ Test Connection</button>
         <span id="ai-test-status" style="font-size:12px;color:var(--muted)"></span>
       </div>
-    </div>
-  </div>
-
-  <!-- Exercise Videos -->
-  <div class="settings-section">
-    <div class="settings-section-title">🎥 Exercise Video Codes</div>
-    <div class="settings-card" id="exercise-video-library">
-      <!-- Injected by JS -->
     </div>
   </div>
 
@@ -1357,8 +1128,8 @@
         <div class="wo-ex-name" id="wo-ex-name">Goblet Squat</div>
         <div class="wo-ex-muscle" id="wo-ex-muscle">🎯 Quads · Glutes · Core</div>
       </div>
-      <button class="yt-btn" id="wo-yt-btn" onclick="openYouTubeDemo()">
-        <span style="font-size:16px">▶</span> Watch Demo on YouTube
+      <button class="form-btn" id="wo-form-btn" onclick="openFormGuideForCurrentStep()">
+        🎯 Form &amp; Muscles
       </button>
     </div>
 
@@ -1618,6 +1389,8 @@
 <script src="js/ai.js"></script>
 <script src="js/quicklog.js"></script>
 <script src="js/reminders.js"></script>
+<script src="js/form-guide.js"></script>
+<script src="js/express.js"></script>
 <script src="js/firebase-sync.js"></script>
 <script src="js/app.js"></script>
   

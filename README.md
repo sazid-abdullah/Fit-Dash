@@ -1,6 +1,6 @@
 # FitDash 🏋️
 
-A fully offline, single-file fitness dashboard built on the Greg Doucette Circle Diet and HTLT training principles. No account, no server, no installation — open the HTML file in any browser and start tracking.
+A fully offline, local-first fitness dashboard built around FitDash's High-Volume Satiety Principle for nutrition and progressive, effort-based strength training. No install needed — open it in any browser and start tracking; optional cloud sync is available.
 
 ---
 
@@ -22,7 +22,7 @@ FitDash covers four areas in one file:
 
 **Training** — a structured Full Body Protocol (Legs & Calves superset → Back/Chest/Back giant set → Full Body Circuit) with three difficulty levels. The guided workout overlay walks you set by set, runs a rest timer, logs weight and reps, auto-detects personal records, and calculates calories burned using the Mifflin–St Jeor BMR formula with a MET/volume-load adjustment. Sessions can also be logged manually from a free-form entry modal.
 
-**Nutrition** — Greg Doucette's Circle Diet meal plans rendered as expandable cards. Six plans are included: International 1500 / 2000 / 2500 kcal and Bangladesh-localised 1500 / 2000 / 2500 kcal (BD plans use locally available foods and brands — Agora, Arong, Meena Bazaar, etc.). Each plan shows three meals and a snack section with calorie counts.
+**Nutrition** — the High-Volume Satiety Engine: original, macro-tracked recipes filtered by Region & Pantry (Bangladesh / South Asian / Mediterranean / Western), Budget Tier, Dietary Preference (Halal, High-Protein Vegetarian, Pescetarian, Dairy-Free) and Prep Time. Every recipe card lists ingredient weights in grams, steps, a cost estimate, a Volume Swap, and a one-tap "Log to Today's Calories". "🤖 Generate Custom High-Volume Meal with AI" builds a recipe for your remaining calories and protein.
 
 **Progress** — 7-day weight trend chart (custom canvas, no library), weight log with per-entry deletion, weekly streak dots, personal records tracker, full session history (last 20 sessions), and CSV export.
 
@@ -76,20 +76,9 @@ C1 BB Overhead Press → C2 DB Lateral Raises → C3 BB Glute Bridges → C4 Bic
 
 ---
 
-## Nutrition plans
+## Nutrition: High-Volume Satiety Principle
 
-All plans follow Greg Doucette's Circle Diet: low calorie-density, high protein, high volume.
-
-| Plan | Target | Notes |
-|---|---|---|
-| International 1500 | 1300–1700 cal | 3 meals + 1–2 snacks up to 225 cal |
-| International 2000 | 1750–2250 cal | 3 meals + 1–2 snacks up to 250 cal |
-| International 2500 | 2250–2750 cal | 3 meals + 1–2 snacks up to 300 cal |
-| BD 1500 🇧🇩 | 1300–1700 cal | Bangladeshi foods, local brands |
-| BD 2000 🇧🇩 | 1750–2250 cal | Bangladeshi foods, local brands |
-| BD 2500 🇧🇩 | 2300–2700 cal | Bangladeshi foods, local brands |
-
-All meal data is from Greg Doucette's published diet plans and the Ultimate Anabolic Cookbook 2.0. The Bangladesh plans use recipes and ingredients available at Agora, Meena Bazaar, Shwapno, and Unimart.
+Maximise food volume, fibre and protein per calorie so you stay full on a deficit or a lean bulk: lean protein plus a big pile of low-calorie vegetables, a measured portion of rice/ruti/oats, and minimal oil. Recipes live in `HV_RECIPES` (`js/data.js`) and are tagged by `region`, `budget`, `contains` (drives the diet filter) and `prep`. Filter choices persist in `fitdash_nutrition_prefs`.
 
 The **🤖 My Plan** tab is the personalized path. The user enters preferences once — goal, calorie target, meal structure, foods to include, foods to avoid, budget, cuisine, equipment, and preparation limits. FitDash sends one structured request to the configured AI provider. The AI resolves targets, builds the meals, checks calories and protein, and returns JSON that FitDash validates and saves immediately. The example plans remain available in their existing tabs.
 
@@ -161,9 +150,7 @@ Works in any modern browser. Requires JavaScript enabled and localStorage availa
 
 ## Credits
 
-Training protocol and nutrition plans based on the work of **Greg Doucette** (IFBB Pro) — *The Ultimate Anabolic Cookbook 2.0*, *The Circle Diet*, and the HTLT coaching methodology.
-
-Bangladesh meal plans designed around locally available foods and brands for users in Dhaka and across Bangladesh.
+FitDash recipes are original and designed around locally available foods, including Bangladeshi staples available across Dhaka and the rest of Bangladesh.
 
 ---
 
