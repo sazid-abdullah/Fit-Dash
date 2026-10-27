@@ -66,19 +66,20 @@ function parseFirebaseConfigInput(text) {
 function loadSyncMeta() {
   try {
     const meta = JSON.parse(localStorage.getItem('fitdash_sync_meta') || 'null');
-    if(meta && typeof meta === 'object') return { localMod: {}, cloudMod: {}, ...meta };
+    if(meta && typeof meta === 'object') return { localMod: {}, cloudMod: {}, tomb: {}, ...meta };
   } catch(_) {}
-  return { uid: null, lastSyncAt: 0, localMod: {}, cloudMod: {} };
+  return { uid: null, lastSyncAt: 0, localMod: {}, cloudMod: {}, tomb: {} };
 }
 function storeSyncMeta(meta) {
   try { localStorage.setItem('fitdash_sync_meta', JSON.stringify(meta)); } catch(_) {}
 }
 
 // Called by save() in state.js after every successful local write.
-function fitdashCloudOnSave(key) {
+function fitdashCloudOnSave(key, prevRaw, newRaw) {
   if(!CLOUD_SYNC_KEYS.includes(key)) return;
   const meta = loadSyncMeta();
   meta.localMod[key] = Date.now();
+  recordTombstones(meta, key, prevRaw, newRaw);
   storeSyncMeta(meta);
   scheduleCloudPush();
 }
@@ -365,6 +366,7 @@ async function cloudSignOut() {
   renderAuthModal();
   const meta = loadSyncMeta();
   meta.uid = null; meta.lastSyncAt = 0; meta.cloudMod = {};
+  if(!keepCopy || synced) meta.tomb = {};
   storeSyncMeta(meta);
   if(!keepCopy) {
     CLOUD_SYNC_KEYS.forEach(k => localStorage.removeItem(k));
@@ -442,6 +444,7 @@ async function syncWithCloud({ reloadIfChanged = false } = {}) {
       const remoteMod = index.modified || {};
       const remoteChunks = legacy ? {} : { ...(index.chunks || {}) };
       const firstSyncOnDevice = meta.uid !== user.uid;
+      const tombstones = mergeTombstones(index.tombstones, meta.tomb);
       const plan = await Promise.all(CLOUD_SYNC_KEYS.map(async key => {
         const localRaw = localStorage.getItem(key);
         const inCloud = legacy ? index.data[key] !== undefined : !!remoteChunks[key];
@@ -449,7 +452,7 @@ async function syncWithCloud({ reloadIfChanged = false } = {}) {
         const localDirty = localRaw !== null && (firstSyncOnDevice || (meta.localMod[key] || 0) > (meta.lastSyncAt || 0));
         const cloudRaw = (remoteChanged || legacy) ? await readCloudKey(ref => tx.get(ref), user.uid, index, key) : undefined;
         const merged = remoteChanged
-          ? mergeSyncKey(key, localRaw, cloudRaw, { meta, cloudModified: remoteMod, firstSyncOnDevice, localDirty })
+          ? mergeSyncKey(key, localRaw, cloudRaw, { meta, cloudModified: remoteMod, firstSyncOnDevice, localDirty, tomb: tombstones[key] })
           : localRaw;
         const hasValue = merged !== null && merged !== undefined;
         const upload = hasValue && (legacy || !inCloud || (remoteChanged ? merged !== cloudRaw : localDirty));
@@ -465,10 +468,10 @@ async function syncWithCloud({ reloadIfChanged = false } = {}) {
         chunks[item.key] = parts.length;
         modified[item.key] = startedAt;
       });
-      if(legacy || plan.some(item => item.upload)) {
-        tx.set(cloudStateDoc(user.uid), { schema: 2, modified, chunks, updatedAt: startedAt });
+      if(legacy || plan.some(item => item.upload) || tombstonesAdded(tombstones, index.tombstones)) {
+        tx.set(cloudStateDoc(user.uid), { schema: 2, modified, chunks, tombstones, updatedAt: startedAt });
       }
-      return { plan, modified };
+      return { plan, modified, tombstones };
     });
     const cloudMod = { ...result.modified };
     let changed = false;
@@ -486,6 +489,7 @@ async function syncWithCloud({ reloadIfChanged = false } = {}) {
     after.uid = user.uid;
     after.lastSyncAt = startedAt;
     after.cloudMod = cloudMod;
+    after.tomb = mergeTombstones(result.tombstones, after.tomb);
     storeSyncMeta(after);
     setCloudStatus('synced');
     ok = true;
@@ -499,6 +503,54 @@ async function syncWithCloud({ reloadIfChanged = false } = {}) {
   return ok;
 }
 
+// Per-entry deletion markers for list keys, synced in the index as tombstones: { key: { entryKey: ts } }.
+// ts > 0 = deleted at ts, ts < 0 = re-added at |ts|. Without them, merging two copies of a list would
+// bring back entries that one device deleted.
+const CLOUD_TOMBSTONE_LIMIT = 500;
+
+function entryKey(rule, item) {
+  if(rule === 'byDate') return 'd:' + (item && item.date);
+  return item && item.id !== undefined ? 'id:' + item.id : 'v:' + JSON.stringify(item);
+}
+
+function pruneTombstones(tomb) {
+  return Object.fromEntries(Object.entries(tomb)
+    .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+    .slice(0, CLOUD_TOMBSTONE_LIMIT));
+}
+
+function recordTombstones(meta, key, prevRaw, newRaw) {
+  const rule = CLOUD_MERGE_RULES[key];
+  if(rule !== 'byId' && rule !== 'byDate') return;
+  const prev = parseRaw(prevRaw), next = parseRaw(newRaw);
+  if(!Array.isArray(next)) return;
+  const now = Date.now();
+  const nextKeys = new Set(next.map(item => entryKey(rule, item)));
+  const tomb = { ...((meta.tomb || {})[key] || {}) };
+  (Array.isArray(prev) ? prev : []).forEach(item => {
+    const k = entryKey(rule, item);
+    if(!nextKeys.has(k)) tomb[k] = now;
+  });
+  nextKeys.forEach(k => { if(tomb[k] > 0) tomb[k] = -now; });
+  meta.tomb = { ...(meta.tomb || {}), [key]: pruneTombstones(tomb) };
+}
+
+function mergeTombstones(a = {}, b = {}) {
+  const out = {};
+  new Set([...Object.keys(a), ...Object.keys(b)]).forEach(key => {
+    const merged = { ...(a[key] || {}) };
+    Object.entries(b[key] || {}).forEach(([k, ts]) => {
+      if(!(k in merged) || Math.abs(ts) > Math.abs(merged[k])) merged[k] = ts;
+    });
+    out[key] = pruneTombstones(merged);
+  });
+  return out;
+}
+
+function tombstonesAdded(merged, base = {}) {
+  return Object.keys(merged).some(key => Object.entries(merged[key]).some(([k, ts]) => (base[key] || {})[k] !== ts));
+}
+
 function parseRaw(raw) {
   try { return JSON.parse(raw); } catch(_) { return undefined; }
 }
@@ -510,21 +562,22 @@ function isEmptyValue(v) {
   return false;
 }
 
-function mergeById(local, remote) {
+// Union of both lists minus deleted entries. Same-key entries: local wins, unless preferRemote (a device's
+// first sign-in, where local entries are often just generated defaults such as the starter routines).
+function unionEntries(rule, local, remote, { tomb = {}, preferRemote = false } = {}) {
   const out = new Map();
-  const keyOf = item => (item && (item.id !== undefined ? 'id:' + item.id : 'v:' + JSON.stringify(item)));
-  remote.forEach(item => out.set(keyOf(item), item));
-  local.forEach(item => out.set(keyOf(item), item));
-  const merged = [...out.values()];
+  (preferRemote ? [local, remote] : [remote, local]).forEach(list => list.forEach(item => out.set(entryKey(rule, item), item)));
+  return [...out.entries()].filter(([k]) => !(tomb[k] > 0)).map(([, item]) => item);
+}
+
+function mergeById(local, remote, opts) {
+  const merged = unionEntries('byId', local, remote, opts);
   if(merged.every(x => x && x.date)) merged.sort((a, b) => String(a.date).localeCompare(String(b.date)) || ((a.id || 0) - (b.id || 0)));
   return merged;
 }
 
-function mergeByDate(local, remote) {
-  const out = new Map();
-  remote.forEach(item => out.set(item && item.date, item));
-  local.forEach(item => out.set(item && item.date, item));
-  return [...out.values()].sort((a, b) => String(a && a.date).localeCompare(String(b && b.date)));
+function mergeByDate(local, remote, opts) {
+  return unionEntries('byDate', local, remote, opts).sort((a, b) => String(a && a.date).localeCompare(String(b && b.date)));
 }
 
 function mergePRs(local, remote) {
@@ -551,8 +604,9 @@ function mergeSyncKey(key, localRaw, cloudRaw, ctx) {
   // One side was deliberately cleared (e.g. Clear History): the newer action wins instead of resurrecting data.
   if(isEmptyValue(local) || isEmptyValue(remote)) return localNewer ? localRaw : cloudRaw;
   const rule = CLOUD_MERGE_RULES[key];
-  if(rule === 'byId' && Array.isArray(local) && Array.isArray(remote)) return JSON.stringify(mergeById(local, remote));
-  if(rule === 'byDate' && Array.isArray(local) && Array.isArray(remote)) return JSON.stringify(mergeByDate(local, remote));
+  const listOpts = { tomb: ctx.tomb || {}, preferRemote: ctx.firstSyncOnDevice };
+  if(rule === 'byId' && Array.isArray(local) && Array.isArray(remote)) return JSON.stringify(mergeById(local, remote, listOpts));
+  if(rule === 'byDate' && Array.isArray(local) && Array.isArray(remote)) return JSON.stringify(mergeByDate(local, remote, listOpts));
   if(rule === 'byKey' && typeof local === 'object' && typeof remote === 'object' && !Array.isArray(local)) return JSON.stringify({ ...remote, ...local });
   if(rule === 'maxPR' && typeof local === 'object' && typeof remote === 'object') return JSON.stringify(mergePRs(local, remote));
   // Settings-like keys: on a device's first sign-in the account copy wins; afterwards the newer edit wins.
