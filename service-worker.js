@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fitdash-shell-v8';
+const CACHE_NAME = 'fitdash-shell-v9';
 const APP_SHELL = [
   './', './index.html', './manifest.webmanifest', './css/style.css',
   './icons/logo.svg', './icons/favicon.svg', './icons/favicon-32.png', './icons/icon-192.png',
