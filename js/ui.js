@@ -804,8 +804,7 @@ function renderSettings() {
   if(g.carbTarget) document.getElementById('s-carb-target').value = g.carbTarget;
   if(g.fatTarget) document.getElementById('s-fat-target').value = g.fatTarget;
   if(g.waterTarget)  document.getElementById('s-water-target').value = g.waterTarget;
-  const equipment = p.equipment || [];
-  document.querySelectorAll('#equipment-options input').forEach(input => { input.checked = equipment.includes(input.value); });
+  syncEquipmentCheckboxes();
   document.getElementById('s-limitations').value = p.limitations || '';
   document.getElementById('s-cardio-focus').value = p.cardioFocus || 'strength';
   renderProgressionSettings();
@@ -822,7 +821,6 @@ function renderSettings() {
   document.getElementById('s-ai-share-health').checked = a.shareHealthData !== false;
   document.getElementById('s-ai-web-search').checked = a.webSearch !== false;
   loadModelOptions(a.model);
-  renderVideoCodeLibrary();
   if(typeof renderWeekPlanSettings === 'function') { renderWeekPlanSettings(); renderReminderSettings(); }
 }
 
@@ -850,7 +848,11 @@ function saveProfileSettings() {
 }
 
 function saveTrainingPreferences() {
-  userProfile.equipment = [...document.querySelectorAll('#equipment-options input:checked')].map(input => input.value);
+  const equipment = [...document.querySelectorAll('#equipment-options input:checked')].map(input => input.value);
+  if(equipment.includes('machines')) equipment.push('cables');
+  userProfile.equipment = equipment;
+  _cachedFullPlanDeps = '';
+  refreshRoutineViews();
   userProfile.limitations = document.getElementById('s-limitations').value.trim();
   userProfile.cardioFocus = document.getElementById('s-cardio-focus').value;
   save('fitdash_profile', userProfile);
@@ -1420,48 +1422,13 @@ function toggleCheck(id) {
 }
 
 // ══ NUTRITION RENDER ═════════════════════════════════════════
-function renderMeals(data, prefix) {
-  ['breakfast','lunch','dinner'].forEach((slot,i) => {
-    const el = document.getElementById(`meals-${prefix}-${i+1}`);
-    if(!el) return;
-    el.innerHTML = data[slot].map((m,idx) => `
-      <div class="meal-card" id="mc-${prefix}-${slot}-${idx}">
-        <div class="meal-card-header" onclick="toggleMeal('mc-${prefix}-${slot}-${idx}')">
-          <div class="meal-icon">${m.emoji}</div>
-          <div class="meal-name">${m.name}</div>
-          <div class="meal-cals">${m.kcal} cal</div>
-          <div class="meal-chevron">▼</div>
-        </div>
-        <div class="meal-card-body">
-          <div class="meal-desc">${m.desc}</div>
-        </div>
-      </div>`).join('');
-  });
-  const snackEl = document.getElementById(`snacks-${prefix}`);
-  if(snackEl) {
-    snackEl.innerHTML = data.snacks.map(s => `
-      <div class="snack-item">
-        <div class="snack-emoji">${s.emoji}</div>
-        <div>
-          <div class="snack-name">${s.name}</div>
-          <div class="snack-cal">${s.approx ? '≈' : ''}${s.kcal} cal</div>
-        </div>
-      </div>`).join('');
-  }
-}
-
 function toggleMeal(id) {
   document.getElementById(id).classList.toggle('open');
 }
 
 const PLAN_LABELS = {
-  '1500':   '1500 kcal Plan',
-  '2000':   '2000 kcal Plan',
-  '2500':   '2500 kcal Plan',
-  'bd1500': '🇧🇩 BD 1500 kcal Plan',
-  'bd2000': '🇧🇩 BD 2000 kcal Plan',
-  'bd2500': '🇧🇩 BD 2500 kcal Plan',
-  'ai':     '🤖 AI Custom Plan',
+  'hv': '🥗 High-Volume Recipes',
+  'ai': '🤖 AI Custom Plan',
 };
 
 // applyPlan updates the UI only — no localStorage write.
@@ -1470,7 +1437,7 @@ const PLAN_LABELS = {
 function applyPlan(p) {
   // Only show the full plan details when Dashboard or Nutrition pages are active.
   const showOnCurrent = (activePageId === 'dashboard' || activePageId === 'nutrition');
-  ['1500','2000','2500','bd1500','bd2000','bd2500','ai'].forEach(id => {
+  ['hv','ai'].forEach(id => {
     const planEl = document.getElementById('plan-'+id);
     const btnEl  = document.getElementById('btn-'+id);
     if(planEl) planEl.style.display = (id === p && showOnCurrent) ? '' : 'none';
@@ -1512,14 +1479,6 @@ function switchPlan(p) {
   applyPlan(p);
 }
 
-function saveNutritionPreference() {
-  const pref = document.getElementById('nutrition-cuisine-pref')?.value || 'both';
-  userGoals.cuisinePref = pref;
-  save('fitdash_goals', userGoals);
-  renderNutrition();
-  renderCalorieTracker();
-}
-
 function openDishBuilderFromNutrition() {
   showPage('dashboard');
   setTimeout(() => {
@@ -1529,24 +1488,8 @@ function openDishBuilderFromNutrition() {
 }
 
 function renderNutrition() {
-  const pref = (userGoals.cuisinePref || 'both').toLowerCase();
-  const sel = document.getElementById('nutrition-cuisine-pref');
-  if(sel) sel.value = pref;
-
-  const intGroup = document.getElementById('plan-group-international');
-  const bdGroup = document.getElementById('plan-group-bd');
-  if(intGroup && bdGroup) {
-    if(pref === 'bangladeshi') {
-      intGroup.style.display = 'none';
-      bdGroup.style.display = '';
-    } else if(pref === 'international') {
-      intGroup.style.display = '';
-      bdGroup.style.display = 'none';
-    } else {
-      intGroup.style.display = '';
-      bdGroup.style.display = '';
-    }
-  }
+  renderHVFilters();
+  renderHVRecipes();
 }
 
 // ══ BODY RECOMPOSITION ═══════════════════════════════════
