@@ -27,6 +27,8 @@
     <button class="nav-tab" role="tab" aria-selected="false" onclick="showPage('progress')">Progress</button>
     <button class="nav-tab" role="tab" aria-selected="false" onclick="showPage('settings')">Settings</button>
   </div>
+  <button class="sync-pill" id="sync-pill" data-status="local" onclick="openAuthModal()" title="Local Mode"><span class="sync-ico" aria-hidden="true">⚡</span><span class="sync-text">Local Mode</span></button>
+  <button class="account-btn" id="account-btn" onclick="openAuthModal()" title="Sign in"><span aria-hidden="true">👤</span><span class="account-text">Sign In</span></button>
   <button class="theme-btn" id="nav-guide-btn" onclick="document.getElementById('guide-modal').style.display='flex'" title="User Guide" style="margin-right:8px;font-size:16px;">❓</button><button class="theme-btn" id="nav-theme-btn" onclick="toggleTheme()" title="Toggle theme">&#127769;</button>
 </nav>
 
@@ -199,11 +201,30 @@
         </div>
         <div class="cardio-bar"><div class="cardio-fill" id="cardio-fill" style="width:0%"></div></div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:14px">
-        <input type="number" id="cardio-add" placeholder="Add minutes" min="1" max="300" step="any"
-          style="flex:1;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-sm);padding:9px 12px;font-size:14px;outline:none">
-        <button class="btn-ghost" onclick="addCardio()">+ Log</button>
-        <button class="btn-ghost" onclick="resetCardio()" style="color:var(--muted)">Reset</button>
+      <div class="cardio-log-form" id="cardio-log-form" data-type="quick">
+        <label class="cardio-type-label"><span class="settings-label">Session type</span>
+          <select id="cardio-type" class="cardio-input" onchange="onCardioTypeChange()">
+            <option value="quick">⏱ Minutes only</option>
+            <option value="treadmill">🚶 Incline Treadmill</option>
+            <option value="cycle">🚴 Stationary Cycle</option>
+            <option value="run">🏃 Outdoor Road Run</option>
+          </select>
+        </label>
+        <div class="cardio-fields">
+          <label class="cf cf-quick cf-treadmill cf-cycle"><span class="settings-label">Minutes</span><input type="number" id="cardio-add" class="cardio-input" placeholder="Add minutes" min="1" max="300" step="any" oninput="updateCardioPreview()"></label>
+          <label class="cf cf-treadmill"><span class="settings-label">Speed (km/h)</span><input type="number" id="cardio-speed" class="cardio-input" placeholder="5.5" min="0.5" max="25" step="0.1" oninput="updateCardioPreview()"></label>
+          <label class="cf cf-treadmill"><span class="settings-label">Incline %</span><input type="number" id="cardio-incline" class="cardio-input" placeholder="12" min="0" max="40" step="0.5"></label>
+          <label class="cf cf-run"><span class="settings-label">Distance</span><select id="cardio-run-preset" class="cardio-input" onchange="onCardioRunPresetChange()"><option value="5">5K</option><option value="10">10K</option><option value="custom">Custom</option></select></label>
+          <label class="cf cf-cycle cf-run"><span class="settings-label">Distance (km)</span><input type="number" id="cardio-distance" class="cardio-input" placeholder="5" min="0.1" max="200" step="0.01" oninput="updateCardioPreview()"></label>
+          <label class="cf cf-cycle"><span class="settings-label">Level</span><input type="number" id="cardio-level" class="cardio-input" placeholder="8" min="1" max="40" step="1"></label>
+          <label class="cf cf-run"><span class="settings-label">Time (mm:ss)</span><input type="text" id="cardio-run-time" class="cardio-input" placeholder="28:30" inputmode="numeric" oninput="updateCardioPreview()"></label>
+        </div>
+        <div id="cardio-preview" class="cardio-preview" aria-live="polite"></div>
+        <div class="cardio-actions">
+          <button class="btn-ghost" onclick="addCardio()">+ Log</button>
+          <button class="btn-ghost" onclick="resetCardio()" style="color:var(--muted)">Reset week</button>
+        </div>
+        <div id="cardio-recent" class="cardio-recent"></div>
       </div>
     </div>
   </div>
@@ -543,6 +564,12 @@
   <div id="plan-ai-content"></div>
 </div>
 
+<div class="saved-plans-section" style="margin-top:24px">
+  <div class="section-title" style="margin-bottom:4px">📚 Saved AI Plans</div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Plans you save from the AI Coach stay on this device, so they work offline in the gym.</div>
+  <div class="saved-ai-plans" data-plan-type="meal"></div>
+</div>
+
 <!-- ══ TRAINING ════════════════════════════════════════════════ -->
 <div id="page-training" class="page" role="main" aria-label="Training">
   <div class="routine-tabs" id="training-routine-tabs" role="group" aria-label="Routine"></div>
@@ -651,6 +678,13 @@
         <button class="btn-ghost" style="flex:1" onclick="document.getElementById('add-custom-ex-form').style.display='none';this.parentElement.parentElement.previousElementSibling.style.display='block'">Cancel</button>
       </div>
     </div>
+  </div>
+
+  <!-- SAVED AI WORKOUT PLANS -->
+  <div class="saved-plans-section" style="margin-bottom:24px">
+    <div class="section-title" style="margin-bottom:4px">📚 Saved AI Workout Plans</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Workout plans saved from the AI Coach. Available offline.</div>
+    <div class="saved-ai-plans" data-plan-type="workout"></div>
   </div>
 
   <!-- SESSION HISTORY (training page mirror) -->
@@ -885,6 +919,36 @@
 <!-- ══ SETTINGS PAGE ═══════════════════════════════════════════ -->
 <div id="page-settings" class="page" role="main" aria-label="Settings">
   <div style="font-size:24px;font-weight:800;letter-spacing:-0.5px;margin-bottom:20px">Settings</div>
+
+  <!-- Account & Cloud Sync -->
+  <div class="settings-section" id="s-account">
+    <div class="settings-section-title">☁️ Account &amp; Cloud Sync</div>
+    <div class="settings-card">
+      <div id="cloud-account-status"></div>
+      <div class="settings-actions" style="margin-top:12px">
+        <button class="btn-red" id="cloud-signin-btn" onclick="openAuthModal('signin')" style="max-width:200px">👤 Sign In / Create Account</button>
+        <button class="btn-ghost" id="cloud-sync-btn" onclick="cloudSyncNow()" style="display:none">🔄 Sync now</button>
+        <button class="btn-ghost" id="cloud-signout-btn" onclick="cloudSignOut()" style="display:none">↩ Sign out</button>
+        <button class="btn-ghost" onclick="openPrivacyModal()">🔒 Privacy &amp; Health Disclaimer</button>
+      </div>
+      <details class="firebase-config-details">
+        <summary>Firebase config (app owner / self-hosting)</summary>
+        <div class="cloud-note" style="margin:8px 0">Paste the <code>firebaseConfig</code> object from Firebase Console → Project settings → Your apps. It is not a secret, but only the owner of the Firebase project should set it. Deploy <code>firestore.rules</code> so each user can only read their own data.</div>
+        <textarea class="settings-input" id="s-firebase-config" rows="6" spellcheck="false" placeholder='{ "apiKey": "...", "authDomain": "your-app.firebaseapp.com", "projectId": "your-app", "appId": "..." }'></textarea>
+        <div class="settings-actions" style="margin-top:8px">
+          <button class="btn-ghost" onclick="saveFirebaseConfigFromSettings()">💾 Save config</button>
+          <button class="btn-ghost" onclick="clearFirebaseConfigFromSettings()" style="color:var(--muted)">Remove config</button>
+        </div>
+        <div id="firebase-config-source" class="cloud-note" style="margin-top:6px"></div>
+        <div id="firebase-config-status" style="font-size:12px;margin-top:6px"></div>
+      </details>
+      <div id="cloud-danger-zone" class="danger-zone" style="display:none">
+        <div style="font-weight:700;color:var(--red)">Danger zone</div>
+        <div class="cloud-note" style="margin:4px 0 10px">Permanently deletes your cloud data (users/&#123;uid&#125;/fitdash/state), your sign-in account, and all FitDash data on this device.</div>
+        <button class="btn-ghost danger-btn" id="cloud-delete-btn" onclick="cloudDeleteAccount()">🗑️ Delete Account &amp; All Cloud/Local Data</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Profile -->
   <div class="settings-section">
@@ -1367,6 +1431,7 @@
       <label>Session Notes</label>
       <textarea id="pw-notes" rows="2" placeholder="PRs? How did it feel? Energy level?"></textarea>
     </div>
+    <button class="btn-ghost share-card-btn" onclick="openShareCardForCurrentWorkout()">📤 Share Card</button>
     <div class="modal-actions">
       <button class="btn-ghost" onclick="discardWorkout()">Discard</button>
       <button class="btn-red" onclick="saveWorkoutSummary()">💾 &nbsp;Save Session</button>
@@ -1465,6 +1530,82 @@
       <div><label class="settings-label">Gender</label><select id="ob-gender" class="settings-input"><option value="male">Male</option><option value="female">Female</option></select></div>
     </div>
     <button class="btn-primary" style="width:100%;font-size:16px;padding:12px" onclick="finishOnboarding()">Start Dashboard</button>
+    <button class="btn-ghost" style="width:100%;margin-top:10px" onclick="openAuthModal('signin')">☁️ Already have an account? Sign in</button>
+    <div style="font-size:11px;color:var(--muted);margin-top:12px">FitDash is a fitness tracking tool, not a medical device. <a href="#" onclick="openPrivacyModal();return false" style="color:var(--blue)">Privacy &amp; disclaimer</a></div>
+  </div>
+</div>
+
+<!-- ══ AUTH MODAL ═════════════════════════════════════════════ -->
+<div id="auth-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+  <div class="modal auth-modal-box">
+    <button class="modal-close-x" onclick="closeAuthModal()" aria-label="Close">✕</button>
+    <div class="auth-brand"><img src="icons/favicon.svg" alt="" width="40" height="40"></div>
+    <div class="modal-title" id="auth-title" style="text-align:center">Sign in to FitDash</div>
+    <div class="auth-tabs" data-auth-view="signin signup">
+      <button class="auth-tab" data-tab="signin" onclick="setAuthView('signin')">Sign In</button>
+      <button class="auth-tab" data-tab="signup" onclick="setAuthView('signup')">Create Account</button>
+    </div>
+    <div data-auth-view="unconfigured">
+      <p class="cloud-note" style="text-align:center">Cloud accounts aren't set up for this copy of FitDash yet, so your data is stored only on this device (Local Guest Mode). The app owner can add a Firebase config in Settings → Account &amp; Cloud Sync.</p>
+    </div>
+    <div data-auth-view="signin signup reset">
+      <button class="auth-google-btn" data-auth-view="signin signup" onclick="authSignInGoogle()"><span class="g-logo" aria-hidden="true">G</span> Continue with Google</button>
+      <div class="auth-divider" data-auth-view="signin signup"><span>or use email</span></div>
+      <div class="form-row"><label for="auth-email">Email</label><input type="email" id="auth-email" autocomplete="email" placeholder="you@example.com"></div>
+      <div class="form-row" data-auth-view="signin signup"><label for="auth-password">Password</label><input type="password" id="auth-password" autocomplete="current-password" placeholder="At least 6 characters" onkeydown="if(event.key==='Enter'){event.preventDefault();authModalView==='signup'?authSignUpEmail():authSignInEmail()}"></div>
+      <button class="btn-red auth-submit" data-auth-view="signin" onclick="authSignInEmail()">Sign In</button>
+      <button class="btn-red auth-submit" data-auth-view="signup" onclick="authSignUpEmail()">Create Account</button>
+      <button class="btn-red auth-submit" data-auth-view="reset" onclick="authResetPassword()">Send reset link</button>
+      <div class="auth-links">
+        <button class="link-btn" data-auth-view="signin" onclick="setAuthView('reset')">Forgot password?</button>
+        <button class="link-btn" data-auth-view="reset" onclick="setAuthView('signin')">← Back to sign in</button>
+      </div>
+    </div>
+    <div data-auth-view="account">
+      <div id="auth-account-info" class="auth-account-info"></div>
+      <div class="settings-actions" style="justify-content:center;margin-top:12px">
+        <button class="btn-ghost" onclick="cloudSyncNow()">🔄 Sync now</button>
+        <button class="btn-ghost" onclick="closeAuthModal();showPage('settings');setTimeout(()=>document.getElementById('s-account').scrollIntoView({block:'start'}),60)">⚙️ Account settings</button>
+        <button class="btn-ghost" onclick="cloudSignOut()">↩ Sign out</button>
+      </div>
+    </div>
+    <div id="auth-message" class="auth-message" role="status" style="display:none"></div>
+    <button class="btn-ghost auth-guest-btn" data-auth-view="signin signup reset unconfigured" onclick="continueAsGuest()">Continue as Guest (Local Mode)</button>
+    <div class="auth-footer">Your AI Coach API keys never leave this device. <a href="#" onclick="openPrivacyModal();return false">Privacy Policy &amp; Health Disclaimer</a></div>
+  </div>
+</div>
+
+<!-- ══ PRIVACY & DISCLAIMER MODAL ═════════════════════════════ -->
+<div id="privacy-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="privacy-title">
+  <div class="modal privacy-modal-box">
+    <button class="modal-close-x" onclick="closePrivacyModal()" aria-label="Close">✕</button>
+    <div class="modal-title" id="privacy-title">🔒 Privacy Policy &amp; Health Disclaimer</div>
+    <div class="privacy-callout"><strong>⚕️ Not a medical device.</strong> FitDash is a fitness and nutrition tracking tool. It does not diagnose, treat, cure or prevent any disease, and its calorie, body-fat, training and AI Coach suggestions are estimates for general wellness only. Talk to a doctor or qualified professional before starting a new diet or exercise program, especially if you are pregnant, injured, or have a medical condition. Stop exercising if you feel pain, dizziness or shortness of breath.</div>
+    <h4>What FitDash stores</h4>
+    <p>Workouts, PRs, food and calorie logs, weight, body measurements, water, sleep, cardio, goals and settings. By default all of it is stored only in your browser/device storage (localStorage). We have no server that collects it.</p>
+    <h4>Optional cloud sync</h4>
+    <p>If you sign in (Google or email), a copy of that data is saved in Google Firebase (Authentication and Cloud Firestore) under your account so you can restore it on other devices. Only you can read it. Your AI provider API keys are never uploaded.</p>
+    <h4>AI Coach</h4>
+    <p>When you use the AI Coach, your message (and, if you allow it in Settings, a summary of your profile and progress) is sent directly from your device to the AI provider you chose (Groq, Google Gemini, OpenRouter, or your own Ollama) using your own API key. Their privacy policies apply to those requests.</p>
+    <h4>Deleting your data</h4>
+    <p>Settings → Account &amp; Cloud Sync → <strong>Delete Account &amp; All Cloud/Local Data</strong> permanently deletes your cloud data, your sign-in account and the data on this device. Without an account, Settings → Data Management → Clear All Data removes everything stored on the device.</p>
+    <p class="cloud-note">Full policy: <a href="privacy.html" target="_blank" rel="noopener">privacy.html</a></p>
+    <div class="modal-actions"><button class="btn-red" onclick="closePrivacyModal()">Got it</button></div>
+  </div>
+</div>
+
+<!-- ══ SHARE CARD MODAL ═══════════════════════════════════════ -->
+<div id="share-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="share-title">
+  <div class="modal share-modal-box">
+    <button class="modal-close-x" onclick="closeShareCard()" aria-label="Close">✕</button>
+    <div class="modal-title" id="share-title">📤 Share your workout</div>
+    <div class="share-preview-wrap"><img id="share-card-img" alt="Workout summary card"></div>
+    <canvas id="share-card-canvas" width="1080" height="1350" hidden></canvas>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="downloadShareCard()">⬇ Download PNG</button>
+      <button class="btn-red" id="share-card-native-btn" onclick="shareShareCard()">📤 Share</button>
+    </div>
+    <div id="share-card-status" class="cloud-note" style="text-align:center;margin-top:8px"></div>
   </div>
 </div>
 <script src="js/data.js"></script>
@@ -1477,6 +1618,7 @@
 <script src="js/ai.js"></script>
 <script src="js/quicklog.js"></script>
 <script src="js/reminders.js"></script>
+<script src="js/firebase-sync.js"></script>
 <script src="js/app.js"></script>
   
 </body>

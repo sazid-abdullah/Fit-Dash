@@ -181,6 +181,14 @@ async function sendChatMessage(opts = {}) {
     return;
   }
 
+  // Ollama runs on localhost, so it still works without internet.
+  if(aiOfflineBlocked()) {
+    chatHistory.push({ role:'assistant', content: AI_OFFLINE_MESSAGE });
+    save('fitdash_chat', chatHistory);
+    renderChatMessages();
+    return;
+  }
+
   chatHistory.push({ role:'user', content: text });
   input.value = '';
   input.style.height = '';
@@ -228,10 +236,7 @@ async function sendChatMessage(opts = {}) {
   } catch(err) {
     const typingEl = document.getElementById('chat-typing');
     if(typingEl) typingEl.remove();
-    const errMsg = err.message.includes('401') ? '🔑 Invalid API key. Check your key in Settings.'
-      : err.message.includes('429') ? '⏳ Rate limited. Wait a moment and try again.'
-      : err.message.includes('Failed to fetch') ? '🌐 Network error. Check your internet connection.'
-      : `❌ Error: ${err.message}`;
+    const errMsg = friendlyAIError(err);
     chatHistory.push({ role: 'assistant', content: errMsg });
     save('fitdash_chat', chatHistory);
     renderChatMessages();
@@ -295,6 +300,43 @@ function dedupeSources(sources) {
   }).slice(0, 5);
 }
 
+// ── Offline & timeout handling ───────────────────────────────
+const AI_REQUEST_TIMEOUT_MS = 60000;
+const AI_OFFLINE_MESSAGE = '📴 You\'re offline. The AI Coach needs an internet connection, but everything else in FitDash keeps working and saves on this device. Your **📚 Saved AI Plans** (Nutrition and Training tabs) are available offline.';
+
+function aiOfflineBlocked() {
+  return navigator.onLine === false && aiConfig.provider !== 'ollama';
+}
+
+async function fetchAIWithTimeout(url, opts = {}) {
+  if(aiOfflineBlocked()) { const e = new Error('offline'); e.name = 'OfflineError'; throw e; }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...opts, signal: controller.signal });
+  } catch(err) {
+    if(err && err.name === 'AbortError') { const e = new Error('timeout'); e.name = 'TimeoutError'; throw e; }
+    if(navigator.onLine === false) { const e = new Error('offline'); e.name = 'OfflineError'; throw e; }
+    const e = new Error('network: ' + (err && err.message || err)); e.name = 'NetworkError'; throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function friendlyAIError(err) {
+  const msg = String((err && err.message) || err || '');
+  if(err && err.name === 'OfflineError') return AI_OFFLINE_MESSAGE;
+  if(err && err.name === 'TimeoutError') return `⏱ The AI provider didn't respond within ${AI_REQUEST_TIMEOUT_MS / 1000}s. Your connection may be slow — try again, or pick a faster model in Settings.`;
+  if(msg.startsWith('401') || msg.startsWith('403')) return '🔑 Invalid API key. Check your key in Settings.';
+  if(msg.startsWith('429')) return '⏳ Rate limited. Wait a moment and try again.';
+  if((err && err.name === 'NetworkError') || /Failed to fetch|NetworkError|Load failed/i.test(msg)) {
+    return aiConfig.provider === 'ollama'
+      ? '🌐 Could not reach Ollama at localhost:11434. Make sure it is running.'
+      : '🌐 Network error reaching the AI provider. Check your connection and try again.';
+  }
+  return `❌ Error: ${msg.slice(0, 240)}`;
+}
+
 async function throwIfNotOk(res) {
   if(res.ok) return;
   const errText = await res.text().catch(() => '');
@@ -308,7 +350,7 @@ async function callAIRequest(messages) {
 async function callAIRequestDetailed(messages, opts = {}) {
   const temperature = opts.temperature ?? 0.7;
   if(aiConfig.provider === 'ollama') {
-    const res = await fetch('http://localhost:11434/v1/chat/completions', {
+    const res = await fetchAIWithTimeout('http://localhost:11434/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model:aiConfig.model, messages, temperature, max_tokens:2048, stream:false })
@@ -334,7 +376,7 @@ async function callAIRequestDetailed(messages, opts = {}) {
     if(systemMessage) body.systemInstruction = { parts: [{ text: systemMessage.content }] };
     if(opts.webSearch) body.tools = [{ google_search: {} }];
 
-    const res = await fetch(url, {
+    const res = await fetchAIWithTimeout(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -371,7 +413,7 @@ async function callAIRequestDetailed(messages, opts = {}) {
   };
   if(opts.webSearch && !isGroq) body.plugins = [{ id:'web', max_results:3 }];
 
-  const res = await fetch(url, { method:'POST', headers, body:JSON.stringify(body) });
+  const res = await fetchAIWithTimeout(url, { method:'POST', headers, body:JSON.stringify(body) });
   await throwIfNotOk(res);
 
   const data = await res.json();
@@ -404,6 +446,7 @@ function parseAIActions(content) {
           btn.textContent = '✅ Apply this meal plan';
           btn.onclick = () => applyAIPlan(planData);
           lastMsg.appendChild(btn);
+          lastMsg.appendChild(createSavePlanButton('meal', planData));
         }
       }, 100);
     } catch(e) { if(FITDASH_DEBUG) console.warn('Failed to parse AI plan:', e); }
@@ -518,7 +561,10 @@ function parseAIActions(content) {
   if(templateMatch) {
     try {
       const template = JSON.parse(templateMatch[1]);
-      if(template && template.name && Array.isArray(template.plan)) addActionButton('✅ Save as routine', btn => { const r = saveTemplateAsRoutine(template); if(!r) return; btn.textContent=`✓ Saved routine "${r.name}" — pick it on Training`; btn.disabled=true; }, 'template');
+      if(template && template.name && Array.isArray(template.plan)) {
+        addActionButton('✅ Save as routine', btn => { const r = saveTemplateAsRoutine(template); if(!r) return; btn.textContent=`✓ Saved routine "${r.name}" — pick it on Training`; btn.disabled=true; }, 'template');
+        addActionButton('💾 Save to AI Plans library', btn => saveAIPlanToLibrary('workout', template, btn), 'template-library');
+      }
     } catch(e) { if(FITDASH_DEBUG) console.warn('Failed to parse template data:', e); }
   }
 }
@@ -682,3 +728,123 @@ function clearAIPlan() {
   switchPlan('1500');
   renderAIPlan();
 }
+
+// ══ SAVED AI PLANS LIBRARY ════════════════════════════════════
+// fitdash_saved_ai_plans: [{ id, type:'meal'|'workout', name, data, favorite, savedAt }]
+let savedAIPlans = safeLoad('fitdash_saved_ai_plans', []);
+if(!Array.isArray(savedAIPlans)) savedAIPlans = [];
+const SAVED_AI_PLANS_LIMIT = 50;
+
+function aiPlanDefaultName(type, data) {
+  if(data && typeof data.name === 'string' && data.name.trim()) return data.name.trim().slice(0, 80);
+  if(type === 'meal') return `${data && data.dailyCal ? data.dailyCal + ' cal ' : ''}meal plan`;
+  return 'AI workout plan';
+}
+
+function createSavePlanButton(type, data) {
+  const btn = document.createElement('button');
+  btn.className = 'apply-btn apply-btn-secondary';
+  btn.dataset.aiAction = type + '-library';
+  btn.textContent = '💾 Save to AI Plans library';
+  btn.onclick = () => saveAIPlanToLibrary(type, data, btn);
+  return btn;
+}
+
+function saveAIPlanToLibrary(type, data, btn) {
+  const json = JSON.stringify(data);
+  if(savedAIPlans.some(p => p.type === type && JSON.stringify(p.data) === json)) {
+    if(btn) { btn.textContent = '✓ Already in your library'; btn.disabled = true; }
+    return null;
+  }
+  const entry = { id: Date.now(), type, name: aiPlanDefaultName(type, data), data, favorite: false, savedAt: getLocalDateStr() };
+  // Favorites are never evicted by the size cap.
+  const favs = savedAIPlans.filter(p => p.favorite);
+  const rest = [entry, ...savedAIPlans.filter(p => !p.favorite)].slice(0, Math.max(0, SAVED_AI_PLANS_LIMIT - favs.length));
+  savedAIPlans = [...favs, ...rest];
+  save('fitdash_saved_ai_plans', savedAIPlans);
+  renderSavedAIPlans();
+  if(btn) { btn.textContent = `✓ Saved — find it in ${type === 'meal' ? 'Nutrition' : 'Training'} → Saved AI Plans`; btn.disabled = true; }
+  return entry;
+}
+
+function loadSavedAIPlan(id) {
+  const p = savedAIPlans.find(x => x.id === id);
+  if(!p) return;
+  if(p.type === 'meal') {
+    applyAIPlan(p.data);
+    showPage('nutrition');
+    const el = document.getElementById('plan-ai');
+    if(el) setTimeout(() => el.scrollIntoView({ block:'start', behavior:'smooth' }), 60);
+    return;
+  }
+  const r = saveTemplateAsRoutine(p.data);
+  if(r) showUndoToast(`✓ Added routine "${r.name}" — pick it below`, () => {
+    if(typeof routines !== 'undefined') { routines = routines.filter(x => x !== r); saveRoutines(); renderRoutinePickers(); }
+  });
+  else alert('This saved plan could not be turned into a routine.');
+}
+
+function toggleFavoriteAIPlan(id) {
+  const p = savedAIPlans.find(x => x.id === id);
+  if(!p) return;
+  p.favorite = !p.favorite;
+  save('fitdash_saved_ai_plans', savedAIPlans);
+  renderSavedAIPlans();
+}
+
+function renameSavedAIPlan(id) {
+  const p = savedAIPlans.find(x => x.id === id);
+  if(!p) return;
+  const name = prompt('Rename plan', p.name);
+  if(name === null || !name.trim()) return;
+  p.name = name.trim().slice(0, 80);
+  save('fitdash_saved_ai_plans', savedAIPlans);
+  renderSavedAIPlans();
+}
+
+function deleteSavedAIPlan(id) {
+  const p = savedAIPlans.find(x => x.id === id);
+  if(!p || !confirm(`Delete saved plan "${p.name}"?`)) return;
+  savedAIPlans = savedAIPlans.filter(x => x.id !== id);
+  save('fitdash_saved_ai_plans', savedAIPlans);
+  renderSavedAIPlans();
+}
+
+function savedAIPlanDetail(p) {
+  const d = p.data || {};
+  if(p.type === 'meal') {
+    const meals = d.meals ? Object.values(d.meals).reduce((n, arr) => n + (Array.isArray(arr) ? arr.length : 0), 0) : 0;
+    return [d.dailyCal ? `${d.dailyCal} cal/day` : '', meals ? `${meals} meals` : ''].filter(Boolean).join(' · ');
+  }
+  const exCount = Array.isArray(d.plan) ? d.plan.reduce((n, b) => n + (Array.isArray(b.exercises) ? b.exercises.length : 1), 0) : 0;
+  return [d.category ? (d.category === 'gym' ? 'Gym' : 'Home') : '', exCount ? `${exCount} exercises` : ''].filter(Boolean).join(' · ');
+}
+
+function renderSavedAIPlans() {
+  document.querySelectorAll('.saved-ai-plans').forEach(el => {
+    const type = el.dataset.planType;
+    const list = savedAIPlans.filter(p => p.type === type)
+      .sort((a, b) => (b.favorite - a.favorite) || (b.id - a.id));
+    if(!list.length) {
+      el.innerHTML = `<div class="saved-plans-empty">No saved ${type === 'meal' ? 'meal' : 'workout'} plans yet. Ask the AI Coach for one, then tap <strong>💾 Save to AI Plans library</strong>.</div>`;
+      return;
+    }
+    el.innerHTML = list.map(p => {
+      const detail = savedAIPlanDetail(p);
+      return `<div class="saved-plan-row${p.favorite ? ' is-fav' : ''}">
+        <button class="saved-plan-fav" onclick="toggleFavoriteAIPlan(${p.id})" title="${p.favorite ? 'Unfavorite' : 'Favorite'}" aria-label="${p.favorite ? 'Unfavorite' : 'Favorite'} plan" aria-pressed="${p.favorite}">${p.favorite ? '★' : '☆'}</button>
+        <div class="saved-plan-main">
+          <div class="saved-plan-name" ondblclick="renameSavedAIPlan(${p.id})">${escapeHtml(p.name)}</div>
+          <div class="saved-plan-meta">${escapeHtml([detail, 'saved ' + (p.savedAt || '')].filter(Boolean).join(' · '))}</div>
+        </div>
+        <div class="saved-plan-actions">
+          <button class="btn-ghost" onclick="loadSavedAIPlan(${p.id})">${p.type === 'meal' ? 'Apply' : 'Load'}</button>
+          <button class="btn-ghost" onclick="renameSavedAIPlan(${p.id})" title="Rename" aria-label="Rename plan">✎</button>
+          <button class="del-btn del-btn-md" onclick="deleteSavedAIPlan(${p.id})" title="Delete" aria-label="Delete plan">×</button>
+        </div>
+      </div>`;
+    }).join('');
+  });
+}
+
+renderSavedAIPlans();

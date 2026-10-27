@@ -520,6 +520,7 @@ function startWorkoutSession() {
   document.getElementById('wo-end-btn').style.color  = '';
   document.getElementById('wo-end-btn').style.borderColor = '';
   document.body.style.overflow = 'hidden';
+  requestWorkoutWakeLock();
 
   // overall timer
   wo.totalInterval = setInterval(() => {
@@ -888,6 +889,7 @@ function discardAndExit() {
   document.getElementById('workout-overlay').style.display = 'none';
   document.body.style.overflow = '';
   wo.active = false;
+  releaseWorkoutWakeLock();
   endSessionSwaps();
 }
 
@@ -902,6 +904,7 @@ function finishWorkout() {
   if(wo.totalInterval) { clearInterval(wo.totalInterval); wo.totalInterval=null; }
   if(wo.restInterval)  { clearInterval(wo.restInterval);  wo.restInterval=null; }
   document.getElementById('workout-overlay').style.display = 'none';
+  releaseWorkoutWakeLock();
   // NOTE: body.overflow stays 'hidden' here — the post-workout modal is about to open
   // and needs the background locked. It is released in closePostWorkout() instead.
 
@@ -1447,18 +1450,18 @@ function getWeekKey() {
 }
 
 function addCardio() {
-  const raw = Number(document.getElementById('cardio-add').value);
-  // Number() rejects "10abc" that parseInt would accept as 10
-  if(!Number.isFinite(raw) || raw <= 0) {
-    alert('Please enter a positive number of minutes.');
-    return;
+  const result = readCardioForm();
+  if(result.error) { alert(result.error); return; }
+  const entry = result.entry;
+  if(entry.type !== 'quick') {
+    cardioLog.unshift(entry);
+    cardioLog = cardioLog.slice(0, CARDIO_LOG_LIMIT);
+    save('fitdash_cardio_log', cardioLog);
   }
-  if(raw > 300) {
-    alert('Please enter a realistic session duration (1–300 min).');
-    return;
-  }
-  addCardioMinutes(Math.round(raw)); // integer minutes prevents floating-point drift
-  document.getElementById('cardio-add').value = '';
+  addCardioMinutes(entry.mins);
+  ['cardio-add','cardio-speed','cardio-incline','cardio-level','cardio-run-time'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  if(entry.type !== 'run') { const d = document.getElementById('cardio-distance'); if(d) d.value = ''; }
+  updateCardioPreview();
 }
 
 function addCardioMinutes(mins) {
@@ -1497,6 +1500,7 @@ function renderCardio() {
   document.getElementById('cardio-done-label').textContent = cardioMins + ' min done';
   const goalLabel = document.getElementById('cardio-goal-label');
   if(goalLabel) goalLabel.textContent = target + ' min goal';
+  renderCardioRecent();
   if(typeof renderQuickLog === 'function') renderQuickLog();
 }
 
@@ -1723,6 +1727,7 @@ function renderTrainingHistory() {
         <div class="history-detail" style="color:var(--muted2)">${chips}</div>
         ${s.notes?`<div class="history-detail" style="margin-top:3px;color:var(--muted)">${escapeHtml(s.notes.slice(0,70))}</div>`:''}
       </div>
+      <button onclick="openShareCardForSession(${s.id})" title="Share workout card" aria-label="Share workout card" class="hist-share-btn">📤</button>
       <button onclick="deleteSession(${s.id})" title="Delete session" class="del-btn del-btn-md">×</button>
     </div>`;
   }).join('');
@@ -1732,3 +1737,335 @@ function renderTrainingHistory() {
 
 
 
+
+
+// ══ SCREEN WAKE LOCK ══════════════════════════════════════════
+// Keeps the phone screen on during an active workout (Chrome/Android, Safari 16.4+).
+let workoutWakeLock = null;
+async function requestWorkoutWakeLock() {
+  if(!('wakeLock' in navigator) || !wo.active || workoutWakeLock) return;
+  try {
+    const lock = await navigator.wakeLock.request('screen');
+    if(!wo.active) { lock.release().catch(() => {}); return; }
+    workoutWakeLock = lock;
+    lock.addEventListener('release', () => { if(workoutWakeLock === lock) workoutWakeLock = null; });
+  } catch(_) { workoutWakeLock = null; }  // denied (battery saver / not visible) — non-fatal
+}
+function releaseWorkoutWakeLock() {
+  const lock = workoutWakeLock;
+  workoutWakeLock = null;
+  if(lock) lock.release().catch(() => {});
+}
+// The browser drops the lock when the tab is hidden; re-acquire it on return.
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible' && wo.active
+     && document.getElementById('workout-overlay').style.display === 'block') requestWorkoutWakeLock();
+});
+
+// ══ STRUCTURED CARDIO ═════════════════════════════════════════
+// fitdash_cardio stays the weekly minute total; fitdash_cardio_log adds per-session detail.
+const CARDIO_LOG_LIMIT = 100;
+const CARDIO_TYPES = {
+  quick:     { icon:'⏱', label:'Cardio' },
+  treadmill: { icon:'🚶', label:'Incline Treadmill' },
+  cycle:     { icon:'🚴', label:'Stationary Cycle' },
+  run:       { icon:'🏃', label:'Road Run' },
+};
+let cardioLog = safeLoad('fitdash_cardio_log', []);
+if(!Array.isArray(cardioLog)) cardioLog = [];
+
+// "28:30" → 1710 s, "1:02:30" → 3750 s, "28" → 28 min.
+function parseDurationInput(text) {
+  const t = String(text || '').trim();
+  if(!t) return NaN;
+  if(!t.includes(':')) { const m = Number(t); return Number.isFinite(m) && m > 0 ? Math.round(m * 60) : NaN; }
+  const parts = t.split(':').map(Number);
+  if(parts.length > 3 || parts.some(n => !Number.isFinite(n) || n < 0)) return NaN;
+  if(parts.slice(1).some(n => n >= 60)) return NaN;
+  return parts.reduce((acc, n) => acc * 60 + n, 0) || NaN;
+}
+function formatClock(totalSecs) {
+  const secs = Math.round(totalSecs);
+  const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), sec = secs % 60;
+  const pad = n => String(n).padStart(2, '0');
+  return h ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
+}
+function formatPace(secPerKm) {
+  return Number.isFinite(secPerKm) && secPerKm > 0 ? `${formatClock(secPerKm)} /km` : '—';
+}
+
+function cardioFormType() {
+  const el = document.getElementById('cardio-type');
+  return el && CARDIO_TYPES[el.value] ? el.value : 'quick';
+}
+function onCardioTypeChange() {
+  const type = cardioFormType();
+  document.getElementById('cardio-log-form').dataset.type = type;
+  if(type === 'run') onCardioRunPresetChange();
+  updateCardioPreview();
+}
+function onCardioRunPresetChange() {
+  const preset = document.getElementById('cardio-run-preset').value;
+  const dist = document.getElementById('cardio-distance');
+  if(preset !== 'custom') dist.value = preset;
+  else if(['5','10'].includes(dist.value)) dist.value = '';
+  updateCardioPreview();
+}
+
+function readCardioForm() {
+  const type = cardioFormType();
+  const num = id => { const el = document.getElementById(id); return el && el.value !== '' ? Number(el.value) : NaN; };
+  const entry = { id: Date.now(), date: getLocalDateStr(), type };
+  if(type === 'run') {
+    const km = num('cardio-distance');
+    const secs = parseDurationInput(document.getElementById('cardio-run-time').value);
+    if(!(km > 0) || km > 200) return { error: 'Enter your run distance in km (e.g. 5).' };
+    if(!(secs > 0)) return { error: 'Enter your run time as mm:ss (e.g. 28:30) or h:mm:ss.' };
+    if(secs > 300 * 60) return { error: 'Please enter a realistic run time (up to 5 hours).' };
+    Object.assign(entry, { distanceKm: Math.round(km * 100) / 100, durationSecs: secs, paceSecPerKm: Math.round(secs / km) });
+    entry.mins = Math.max(1, Math.round(secs / 60));
+    return { entry };
+  }
+  const mins = num('cardio-add');
+  // Number() rejects "10abc" that parseInt would accept as 10
+  if(!Number.isFinite(mins) || mins <= 0) return { error: 'Please enter a positive number of minutes.' };
+  if(mins > 300) return { error: 'Please enter a realistic session duration (1–300 min).' };
+  entry.mins = Math.round(mins); // integer minutes prevents floating-point drift
+  if(type === 'treadmill') {
+    const speed = num('cardio-speed'), incline = num('cardio-incline');
+    if(Number.isFinite(speed)) { if(speed <= 0 || speed > 25) return { error: 'Treadmill speed should be between 0.5 and 25 km/h.' }; entry.speedKmh = speed; }
+    if(Number.isFinite(incline)) { if(incline < 0 || incline > 40) return { error: 'Incline should be between 0 and 40%.' }; entry.inclinePct = incline; }
+    if(entry.speedKmh) entry.distanceKm = Math.round(entry.speedKmh * entry.mins / 60 * 100) / 100;
+  } else if(type === 'cycle') {
+    const km = num('cardio-distance'), level = num('cardio-level');
+    if(Number.isFinite(km)) { if(km <= 0 || km > 200) return { error: 'Cycle distance should be between 0.1 and 200 km.' }; entry.distanceKm = km; }
+    if(Number.isFinite(level)) { if(level < 1 || level > 40) return { error: 'Resistance level should be between 1 and 40.' }; entry.level = Math.round(level); }
+  }
+  return { entry };
+}
+
+function updateCardioPreview() {
+  const el = document.getElementById('cardio-preview');
+  if(!el) return;
+  const type = cardioFormType();
+  let text = '';
+  if(type === 'run') {
+    const km = Number(document.getElementById('cardio-distance').value);
+    const secs = parseDurationInput(document.getElementById('cardio-run-time').value);
+    if(km > 0 && secs > 0) text = `Pace: <strong>${formatPace(secs / km)}</strong> · ${km} km in ${formatClock(secs)}`;
+  } else if(type === 'treadmill') {
+    const speed = Number(document.getElementById('cardio-speed').value), mins = Number(document.getElementById('cardio-add').value);
+    if(speed > 0 && mins > 0) text = `≈ ${(speed * mins / 60).toFixed(2)} km · pace ${formatPace(3600 / speed)}`;
+  }
+  el.innerHTML = text;
+}
+
+function cardioEntrySummary(e) {
+  if(e.type === 'run') return `${e.distanceKm} km · ${formatClock(e.durationSecs)} · ${formatPace(e.paceSecPerKm)}`;
+  const bits = [`${e.mins} min`];
+  if(e.type === 'treadmill') { if(e.speedKmh) bits.push(`${e.speedKmh} km/h`); if(e.inclinePct !== undefined) bits.push(`${e.inclinePct}% incline`); }
+  if(e.type === 'cycle') { if(e.distanceKm) bits.push(`${e.distanceKm} km`); if(e.level) bits.push(`level ${e.level}`); }
+  return bits.join(' · ');
+}
+
+function renderCardioRecent() {
+  const el = document.getElementById('cardio-recent');
+  if(!el) return;
+  const recent = cardioLog.slice(0, 4);
+  if(!recent.length) { el.innerHTML = ''; return; }
+  el.innerHTML = recent.map(e => {
+    const t = CARDIO_TYPES[e.type] || CARDIO_TYPES.quick;
+    return `<div class="cardio-recent-row"><span class="cardio-recent-ico">${t.icon}</span><span class="cardio-recent-main"><strong>${t.label}</strong><span>${escapeHtml(cardioEntrySummary(e))}</span></span><span class="cardio-recent-date">${escapeHtml(e.date || '')}</span><button class="del-btn del-btn-sm" title="Delete" aria-label="Delete cardio session" onclick="deleteCardioEntry(${Number(e.id)})">×</button></div>`;
+  }).join('');
+}
+
+function deleteCardioEntry(id) {
+  const e = cardioLog.find(x => x.id === id);
+  if(!e || !confirm('Delete this cardio session?')) return;
+  cardioLog = cardioLog.filter(x => x.id !== id);
+  save('fitdash_cardio_log', cardioLog);
+  // Only this week's sessions count towards the weekly total.
+  const entryWeek = (() => { const d = parseLocalDate(e.date); const jan1 = new Date(d.getFullYear(),0,1); return d.getFullYear() + '-W' + Math.ceil(((d - jan1) / 86400000 + jan1.getDay() + 1) / 7); })();
+  if(entryWeek === getWeekKey()) { cardioMins = Math.max(0, cardioMins - (e.mins || 0)); save('fitdash_cardio', cardioMins); }
+  renderCardio();
+}
+
+// ══ SHAREABLE WORKOUT CARD (1080×1350 PNG) ═════════════════════
+let shareCardBlob = null, shareCardUrl = null, shareCardName = 'fitdash-workout.png';
+
+function buildShareCardData(session, priorSessions) {
+  const bests = getExerciseBests([session]);
+  const top = Object.entries(bests)
+    .map(([name, b]) => ({ name, weight: b.weight, volume: b.volume, sets: setsFromSession(session).filter(x => x.exName === name).length }))
+    .sort((a, b) => b.volume - a.volume || b.sets - a.sets)
+    .slice(0, 5);
+  let volume = session.volumeKg;
+  if(!(volume > 0)) volume = Math.round(setsFromSession(session).reduce((sum, x) => sum + x.weight * x.reps, 0));
+  return {
+    title: session.title || (session.quick ? 'Quick Workout' : 'Full Body Session'),
+    date: session.date,
+    durationSecs: session.durationSecs || 0,
+    volumeKg: volume || 0,
+    sets: countSets(session),
+    calories: session.caloriesBurned || 0,
+    prs: findSessionPRs(session, priorSessions),
+    top,
+  };
+}
+
+function shareCardEllipsize(ctx, text, maxW) {
+  if(ctx.measureText(text).width <= maxW) return text;
+  let t = text;
+  while(t.length > 1 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
+  return t + '…';
+}
+
+function shareCardRoundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function drawShareCard(canvas, d) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height, P = 80;
+  const font = (weight, size) => `${weight} ${size}px Inter, "Segoe UI", Roboto, system-ui, sans-serif`;
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#08080e'); bg.addColorStop(0.6, '#111120'); bg.addColorStop(1, '#2a0b12');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  const glow = ctx.createRadialGradient(W - 120, 120, 0, W - 120, 120, 520);
+  glow.addColorStop(0, 'rgba(230,57,70,0.35)'); glow.addColorStop(1, 'rgba(230,57,70,0)');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+
+  // Brand
+  ctx.textBaseline = 'alphabetic';
+  shareCardRoundRect(ctx, P, 78, 64, 64, 16); ctx.fillStyle = '#e63946'; ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = font(900, 40); ctx.textAlign = 'center'; ctx.fillText('F', P + 32, 125);
+  ctx.textAlign = 'left'; ctx.font = font(800, 40);
+  ctx.fillStyle = '#e63946'; ctx.fillText('FIT', P + 88, 124);
+  ctx.fillStyle = '#ffffff'; ctx.fillText('DASH', P + 88 + ctx.measureText('FIT').width, 124);
+
+  // Title + date
+  const dateLabel = d.date ? parseLocalDate(d.date).toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' }) : '';
+  ctx.fillStyle = '#9ca3af'; ctx.font = font(600, 34); ctx.fillText(dateLabel, P, 250);
+  ctx.fillStyle = '#ffffff'; ctx.font = font(900, 84); ctx.fillText(shareCardEllipsize(ctx, d.title, W - 2 * P), P, 345);
+  ctx.fillStyle = '#e63946'; ctx.fillRect(P, 380, 120, 8);
+
+  // Stat tiles
+  const stats = [
+    { label: 'DURATION', value: d.durationSecs ? formatClock(d.durationSecs) : '—' },
+    { label: 'VOLUME', value: d.volumeKg ? `${Math.round(d.volumeKg).toLocaleString('en-US')} kg` : '—' },
+    { label: 'PRs HIT', value: String(new Set(d.prs.map(pr => pr.exName)).size) },
+  ];
+  const gap = 24, tileW = (W - 2 * P - 2 * gap) / 3, tileY = 440, tileH = 200;
+  stats.forEach((st, i) => {
+    const x = P + i * (tileW + gap);
+    shareCardRoundRect(ctx, x, tileY, tileW, tileH, 28);
+    ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fill();
+    ctx.strokeStyle = i === 2 && d.prs.length ? 'rgba(74,222,128,0.6)' : 'rgba(255,255,255,0.12)'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#9ca3af'; ctx.font = font(700, 26); ctx.fillText(st.label, x + 30, tileY + 62);
+    ctx.fillStyle = i === 2 && d.prs.length ? '#4ade80' : '#ffffff';
+    let size = 58;
+    do { ctx.font = font(800, size); size -= 2; } while(size > 30 && ctx.measureText(st.value).width > tileW - 60);
+    ctx.fillText(shareCardEllipsize(ctx, st.value, tileW - 60), x + 30, tileY + 150);
+  });
+  const sub = [d.sets ? `${d.sets} sets` : '', d.calories ? `${d.calories} kcal` : ''].filter(Boolean).join('  ·  ');
+  if(sub) { ctx.fillStyle = '#9ca3af'; ctx.font = font(600, 30); ctx.fillText(sub, P, tileY + tileH + 60); }
+
+  // Top exercises (+ PR badges)
+  let y = 800;
+  ctx.fillStyle = '#ffffff'; ctx.font = font(800, 38); ctx.fillText('Top exercises', P, y);
+  y += 30;
+  const prNames = new Set(d.prs.map(pr => pr.exName));
+  if(!d.top.length) {
+    ctx.fillStyle = '#6b7280'; ctx.font = font(600, 30); ctx.fillText('No weighted sets logged', P, y + 50);
+  }
+  d.top.forEach(ex => {
+    y += 72;
+    const isPR = prNames.has(ex.name);
+    const right = `${ex.sets} set${ex.sets === 1 ? '' : 's'}${ex.weight ? ` · best ${ex.weight} kg` : ''}`;
+    ctx.font = font(600, 30);
+    const rightW = ctx.measureText(right).width;
+    ctx.fillStyle = isPR ? '#4ade80' : '#e63946'; ctx.beginPath(); ctx.arc(P + 10, y - 10, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#e5e7eb'; ctx.font = font(700, 34);
+    const name = shareCardEllipsize(ctx, ex.name, W - 2 * P - rightW - (isPR ? 190 : 100));
+    ctx.fillText(name, P + 40, y);
+    if(isPR) {
+      // Drawn badge instead of an emoji so it renders on devices without colour-emoji fonts.
+      const bx = P + 40 + ctx.measureText(name).width + 16;
+      shareCardRoundRect(ctx, bx, y - 32, 70, 40, 20); ctx.fillStyle = 'rgba(74,222,128,0.18)'; ctx.fill();
+      ctx.fillStyle = '#4ade80'; ctx.font = font(800, 24); ctx.fillText('PR', bx + 19, y - 4);
+    }
+    ctx.fillStyle = '#9ca3af'; ctx.font = font(600, 30); ctx.textAlign = 'right'; ctx.fillText(right, W - P, y); ctx.textAlign = 'left';
+  });
+
+  // Watermark
+  ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(P, H - 150, W - 2 * P, 2);
+  ctx.fillStyle = '#9ca3af'; ctx.font = font(600, 28); ctx.fillText('Tracked with FitDash', P, H - 92);
+  ctx.textAlign = 'right'; ctx.fillStyle = '#e63946'; ctx.font = font(800, 28); ctx.fillText('#FitDash', W - P, H - 92); ctx.textAlign = 'left';
+}
+
+function openShareCard(session, priorSessions) {
+  const canvas = document.getElementById('share-card-canvas');
+  const data = buildShareCardData(session, priorSessions);
+  drawShareCard(canvas, data);
+  shareCardName = `fitdash-workout-${data.date || getLocalDateStr()}.png`;
+  const status = document.getElementById('share-card-status');
+  status.textContent = '';
+  document.getElementById('share-card-native-btn').style.display = navigator.share ? '' : 'none';
+  canvas.toBlob(blob => {
+    shareCardBlob = blob;
+    if(shareCardUrl) URL.revokeObjectURL(shareCardUrl);
+    shareCardUrl = blob ? URL.createObjectURL(blob) : canvas.toDataURL('image/png');
+    document.getElementById('share-card-img').src = shareCardUrl;
+  }, 'image/png');
+  document.getElementById('share-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function openShareCardForCurrentWorkout() {
+  const fd = wo.finishedData;
+  if(!fd) return;
+  openShareCard({ date: getLocalDateStr(), durationSecs: fd.durationSecs, volumeKg: Math.round(fd.totalVolume),
+    caloriesBurned: fd.calData.total, setsCompleted: fd.setsCount, exercises: wo.log }, sessions);
+}
+
+function openShareCardForSession(id) {
+  const s = sessions.find(x => x.id === id);
+  if(!s) return;
+  const prior = sessions.filter(x => x !== s && (x.date < s.date || (x.date === s.date && (x.id || 0) < (s.id || 0))));
+  openShareCard(s, prior);
+}
+
+function closeShareCard() {
+  document.getElementById('share-modal').classList.remove('open');
+  if(!document.querySelector('.modal-backdrop.open') && document.getElementById('workout-overlay').style.display !== 'block') document.body.style.overflow = '';
+}
+
+function downloadShareCard() {
+  if(!shareCardUrl) return;
+  const a = document.createElement('a');
+  a.href = shareCardUrl; a.download = shareCardName;
+  document.body.appendChild(a); a.click(); a.remove();
+  document.getElementById('share-card-status').textContent = '✓ Saved ' + shareCardName;
+}
+
+async function shareShareCard() {
+  const status = document.getElementById('share-card-status');
+  if(!shareCardBlob) { downloadShareCard(); return; }
+  const file = new File([shareCardBlob], shareCardName, { type: 'image/png' });
+  const payload = { files: [file], title: 'My FitDash workout', text: 'Just finished a workout 💪 #FitDash' };
+  if(!navigator.share || (navigator.canShare && !navigator.canShare(payload))) {
+    downloadShareCard();
+    status.textContent = 'Sharing images isn\u2019t supported here — downloaded the PNG instead.';
+    return;
+  }
+  try { await navigator.share(payload); status.textContent = '✓ Shared'; }
+  catch(err) { if(err && err.name !== 'AbortError') status.textContent = 'Could not share: ' + (err.message || err); }
+}
+
+document.getElementById('share-modal').addEventListener('click', e => { if(e.target.id === 'share-modal') closeShareCard(); });
