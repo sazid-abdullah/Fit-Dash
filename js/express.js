@@ -5,7 +5,7 @@
 const EQUIPMENT_CHIPS = [
   ['bodyweight', '🧘 Bodyweight Only'], ['dumbbells', '🏋️ Dumbbells'], ['bench', '🛋️ Flat / Adjustable Bench'],
   ['pullup_bar', '🧗 Pull-Up Bar'], ['bands', '➰ Resistance Bands'], ['backpack', '🎒 Loaded Backpack (Books / Water Bottles)'],
-  ['chair', '🪑 Sturdy Chair / Step / Stairs'], ['barbell', '🏋️‍♂️ Barbell & Plates'], ['kettlebell', '🔔 Kettlebell'],
+  ['chair', '🪑 Sturdy Chair / Step / Stairs'], ['barbell', '🏋️ Barbell & Plates'], ['kettlebell', '🔔 Kettlebell'],
   ['machines', '⚙️ Gym Cables & Machines'],
 ];
 const SESSION_MODES = {

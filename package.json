@@ -7,13 +7,14 @@
   "scripts": {
     "serve": "python3 -m http.server 8765",
     "build": "node scripts/build-www.mjs",
+    "check:glyphs": "node scripts/check-glyphs.mjs",
     "cap:sync": "npm run build && npx cap sync android",
     "cap:open": "npx cap open android",
     "android": "npm run cap:sync && npx cap open android"
   },
   "devDependencies": {
-    "@capacitor/android": "^6.1.2",
-    "@capacitor/cli": "^6.1.2",
-    "@capacitor/core": "^6.1.2"
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0"
   }
 }

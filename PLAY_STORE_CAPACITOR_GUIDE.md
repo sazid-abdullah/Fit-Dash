@@ -10,7 +10,7 @@ Install:
 
 - **Node.js 20 LTS** (includes npm) — https://nodejs.org
 - **Android Studio** (latest stable) with the Android SDK, SDK Platform 34+ and Build-Tools — https://developer.android.com/studio
-- **JDK 17** (bundled with Android Studio as "JetBrains Runtime"; set `JAVA_HOME` to it if Gradle complains)
+- **JDK 21** (Capacitor 7 requirement; bundled with recent Android Studio as "JetBrains Runtime"; set `JAVA_HOME` to it if Gradle complains)
 
 Then, from the repo root:
 
