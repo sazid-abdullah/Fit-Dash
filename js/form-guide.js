@@ -5,13 +5,13 @@ const MUSCLE_NAMES = {
   chest:'Chest / Pectorals', front_delts:'Front Delts', side_delts:'Side Delts', rear_delts:'Rear Delts', traps:'Traps',
   lats:'Lats', mid_back:'Mid Back / Rhomboids', lower_back:'Lower Back / Erectors', biceps:'Biceps', triceps:'Triceps',
   forearms:'Forearms / Grip', abs:'Abs / Core', obliques:'Obliques', quads:'Quads', hamstrings:'Hamstrings',
-  glutes:'Glutes', adductors:'Adductors', abductors:'Glute Med / Abductors', calves:'Calves',
+  glutes:'Glutes', adductors:'Adductors', abductors:'Glute Med / Abductors', calves:'Calves', serratus:'Serratus Anterior',
 };
 
 const MUSCLE_ALIASES = [
   [/chest|pec/, ['chest']], [/front delt|anterior delt/, ['front_delts']], [/lateral delt|side delt|lateral deltoid/, ['side_delts']],
   [/rear delt|posterior delt/, ['rear_delts']], [/shoulder/, ['front_delts', 'side_delts']], [/trap/, ['traps']],
-  [/\blats?\b|latissimus|vertical back|serratus/, ['lats']], [/mid back|rhomboid|horizontal back|upper back/, ['mid_back']],
+  [/\blats?\b|latissimus|vertical back/, ['lats']], [/serratus/, ['serratus']], [/mid back|rhomboid|horizontal back|upper back/, ['mid_back']],
   [/lower back|erector/, ['lower_back']], [/bicep|brachialis/, ['biceps']], [/tricep/, ['triceps']], [/forearm|grip/, ['forearms']],
   [/core|\babs?\b|abdominal/, ['abs']], [/oblique/, ['obliques']], [/quad/, ['quads']], [/hamstring/, ['hamstrings']],
   [/glute(?!.*med)|glutes/, ['glutes']], [/adductor|inner thigh/, ['adductors']], [/abductor|outer hip|glute med/, ['abductors']],
@@ -298,6 +298,10 @@ const MOTION_SPECS = {
     poses:[ mpose({ P:[118,174], tr:-90, A:[156,180], arm:90, fore:90 }), mpose({ P:[118,174], tr:-90, A:[156,180], arm:90, fore:90 }),
       mpose({ P:[118,174], tr:-84, fx:36, A:[156,180], arm:100, fore:100 }) ],
     arcs:[['S','T','P','spine']], track:'S', fo:[0,-22] },
+  deadbug: { label:'Core · supine anti-extension', note:'Lower back stays glued to the floor', load:'none',
+    poses:[ { P:[122,174], tr:-90, arm:180, fore:180, thigh:180, shin:90, foot:180 }, { P:[122,174], tr:-90, arm:262, fore:264, thigh:102, shin:98, foot:110 },
+      { P:[122,174], tr:-90, arm:180, fore:180, thigh:180, shin:90, foot:180 } ],
+    arcs:[['S','P','K','hip']], guide:'line', track:'A', fo:[0,-10] },
   bridge: { label:'Hip extension · bridge', note:'Finish with the glutes, not the low back', load:'none',
     poses:[ mpose({ P:[104,175], tr:-90, A:[140,180], arm:90, fore:90 }), mpose({ P:[104,175], tr:-90, A:[140,180], arm:90, fore:90 }),
       mpose({ P:[106,146], tr:-117.6, A:[140,180], arm:80, fore:80 }) ],
@@ -322,6 +326,7 @@ function motionKeyFor(key, name) {
   const n = String(name || '').toLowerCase();
   if(key === 'hpush') return /push-?up|press-?up/.test(n) ? 'pushup' : /incline/.test(n) ? 'incline' : 'bench';
   if(key === 'vpush') return /incline/.test(n) ? 'incline' : 'ohp';
+  if(key === 'core' && /dead ?bug|leg raise|hollow|flutter|scissor/.test(n)) return 'deadbug';
   if(key === 'core') return /crunch|sit-?up|v-?up|jackknife/.test(n) ? 'crunch' : 'plank';
   if(key === 'triceps') return /pushdown|press-?down/.test(n) ? 'pushdown' : 'overhead';
   if(key === 'legmachine') return /curl/.test(n) ? 'legcurl' : 'legext';
@@ -454,17 +459,19 @@ function playMotionPhase(phase, secs) {
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const legs = [];
   let force = null;
+  ctx.prep = 0;
   if(phase === 0) legs.push([cur, spec.poses[0], 600, easeInOutSine]);
   else {
     const from = spec.poses[phase === 1 ? 2 : 1], to = spec.poses[phase], full = Math.max(300, secs * 1000);
     const prep = poseDiff(cur, from) > 1.5 ? Math.min(600, full * 0.25) : 0;
     if(prep) legs.push([cur, from, prep, easeInOutSine]);
-    legs.push([from, to, full - prep, phase === 1 ? easeInOutSine : easeOutCubic]);
+    legs.push([from, to, full, phase === 1 ? easeInOutSine : easeOutCubic]);
+    ctx.prep = prep;
     const a = solvePose(from, spec)[spec.track], b = solvePose(to, spec)[spec.track], o = spec.fo || [0, 0];
     const dir = munit(msub(b, a)), len = Math.hypot(b[0] - a[0], b[1] - a[1]), pad = Math.min(3, len / 4);
     force = [a[0] + o[0] + dir[0] * pad, a[1] + o[1] + dir[1] * pad, b[0] + o[0] - dir[0] * pad, b[1] + o[1] - dir[1] * pad];
   }
-  if(reduce) { const last = legs[legs.length - 1]; ctx.q = last[1]; drawMotionPose(svg, ctx.q, spec, force); return; }
+  if(reduce) { const last = legs[legs.length - 1]; ctx.q = last[1]; ctx.prep = 0; drawMotionPose(svg, ctx.q, spec, force); return; }
   let li = 0, start = performance.now();
   const step = now => {
     if(formGuideCtx !== ctx) return;
@@ -550,6 +557,7 @@ function selectFormPhase(i) {
   formGuideCtx.phase = i;
   const panel = modal.querySelector(`.fg-phase[data-phase="${i}"]`);
   playMotionPhase(i, Number(panel?.dataset.secs) || 2);
+  const prep = formGuideCtx.prep || 0;
   const now = document.getElementById('fg-phase-now');
   if(now) now.textContent = `${i + 1} · ${['Setup', 'Eccentric', 'Concentric'][i]} · ${panel?.dataset.secs || 2}s`;
   modal.querySelectorAll('.fg-phase-tab').forEach((t, j) => { t.classList.toggle('active', j === i); t.setAttribute('aria-selected', String(j === i)); });
@@ -560,7 +568,7 @@ function selectFormPhase(i) {
     fill.style.transition = 'none'; fill.style.width = '0%';
     if(j === i) {
       void fill.offsetWidth;
-      fill.style.transition = `width ${p.dataset.secs}s linear`;
+      fill.style.transition = `width ${p.dataset.secs}s linear ${prep}ms`;
       fill.style.width = '100%';
     }
   });
@@ -577,7 +585,7 @@ function toggleFormGuidePlay() {
     selectFormPhase(i);
     const panel = document.querySelector(`#form-guide-modal .fg-phase[data-phase="${i}"]`);
     const secs = Number(panel?.dataset.secs) || 2;
-    formGuideCtx.timer = setTimeout(() => step((i + 1) % 3), (secs + 0.6) * 1000);
+    formGuideCtx.timer = setTimeout(() => step((i + 1) % 3), (secs + 0.6) * 1000 + (formGuideCtx.prep || 0));
   };
   step(formGuideCtx.phase);
 }
@@ -585,7 +593,9 @@ function toggleFormGuidePlay() {
 function stopFormGuidePlay() {
   if(!formGuideCtx) return;
   clearTimeout(formGuideCtx.timer);
+  cancelAnimationFrame(formGuideCtx.raf);
   formGuideCtx.playing = false;
+  document.querySelectorAll('#form-guide-modal .fg-tempo-fill').forEach(f => { const w = getComputedStyle(f).width; f.style.transition = 'none'; f.style.width = w; });
   const btn = document.getElementById('fg-play');
   if(btn) { btn.innerHTML = `${FG_ICON.play} Play tempo`; btn.setAttribute('aria-pressed', 'false'); }
 }
