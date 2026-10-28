@@ -167,190 +167,328 @@ function buildFormGuide(ex) {
   return { key, label: pat.label, primary, secondary, setup: pat.setup, eccentric: pat.eccentric, concentric: pat.concentric, mistakes: pat.mistakes, cue };
 }
 
-// ── SVG anatomy (shapes drawn for the viewer's left side, mirrored for the right) ──
-const BODY_SHAPES = [
-  ['circle', { cx:100, cy:30, r:17 }, true], ['rect', { x:92, y:45, width:16, height:12, rx:4 }, true],
-  ['path', { d:'M62,60 Q100,50 138,60 L144,118 Q136,160 132,198 L68,198 Q64,160 56,118 Z' }, true],
-  ['ellipse', { cx:52, cy:96, rx:11, ry:30, rot:10 }], ['ellipse', { cx:42, cy:150, rx:9, ry:28, rot:8 }],
-  ['circle', { cx:37, cy:185, r:7 }], ['ellipse', { cx:83, cy:252, rx:18, ry:52, rot:3 }],
-  ['ellipse', { cx:85, cy:336, rx:12, ry:40, rot:0 }], ['ellipse', { cx:85, cy:382, rx:12, ry:6, rot:0 }],
-];
+// ── Muscle map: true anatomical paths live in js/anatomy-svg.js ──
+function muscleMapSvg(primary, secondary) { return anatomyMapSvg(primary, secondary); }
 
-// Sculpted muscle paths, drawn for the viewer's left side and mirrored (x → 200 − x).
-const MUSCLE_PATHS = {
-  front: [
-    ['front_delts', 'M70,66 Q60,63 54,71 Q53,82 60,87 Q66,78 73,74 Z'], ['side_delts', 'M54,69 Q47,74 47,85 L54,88 Q53,78 57,71 Z'],
-    ['chest', 'M99,71 L99,98 Q86,103 72,97 Q65,87 70,76 Q84,69 99,71 Z'], ['biceps', 'M50,89 Q45,101 47,117 Q54,120 58,112 Q61,98 56,89 Z'],
-    ['forearms', 'M46,124 Q40,141 38,166 L46,169 Q53,148 55,126 Z'], ['abs', 'M89,104 L111,104 L113,160 Q100,169 87,160 Z', true],
-    ['obliques', 'M86,107 Q76,118 73,146 Q80,163 87,165 L87,110 Z'], ['quads', 'M70,206 Q65,240 72,287 Q81,293 90,287 Q97,250 92,210 Q82,201 70,206 Z'],
-    ['adductors', 'M94,211 Q99,213 99,224 L96,262 Q92,240 92,214 Z'], ['calves', 'M76,300 Q71,321 78,351 L86,353 Q91,322 88,300 Z'],
-  ],
-  back: [
-    ['traps', 'M88,51 L112,51 L131,66 Q116,74 106,96 L100,104 L94,96 Q84,74 69,66 Z', true], ['rear_delts', 'M70,67 Q58,65 52,73 Q53,84 60,87 Q66,78 72,72 Z'],
-    ['side_delts', 'M54,69 Q47,74 47,85 L54,88 Q53,78 57,71 Z'], ['mid_back', 'M94,80 Q84,84 82,104 Q88,112 96,110 Z'],
-    ['lats', 'M80,96 Q65,110 70,147 Q80,161 90,158 Q93,126 90,104 Z'], ['lower_back', 'M93,150 Q88,166 90,185 L99,187 L99,150 Z'],
-    ['triceps', 'M50,89 Q45,101 47,119 Q54,121 58,112 Q61,98 56,89 Z'], ['forearms', 'M46,124 Q40,141 38,166 L46,169 Q53,148 55,126 Z'],
-    ['abductors', 'M68,190 Q63,198 68,209 L77,204 Q77,194 74,190 Z'], ['glutes', 'M99,196 L99,228 Q86,235 74,227 Q69,210 76,198 Q88,191 99,196 Z'],
-    ['hamstrings', 'M72,236 Q69,262 76,293 L88,293 Q95,262 92,236 Z'], ['calves', 'M74,302 Q69,321 76,351 L88,351 Q95,322 90,302 Z'],
-  ],
+// ── Phase-synced 2D biomechanics figure (side view, facing +x). ──
+// Each pose is a set of joint angles: tr trunk lean, fx upper-spine flexion, nk neck, arm/fore and
+// thigh/shin absolute segment angles (0 = pointing down, 90 = forward). W / A / A2 pin a hand or
+// ankle to a point and the elbow / knee is then solved with two-bone IK, so limbs never stretch.
+const ML = { th:42, sh:42, tl:24, tu:24, nk:16, ua:29, fa:26, ft:14 };
+const FLOOR_Y = 184;
+const mvec = (a, l) => [Math.sin(a * Math.PI / 180) * l, Math.cos(a * Math.PI / 180) * l];
+const madd = (p, v) => [p[0] + v[0], p[1] + v[1]];
+const msub = (a, b) => [a[0] - b[0], a[1] - b[1]];
+const munit = v => { const l = Math.hypot(v[0], v[1]) || 1; return [v[0] / l, v[1] / l]; };
+const mmul = (v, k) => [v[0] * k, v[1] * k];
+const r1 = n => Math.round(n * 10) / 10;
+
+function solveIK(root, target, l1, l2, bend) {
+  const d = msub(target, root), dist = Math.hypot(d[0], d[1]) || 1e-6, u = [d[0] / dist, d[1] / dist];
+  const dc = Math.min(dist, l1 + l2 - 0.01), a = (l1 * l1 - l2 * l2 + dc * dc) / (2 * dc), h = Math.sqrt(Math.max(0, l1 * l1 - a * a));
+  return [madd(madd(root, mmul(u, a)), [-u[1] * h * bend, u[0] * h * bend]), madd(root, mmul(u, dc))];
+}
+
+function solvePose(q, spec) {
+  const P = q.P, up = 180 - (q.tr || 0);
+  const T = madd(P, mvec(up, ML.tl)), S = madd(T, mvec(up - (q.fx || 0), ML.tu));
+  const H = madd(S, mvec(up - (q.fx || 0) - (q.nk || 0), ML.nk));
+  let E, W;
+  if(q.W) [E, W] = solveIK(S, q.W, ML.ua, ML.fa, spec.eb ?? 1);
+  else { E = madd(S, mvec(q.arm || 0, ML.ua)); W = madd(E, mvec(q.fore || 0, ML.fa)); }
+  const leg = (A, thigh, shin, kb) => {
+    if(A) return solveIK(P, A, ML.th, ML.sh, kb);
+    const K = madd(P, mvec(thigh || 0, ML.th)); return [K, madd(K, mvec(shin || 0, ML.sh))];
+  };
+  const [K, A] = leg(q.A, q.thigh, q.shin, spec.kb ?? -1);
+  const two = q.A2 || q.thigh2 !== undefined;
+  const [K2, A2] = two ? leg(q.A2, q.thigh2, q.shin2, spec.kb2 ?? -1) : [K, A];
+  const foot = (an, ang) => [madd(an, mvec(ang, -3)), madd(an, mvec(ang, ML.ft))];
+  const [heel, toe] = foot(A, q.foot ?? 90), [heel2, toe2] = foot(A2, two ? (q.foot2 ?? 90) : (q.foot ?? 90));
+  return { P, T, S, H, E, W, K, A, K2, A2, heel, toe, heel2, toe2, hand: madd(W, mmul(munit(msub(W, E)), 5)) };
+}
+
+function lerpPose(a, b, t) {
+  const out = {};
+  new Set([...Object.keys(a), ...Object.keys(b)]).forEach(k => {
+    const x = a[k] ?? b[k], y = b[k] ?? a[k];
+    out[k] = Array.isArray(x) ? [x[0] + (y[0] - x[0]) * t, x[1] + (y[1] - x[1]) * t] : typeof x === 'number' ? x + (y - x) * t : x;
+  });
+  return out;
+}
+
+function poseDiff(a, b) {
+  let m = 0;
+  new Set([...Object.keys(a), ...Object.keys(b)]).forEach(k => {
+    const x = a[k], y = b[k];
+    if(Array.isArray(x) && Array.isArray(y)) m = Math.max(m, Math.abs(x[0] - y[0]), Math.abs(x[1] - y[1]));
+    else if(typeof x === 'number' && typeof y === 'number') m = Math.max(m, Math.abs(x - y));
+    else if(x !== y) m = Infinity;
+  });
+  return m;
+}
+
+const mBar = (x1, y1, x2, y2, w) => {
+  const u = munit([x2 - x1, y2 - y1]), n = [-u[1] * w / 2, u[0] * w / 2];
+  return `M${r1(x1 + n[0])},${r1(y1 + n[1])} L${r1(x2 + n[0])},${r1(y2 + n[1])} L${r1(x2 - n[0])},${r1(y2 - n[1])} L${r1(x1 - n[0])},${r1(y1 - n[1])} Z`;
+};
+const MPROPS = {
+  bench: mBar(56, 151, 162, 151, 6) + mBar(70, 154, 70, 184, 4) + mBar(148, 154, 148, 184, 4),
+  incline: mBar(110, 155, 70, 113, 7) + mBar(100, 155, 146, 155, 6) + mBar(122, 158, 122, 184, 4) + mBar(84, 130, 84, 184, 3),
+  pullup: mBar(60, -4, 180, -4, 4) + mBar(64, -4, 64, 184, 3) + mBar(176, -4, 176, 184, 3),
+  dip: mBar(76, 107, 150, 107, 4) + mBar(84, 107, 84, 184, 3) + mBar(142, 107, 142, 184, 3),
+  seat: mBar(70, 146, 116, 146, 7) + mBar(92, 150, 92, 184, 4) + mBar(68, 146, 60, 100, 6),
 };
 
-function svgShape(tag, a, mirror, extra) {
-  const m = mirror ? { ...a, cx: a.cx !== undefined ? 200 - a.cx : undefined, rot: a.rot ? -a.rot : 0 } : a;
-  if(tag === 'ellipse') return `<ellipse cx="${m.cx}" cy="${m.cy}" rx="${m.rx}" ry="${m.ry}" transform="rotate(${m.rot || 0} ${m.cx} ${m.cy})" ${extra}/>`;
-  if(tag === 'circle') return `<circle cx="${m.cx}" cy="${m.cy}" r="${m.r}" ${extra}/>`;
-  if(tag === 'rect') return `<rect x="${a.x}" y="${a.y}" width="${a.width}" height="${a.height}" rx="${a.rx}" ${extra}/>`;
-  return `<path d="${a.d}" ${extra}/>`;
-}
-
-function bodyViewSvg(view, primary, secondary, offsetX) {
-  const body = BODY_SHAPES.map(([tag, a, center]) => svgShape(tag, a, false, 'class="fg-body"') + (center ? '' : svgShape(tag, a, true, 'class="fg-body"'))).join('');
-  const muscles = MUSCLE_PATHS[view].map(([id, d, center]) => {
-    const cls = primary.includes(id) ? 'fg-muscle fg-primary' : secondary.includes(id) ? 'fg-muscle fg-secondary' : 'fg-muscle';
-    const one = mirror => `<path class="${cls}" data-muscle="${id}" d="${d}"${mirror ? ' transform="matrix(-1 0 0 1 200 0)"' : ''}><title>${MUSCLE_NAMES[id]}</title></path>`;
-    return one(false) + (center ? '' : one(true));
-  }).join('');
-  return `<g transform="translate(${offsetX},0)">${body}${muscles}<text x="100" y="398" text-anchor="middle" class="fg-view-label">${view === 'front' ? 'FRONT' : 'BACK'}</text></g>`;
-}
-
-function muscleMapSvg(primary, secondary) {
-  return `<svg class="fg-svg" viewBox="0 0 420 402" role="img" aria-label="Muscle map: primary ${primary.map(m => MUSCLE_NAMES[m]).join(', ')}">
-    ${bodyViewSvg('front', primary, secondary, 0)}${bodyViewSvg('back', primary, secondary, 220)}</svg>`;
-}
-
-// ── Animated motion figure (side view). Joints: h head, s shoulder, e elbow, w wrist, p hip, k/a front knee/ankle, k2/a2 back leg.
-const STAND = { h:[100,40], s:[100,62], e:[100,90], w:[100,116], p:[100,115], k:[100,150], a:[100,184] };
-const pose = (o) => ({ ...STAND, ...o });
-const MOTION_POSES = {
-  hpush: { label:'Push-up / press path', poses:[
-      pose({ a:[172,180], k:[142,171], p:[112,162], s:[62,146], h:[46,139], e:[62,163], w:[62,181] }),
-      pose({ a:[172,180], k:[142,173], p:[112,167], s:[62,158], h:[46,153], e:[78,168], w:[62,181] }),
-      pose({ a:[172,180], k:[142,171], p:[112,162], s:[62,146], h:[46,139], e:[62,163], w:[62,181] }) ],
-    arrows:[null, [40,140,40,168], [40,170,40,140]], bar:'floor' },
-  vpush: { label:'Overhead press path', poses:[
-      pose({ e:[82,82], w:[88,62] }), pose({ e:[82,84], w:[88,64] }), pose({ e:[96,40], w:[100,16] }) ],
-    arrows:[null, [128,26,128,60], [128,62,128,22]], bar:'hand' },
-  hpull: { label:'Row path', poses:[
-      pose({ a:[122,184], k:[116,150], p:[126,114], s:[76,95], h:[60,88], e:[76,123], w:[76,150] }),
-      pose({ a:[122,184], k:[116,150], p:[126,114], s:[76,95], h:[60,88], e:[74,125], w:[74,152] }),
-      pose({ a:[122,184], k:[116,150], p:[126,114], s:[76,95], h:[60,88], e:[104,102], w:[90,124] }) ],
-    arrows:[null, [48,118,48,150], [48,150,48,118]], bar:'hand' },
-  vpull: { label:'Pull-up path', poses:[
-      pose({ w:[100,20], e:[100,40], s:[100,62], h:[100,47], p:[100,112], k:[100,146], a:[100,180] }),
-      pose({ w:[100,20], e:[100,40], s:[100,62], h:[100,47], p:[100,112], k:[100,146], a:[100,180] }),
-      pose({ w:[100,20], e:[80,46], s:[100,42], h:[100,25], p:[100,92], k:[100,126], a:[100,160] }) ],
-    arrows:[null, [138,40,138,70], [138,72,138,40]], bar:'pullup' },
-  squat: { label:'Squat path', poses:[
-      pose({ e:[112,80], w:[116,64] }), pose({ p:[80,150], k:[126,156], s:[96,98], h:[102,82], e:[112,114], w:[118,98] }), pose({ e:[112,80], w:[116,64] }) ],
-    arrows:[null, [150,110,150,150], [150,152,150,110]], bar:'hand' },
-  hinge: { label:'Hip hinge path', poses:[
-      pose({}), pose({ p:[124,112], k:[110,150], s:[72,98], h:[57,90], e:[78,122], w:[82,146] }), pose({}) ],
-    arrows:[null, [150,112,170,112], [170,112,148,112]], bar:'hand' },
-  lunge: { label:'Split-squat path', poses:[
-      pose({ p:[100,112], k:[124,148], a:[130,184], k2:[86,150], a2:[70,184] }),
-      pose({ p:[100,136], k:[128,142], a:[132,184], s:[100,86], h:[100,70], e:[100,112], w:[100,136], k2:[82,178], a2:[58,182] }),
-      pose({ p:[100,112], k:[124,148], a:[130,184], k2:[86,150], a2:[70,184] }) ],
-    arrows:[null, [154,104,154,140], [154,142,154,104]], bar:'none' },
-  curl: { label:'Curl / extension path', poses:[
-      pose({}), pose({ e:[100,92], w:[102,118] }), pose({ e:[100,92], w:[120,74] }) ],
-    arrows:[null, [134,76,134,112], [134,112,134,76]], bar:'hand' },
-  triceps: { label:'Extension path', poses:[
-      pose({ e:[106,34], w:[86,52] }), pose({ e:[106,34], w:[84,56] }), pose({ e:[106,34], w:[108,8] }) ],
-    arrows:[null, [134,14,134,48], [134,50,134,12]], bar:'hand' },
-  core: { label:'Plank / brace', poses:[
-      pose({ a:[172,180], k:[142,171], p:[112,163], s:[62,156], h:[47,150], e:[62,180], w:[84,180] }),
-      pose({ a:[172,180], k:[142,172], p:[112,166], s:[62,156], h:[47,150], e:[62,180], w:[84,180] }),
-      pose({ a:[172,180], k:[142,170], p:[112,159], s:[62,156], h:[47,150], e:[62,180], w:[84,180] }) ],
-    arrows:[null, [112,140,112,158], [112,160,112,142]], bar:'floor' },
-  bridge: { label:'Hip-thrust path', poses:[
-      pose({ s:[52,174], h:[36,171], e:[66,180], w:[82,180], p:[104,176], k:[132,146], a:[142,182] }),
-      pose({ s:[52,174], h:[36,171], e:[66,180], w:[82,180], p:[104,178], k:[132,146], a:[142,182] }),
-      pose({ s:[52,170], h:[36,167], e:[66,180], w:[82,180], p:[100,146], k:[132,140], a:[142,182] }) ],
-    arrows:[null, [100,128,100,160], [100,162,100,128]], bar:'floor' },
-  calf: { label:'Calf-raise path', poses:[
-      pose({}), pose({ h:[100,44], s:[100,66], e:[100,94], w:[100,120], p:[100,119], k:[100,154], a:[100,186] }),
-      pose({ h:[100,30], s:[100,52], e:[100,80], w:[100,106], p:[100,105], k:[100,140], a:[102,176] }) ],
-    arrows:[null, [134,40,134,62], [134,64,134,36]], bar:'none' },
+const MBASE = { P:[112,96], tr:0, A:[112,180], foot:90, arm:0, fore:0 };
+const mpose = (...o) => Object.assign({}, MBASE, ...o);
+// poses: [setup, end of eccentric (stretch), end of concentric (contracted)]
+const MOTION_SPECS = {
+  pushup: { label:'Horizontal press · push-up', note:'Elbows tucked 45–60° from the torso', load:'none', eb:1,
+    poses:[ mpose({ A:[48,172], foot:-30, P:[125.6,142], tr:68.9, W:[168,180] }), mpose({ A:[48,172], foot:-30, P:[130.7,166.3], tr:86, W:[168,180] }),
+      mpose({ A:[48,172], foot:-30, P:[125.6,142], tr:68.9, W:[168,180] }) ],
+    arcs:[['S','E','W','elbow'], ['P','S','E','shoulder']], track:'S', fo:[0,-26] },
+  bench: { label:'Horizontal press · bench', note:'Elbows 45–60°, bar over mid-chest', load:'db', eb:-1, kb:1, prop:'bench',
+    poses:[ mpose({ P:[96,141], tr:90, A:[66,180], W:[144,86] }), mpose({ P:[96,141], tr:90, A:[66,180], W:[140,124] }),
+      mpose({ P:[96,141], tr:90, A:[66,180], W:[144,86] }) ],
+    arcs:[['S','E','W','elbow'], ['P','S','E','shoulder']], track:'W', fo:[18,0] },
+  incline: { label:'Incline / vertical press', note:'Press over the upper chest, elbows ~45°', load:'db', eb:1, prop:'incline',
+    poses:[ mpose({ P:[118,146], tr:-42, A:[160,180], W:[92,57] }), mpose({ P:[118,146], tr:-42, A:[160,180], W:[96,101] }),
+      mpose({ P:[118,146], tr:-42, A:[160,180], W:[92,57] }) ],
+    arcs:[['S','E','W','elbow']], track:'W', fo:[22,0] },
+  ohp: { label:'Vertical press · overhead', note:'Ribs down, bar path over mid-foot', load:'db', eb:1,
+    poses:[ mpose({ W:[122,46] }), mpose({ W:[122,46] }), mpose({ W:[113,-6] }) ],
+    arcs:[['S','E','W','elbow']], track:'W', fo:[24,0] },
+  row: { label:'Horizontal row', note:'Drive the elbow to the hip', load:'db', eb:1,
+    poses:[ mpose({ A:[100,180], P:[84,104], tr:62, W:[128,136] }), mpose({ A:[100,180], P:[84,104], tr:62, W:[129,137] }),
+      mpose({ A:[100,180], P:[84,104], tr:62, W:[112,108] }) ],
+    arcs:[['S','E','W','elbow']], track:'W', fo:[18,0] },
+  pullup: { label:'Vertical pull · pull-up', note:'Full hang → elbows to ribs', load:'none', eb:1, prop:'pullup',
+    poses:[ { P:[111.5,100], tr:3, W:[118,-2], thigh:10, shin:-60, foot:-30 }, { P:[111.5,100], tr:3, W:[118,-2], thigh:10, shin:-60, foot:-30 },
+      { P:[111.5,64], tr:-4, W:[118,-2], thigh:20, shin:-50, foot:-30 } ],
+    arcs:[['S','E','W','elbow']], track:'S', fo:[-30,0] },
+  squat: { label:'Squat', note:'Knees track over the toes', load:'db',
+    poses:[ mpose({ tr:3, arm:25, fore:165 }), mpose({ P:[88,140], tr:38, arm:45, fore:175 }), mpose({ tr:3, arm:25, fore:165 }) ],
+    arcs:[['P','K','A','knee'], ['S','P','K','hip']], guide:'knee', track:'P', fo:[-26,0] },
+  hinge: { label:'Hip hinge · RDL', note:'Hips back, neutral spine, bar close', load:'bar',
+    poses:[ mpose({}), mpose({ P:[76,106], tr:75 }), mpose({}) ],
+    arcs:[['S','P','K','hip']], guide:'spine', track:'P', fo:[0,-22] },
+  lunge: { label:'Lunge / split squat', note:'Front knee over the second toe', load:'none',
+    poses:[ mpose({ A:[132,180], A2:[66,175], foot2:50, P:[100,104], tr:2 }), mpose({ A:[132,180], A2:[66,175], foot2:50, P:[100,138], tr:6 }),
+      mpose({ A:[132,180], A2:[66,175], foot2:50, P:[100,104], tr:2 }) ],
+    arcs:[['P','K','A','knee']], guide:'knee', track:'P', fo:[-40,0] },
+  curl: { label:'Elbow flexion · curl', note:'Elbows pinned to the sides', load:'db',
+    poses:[ mpose({ arm:-4, fore:0 }), mpose({ arm:-4, fore:2 }), mpose({ arm:-4, fore:145 }) ],
+    arcs:[['S','E','W','elbow']], track:'W', fo:[20,0] },
+  overhead: { label:'Elbow extension · overhead', note:'Upper arm fixed, only the forearm moves', load:'db',
+    poses:[ mpose({ arm:165, fore:170 }), mpose({ arm:165, fore:315 }), mpose({ arm:165, fore:170 }) ],
+    arcs:[['S','E','W','elbow']], track:'W', fo:[-22,0] },
+  pushdown: { label:'Elbow extension · pushdown', note:'Elbows pinned, lock out fully', load:'bar',
+    poses:[ mpose({ arm:2, fore:2 }), mpose({ arm:2, fore:125 }), mpose({ arm:2, fore:2 }) ],
+    arcs:[['S','E','W','elbow']], track:'W', fo:[22,0] },
+  dip: { label:'Dip', note:'Lower to ~90° at the elbow', load:'none', eb:1, prop:'dip',
+    poses:[ { P:[106.7,96.9], tr:4, W:[110,104], thigh:25, shin:-80, foot:-20 }, { P:[105.6,126.4], tr:15, W:[110,104], thigh:25, shin:-80, foot:-20 },
+      { P:[106.7,96.9], tr:4, W:[110,104], thigh:25, shin:-80, foot:-20 } ],
+    arcs:[['S','E','W','elbow']], track:'S', fo:[-30,0] },
+  plank: { label:'Core · plank brace', note:'One straight line, ribs down', load:'none',
+    poses:[ mpose({ A:[40,172], foot:-30, P:[122.9,158.6], tr:80.8, arm:0, fore:90 }), mpose({ A:[40,172], foot:-30, P:[122.9,160], tr:80.8, arm:0, fore:90 }),
+      mpose({ A:[40,172], foot:-30, P:[122.9,155.5], tr:79.5, arm:0, fore:90 }) ],
+    arcs:[['S','P','K','hip']], guide:'line', track:'P', fo:[0,-24] },
+  crunch: { label:'Core · crunch', note:'Curl the ribs toward the pelvis', load:'none',
+    poses:[ mpose({ P:[118,174], tr:-90, A:[156,180], arm:90, fore:90 }), mpose({ P:[118,174], tr:-90, A:[156,180], arm:90, fore:90 }),
+      mpose({ P:[118,174], tr:-84, fx:36, A:[156,180], arm:100, fore:100 }) ],
+    arcs:[['S','T','P','spine']], track:'S', fo:[0,-22] },
+  bridge: { label:'Hip extension · bridge', note:'Finish with the glutes, not the low back', load:'none',
+    poses:[ mpose({ P:[104,175], tr:-90, A:[140,180], arm:90, fore:90 }), mpose({ P:[104,175], tr:-90, A:[140,180], arm:90, fore:90 }),
+      mpose({ P:[106,146], tr:-117.6, A:[140,180], arm:80, fore:80 }) ],
+    arcs:[['S','P','K','hip']], track:'P', fo:[0,-24] },
+  calf: { label:'Ankle plantarflexion', note:'Pause in the stretch, rise to the big toe', load:'none',
+    poses:[ mpose({}), mpose({}), mpose({ P:[110,85], A:[110,169], foot:40 }) ],
+    arcs:[['K','A','toe','ankle']], track:'A', fo:[-22,0] },
+  raise: { label:'Shoulder raise', note:'Lead with the elbows to shoulder height', load:'db',
+    poses:[ mpose({ arm:4, fore:8 }), mpose({ arm:4, fore:8 }), mpose({ arm:84, fore:90 }) ],
+    arcs:[['P','S','E','shoulder']], track:'W', fo:[10,-14] },
+  legext: { label:'Knee extension', note:'Knee lined up with the machine pivot', load:'none', prop:'seat',
+    poses:[ { P:[100,140], tr:-8, arm:10, fore:30, thigh:88, shin:2, foot:90 }, { P:[100,140], tr:-8, arm:10, fore:30, thigh:88, shin:2, foot:90 },
+      { P:[100,140], tr:-8, arm:10, fore:30, thigh:88, shin:84, foot:170 } ],
+    arcs:[['P','K','A','knee']], track:'A', fo:[0,18] },
+  legcurl: { label:'Knee flexion', note:'Hips pinned, full range', load:'none', prop:'seat',
+    poses:[ { P:[100,140], tr:-8, arm:10, fore:30, thigh:88, shin:80, foot:160 }, { P:[100,140], tr:-8, arm:10, fore:30, thigh:88, shin:80, foot:160 },
+      { P:[100,140], tr:-8, arm:10, fore:30, thigh:88, shin:-15, foot:75 } ],
+    arcs:[['P','K','A','knee']], track:'A', fo:[0,18] },
 };
-const MOTION_ALIAS = { lateral:'vpush', reardelt:'hpull', dip:'hpush', pullover:'vpull', adduction:'squat', abduction:'squat', legmachine:'squat', general:'squat' };
 
-function motionSpec(key) { return MOTION_POSES[key] || MOTION_POSES[MOTION_ALIAS[key]] || MOTION_POSES.squat; }
+function motionKeyFor(key, name) {
+  const n = String(name || '').toLowerCase();
+  if(key === 'hpush') return /push-?up|press-?up/.test(n) ? 'pushup' : /incline/.test(n) ? 'incline' : 'bench';
+  if(key === 'vpush') return /incline/.test(n) ? 'incline' : 'ohp';
+  if(key === 'core') return /crunch|sit-?up|v-?up|jackknife/.test(n) ? 'crunch' : 'plank';
+  if(key === 'triceps') return /pushdown|press-?down/.test(n) ? 'pushdown' : 'overhead';
+  if(key === 'legmachine') return /curl/.test(n) ? 'legcurl' : 'legext';
+  return { hpull:'row', reardelt:'row', vpull:'pullup', pullover:'pullup', lateral:'raise', curl:'curl', dip:'dip', calf:'calf',
+    bridge:'bridge', lunge:'lunge', hinge:'hinge', squat:'squat' }[key] || 'squat';
+}
+function motionSpec(mkey) { return MOTION_SPECS[mkey] || MOTION_SPECS.squat; }
+
+const MOTION_SEG_MUSCLES = {
+  torsoU:['chest','lats','mid_back','traps','serratus'], torsoL:['abs','obliques','lower_back'],
+  arm:['front_delts','side_delts','rear_delts','biceps','triceps'], fore:['forearms'],
+  thigh:['quads','hamstrings','glutes','adductors','abductors'], shin:['calves'],
+};
 
 function jointAngle(a, b, c) {
-  const v1 = [a[0] - b[0], a[1] - b[1]], v2 = [c[0] - b[0], c[1] - b[1]];
+  const v1 = msub(a, b), v2 = msub(c, b);
   const cos = (v1[0] * v2[0] + v1[1] * v2[1]) / (Math.hypot(...v1) * Math.hypot(...v2) || 1);
   return Math.round(Math.acos(Math.max(-1, Math.min(1, cos))) * 180 / Math.PI);
 }
 
-function motionSvg(key) {
-  const spec = motionSpec(key);
-  const prop = spec.bar === 'pullup' ? '<line class="fg-prop" x1="60" y1="20" x2="140" y2="20"/>' : '';
-  return `<svg class="fg-motion" viewBox="0 0 200 200" role="img" aria-label="${escapeHtml(spec.label)} animation">
-    <defs><marker id="fg-arrowhead" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="#fbbf24"/></marker></defs>
-    <line class="fg-ground" x1="10" y1="186" x2="190" y2="186"/>${prop}
-    <g class="fg-figure">
-      <line data-seg="p-k2"/><line data-seg="k2-a2"/>
-      <line data-seg="s-p" class="fg-torso"/><line data-seg="p-k"/><line data-seg="k-a"/>
-      <line data-seg="s-e"/><line data-seg="e-w"/>
-      <circle data-joint="h" r="9" class="fg-head"/><circle data-joint="w" r="4" class="fg-load"/>
-      ${['s','e','p','k','a'].map(j => `<circle data-joint="${j}" r="3" class="fg-joint"/>`).join('')}
-    </g>
-    <line class="fg-force" marker-end="url(#fg-arrowhead)" x1="0" y1="0" x2="0" y2="0" style="opacity:0"/>
-    <text class="fg-angle" x="0" y="0"></text>
-    <text class="fg-motion-label" x="100" y="198" text-anchor="middle">${escapeHtml(spec.label)}</text></svg>`;
+// Tapered limb with gently bulging (muscle-belly) sides and rounded ends.
+function limbPath(A, B, wa, wb, bulge = 1) {
+  const u = munit(msub(B, A)), n = [-u[1], u[0]], L = Math.hypot(B[0] - A[0], B[1] - A[1]);
+  const ra = wa / 2, rb = wb / 2, mid = madd(A, mmul(u, L * 0.42)), rm = (ra + rb) / 2 + bulge;
+  const p = (pt, s, r) => `${r1(pt[0] + n[0] * r * s)},${r1(pt[1] + n[1] * r * s)}`;
+  return `M${p(A, 1, ra)} Q${p(mid, 1, rm)} ${p(B, 1, rb)} A${r1(rb)},${r1(rb)} 0 0 0 ${p(B, -1, rb)} Q${p(mid, -1, rm)} ${p(A, -1, ra)} A${r1(ra)},${r1(ra)} 0 0 0 ${p(A, 1, ra)} Z`;
 }
 
-function drawMotionPose(svg, p, arrow) {
+function headPath(H, S) {
+  const u = munit(msub(H, S)), f = [-u[1], u[0]], k = 0.5523;
+  const at = (a, b) => madd(madd(H, mmul(u, a)), mmul(f, b));
+  const T = at(9.5, 0), F = at(0, 8), B = at(-8.5, 1.5), K = at(0, -7.5);
+  const c = (pt, du, df) => { const q = madd(madd(pt, mmul(u, du)), mmul(f, df)); return `${r1(q[0])},${r1(q[1])}`; };
+  const P = pt => `${r1(pt[0])},${r1(pt[1])}`;
+  return `M${P(T)} C${c(T, 0, 8 * k)} ${c(F, 9.5 * k, 0)} ${P(F)} C${c(F, -8.5 * k, 0)} ${c(B, 0, 6.5 * k)} ${P(B)} C${c(B, 0, -8 * k)} ${c(K, -8.5 * k, 0)} ${P(K)} C${c(K, 9.5 * k, 0)} ${c(T, 0, -7.5 * k)} ${P(T)} Z`;
+}
+
+function loadPath(J, type) {
+  if(type === 'db' || type === 'bar') {
+    const r = type === 'bar' ? 9 : 6.5, c = J.hand;
+    return Array.from({ length: 8 }, (_, i) => { const a = Math.PI / 8 + i * Math.PI / 4; return `${i ? 'L' : 'M'}${r1(c[0] + Math.cos(a) * r)},${r1(c[1] + Math.sin(a) * r)}`; }).join(' ') + ' Z';
+  }
+  return '';
+}
+
+function packPath(J) {
+  const u = munit(msub(J.S, J.T)), f = [-u[1], u[0]], c = madd(madd(J.T, mmul(u, 12)), mmul(f, -12));
+  const pt = (a, b) => { const q = madd(madd(c, mmul(u, a)), mmul(f, b)); return `${r1(q[0])},${r1(q[1])}`; };
+  return `M${pt(9, 2)} Q${pt(11, -6)} ${pt(7, -7)} L${pt(-9, -7)} Q${pt(-11, -6)} ${pt(-10, 2)} Z`;
+}
+
+function arcPath(A, B, C, r = 10) {
+  const u = munit(msub(A, B)), v = munit(msub(C, B)), p1 = madd(B, mmul(u, r)), p2 = madd(B, mmul(v, r));
+  const sweep = u[0] * v[1] - u[1] * v[0] > 0 ? 1 : 0;
+  return `M${r1(B[0])},${r1(B[1])} L${r1(p1[0])},${r1(p1[1])} A${r},${r} 0 0 ${sweep} ${r1(p2[0])},${r1(p2[1])} Z`;
+}
+
+function motionSvg(mkey, primary, secondary, exName) {
+  const spec = motionSpec(mkey);
+  const segCls = part => {
+    const m = MOTION_SEG_MUSCLES[part] || [];
+    return m.some(x => primary.includes(x)) ? ' fg-on-primary' : m.some(x => secondary.includes(x)) ? ' fg-on-secondary' : '';
+  };
+  const seg = (part, extra = '') => `<path data-part="${part}" class="fg-seg${segCls(part.replace(/2$/, ''))}${extra}"/>`;
+  const pack = mkey === 'pushup' && /backpack|weighted/i.test(exName || '');
+  return `<svg class="fg-motion" viewBox="0 -14 240 214" role="img" aria-label="${escapeHtml(spec.label)} animation">
+    <defs><marker id="fg-arrowhead" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 Z" fill="#fbbf24"/></marker></defs>
+    ${spec.prop ? `<path class="fg-prop" d="${MPROPS[spec.prop]}"/>` : ''}
+    <path class="fg-ground" d="M8,${FLOOR_Y} L232,${FLOOR_Y}"/>
+    <path class="fg-guide" data-guide d=""/><text class="fg-guide-label" data-guide-label></text>
+    <g class="fg-fig">
+      ${seg('thigh2', ' fg-far')}${seg('shin2', ' fg-far')}${seg('foot2', ' fg-far')}
+      ${seg('torsoL')}${seg('torsoU')}${seg('neck')}<path data-part="head" class="fg-head"/>
+      ${pack ? '<path data-part="pack" class="fg-load"/>' : ''}
+      ${seg('thigh')}${seg('shin')}${seg('foot')}${seg('arm')}${seg('fore')}${seg('hand')}
+      ${spec.load === 'db' || spec.load === 'bar' ? '<path data-part="load" class="fg-load"/>' : ''}
+    </g>
+    ${spec.arcs.map((_, i) => `<path class="fg-arc" data-arc="${i}"/><text class="fg-angle" data-arc-label="${i}"></text>`).join('')}
+    <path class="fg-force" marker-end="url(#fg-arrowhead)" d="" style="opacity:0"/>
+    <text class="fg-motion-note" x="8" y="-3">${escapeHtml(spec.note)}</text>
+    <text class="fg-motion-label" x="120" y="197" text-anchor="middle">${escapeHtml(spec.label.toUpperCase())}</text></svg>`;
+}
+
+function drawMotionPose(svg, q, spec, force) {
   if(!svg) return;
-  const pt = j => p[j] || (j === 'k2' ? p.k : j === 'a2' ? p.a : STAND[j]);
-  svg.querySelectorAll('[data-seg]').forEach(l => {
-    const [a, b] = l.dataset.seg.split('-');
-    const A = pt(a), B = pt(b);
-    l.setAttribute('x1', A[0]); l.setAttribute('y1', A[1]); l.setAttribute('x2', B[0]); l.setAttribute('y2', B[1]);
+  const J = solvePose(q, spec);
+  const set = (part, d) => { const el = svg.querySelector(`[data-part="${part}"]`); if(el) el.setAttribute('d', d); };
+  set('torsoL', limbPath(J.P, J.T, 15, 14, 1)); set('torsoU', limbPath(J.T, J.S, 14, 17, 1.5));
+  set('neck', limbPath(J.S, madd(J.S, mmul(msub(J.H, J.S), 0.6)), 7, 6, 0)); set('head', headPath(J.H, J.S));
+  set('thigh', limbPath(J.P, J.K, 13, 9, 2)); set('shin', limbPath(J.K, J.A, 9, 6, 1.5)); set('foot', limbPath(J.heel, J.toe, 6, 4, 0));
+  set('thigh2', limbPath(J.P, J.K2, 13, 9, 2)); set('shin2', limbPath(J.K2, J.A2, 9, 6, 1.5)); set('foot2', limbPath(J.heel2, J.toe2, 6, 4, 0));
+  set('arm', limbPath(J.S, J.E, 9, 7, 1.5)); set('fore', limbPath(J.E, J.W, 7, 5, 1)); set('hand', limbPath(J.W, J.hand, 5.5, 4.5, 0));
+  set('load', loadPath(J, spec.load)); set('pack', packPath(J));
+  spec.arcs.forEach(([a, b, c, name], i) => {
+    const arc = svg.querySelector(`[data-arc="${i}"]`), label = svg.querySelector(`[data-arc-label="${i}"]`);
+    if(!arc || !label) return;
+    arc.setAttribute('d', arcPath(J[a], J[b], J[c]));
+    const bis = munit(madd(munit(msub(J[a], J[b])), munit(msub(J[c], J[b]))));
+    const at = madd(J[b], mmul(bis[0] || bis[1] ? bis : [0, -1], -16));
+    label.setAttribute('x', r1(Math.max(26, Math.min(214, at[0])))); label.setAttribute('y', r1(Math.min(FLOOR_Y - 6, at[1] + 3))); label.setAttribute('text-anchor', 'middle');
+    label.textContent = `${name} ${jointAngle(J[a], J[b], J[c])}°`;
   });
-  svg.querySelectorAll('[data-joint]').forEach(c => { const P = pt(c.dataset.joint); c.setAttribute('cx', P[0]); c.setAttribute('cy', P[1]); });
-  const angle = svg.querySelector('.fg-angle');
-  if(angle) { const e = pt('e'); angle.setAttribute('x', e[0] + 7); angle.setAttribute('y', e[1] - 6); angle.textContent = `${jointAngle(pt('s'), e, pt('w'))}°`; }
-  const force = svg.querySelector('.fg-force');
-  if(force) {
-    if(arrow) { ['x1','y1','x2','y2'].forEach((k, i) => force.setAttribute(k, arrow[i])); force.style.opacity = '1'; }
-    else force.style.opacity = '0';
+  const guide = svg.querySelector('[data-guide]'), gl = svg.querySelector('[data-guide-label]');
+  if(guide && gl) {
+    let d = '', lx = 0, ly = 0, txt = '';
+    if(spec.guide === 'knee') { d = `M${r1(J.toe[0])},${FLOOR_Y} L${r1(J.toe[0])},${r1(J.K[1] - 10)}`; lx = J.toe[0] + 3; ly = FLOOR_Y - 4; txt = 'toe line'; }
+    else if(spec.guide === 'spine' || spec.guide === 'line') {
+      const from = spec.guide === 'line' ? J.A : J.P, n = munit(msub(J.H, from)), off = [n[1] * 10, -n[0] * 10];
+      const p1 = madd(from, off), p2 = madd(J.H, off);
+      d = `M${r1(p1[0])},${r1(p1[1])} L${r1(p2[0])},${r1(p2[1])}`; lx = p2[0] - 30; ly = p2[1] - 6; txt = spec.guide === 'line' ? 'straight line' : 'neutral spine';
+    }
+    guide.setAttribute('d', d); gl.setAttribute('x', r1(lx)); gl.setAttribute('y', r1(ly)); gl.textContent = txt;
+  }
+  const fe = svg.querySelector('.fg-force');
+  if(fe) {
+    if(force && Math.hypot(force[2] - force[0], force[3] - force[1]) > 4) { fe.setAttribute('d', `M${r1(force[0])},${r1(force[1])} L${r1(force[2])},${r1(force[3])}`); fe.style.opacity = '1'; }
+    else fe.style.opacity = '0';
   }
 }
 
-function animateMotionTo(phase) {
-  const svg = document.querySelector('#form-guide-modal .fg-motion');
-  if(!svg || !formGuideCtx) return;
-  const spec = motionSpec(formGuideCtx.key);
-  const from = formGuideCtx.motionPose || spec.poses[0], to = spec.poses[phase] || spec.poses[0];
-  const arrow = spec.arrows[phase];
-  cancelAnimationFrame(formGuideCtx.raf);
+const easeInOutSine = t => -(Math.cos(Math.PI * t) - 1) / 2;
+const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+
+// Moves the figure through one execution phase in real time (secs = the phase's tempo).
+function playMotionPhase(phase, secs) {
+  const ctx = formGuideCtx, svg = document.querySelector('#form-guide-modal .fg-motion');
+  if(!ctx || !svg) return;
+  const spec = motionSpec(ctx.motionKey), cur = ctx.q || spec.poses[0];
+  cancelAnimationFrame(ctx.raf);
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const dur = reduce ? 0 : 700, start = performance.now();
-  const step = (now) => {
-    const t = dur ? Math.min(1, (now - start) / dur) : 1, ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-    const cur = {};
-    Object.keys({ ...from, ...to }).forEach(j => {
-      const A = from[j] || to[j], B = to[j] || from[j];
-      cur[j] = [A[0] + (B[0] - A[0]) * ease, A[1] + (B[1] - A[1]) * ease];
-    });
-    drawMotionPose(svg, cur, t === 1 ? arrow : null);
-    if(formGuideCtx) formGuideCtx.motionPose = cur;
-    if(t < 1 && formGuideCtx) formGuideCtx.raf = requestAnimationFrame(step);
+  const legs = [];
+  let force = null;
+  if(phase === 0) legs.push([cur, spec.poses[0], 600, easeInOutSine]);
+  else {
+    const from = spec.poses[phase === 1 ? 2 : 1], to = spec.poses[phase], full = Math.max(300, secs * 1000);
+    const prep = poseDiff(cur, from) > 1.5 ? Math.min(600, full * 0.25) : 0;
+    if(prep) legs.push([cur, from, prep, easeInOutSine]);
+    legs.push([from, to, full - prep, phase === 1 ? easeInOutSine : easeOutCubic]);
+    const a = solvePose(from, spec)[spec.track], b = solvePose(to, spec)[spec.track], o = spec.fo || [0, 0];
+    const dir = munit(msub(b, a)), len = Math.hypot(b[0] - a[0], b[1] - a[1]), pad = Math.min(3, len / 4);
+    force = [a[0] + o[0] + dir[0] * pad, a[1] + o[1] + dir[1] * pad, b[0] + o[0] - dir[0] * pad, b[1] + o[1] - dir[1] * pad];
+  }
+  if(reduce) { const last = legs[legs.length - 1]; ctx.q = last[1]; drawMotionPose(svg, ctx.q, spec, force); return; }
+  let li = 0, start = performance.now();
+  const step = now => {
+    if(formGuideCtx !== ctx) return;
+    const [a, b, dur, ease] = legs[li];
+    const t = Math.min(1, (now - start) / dur);
+    ctx.q = lerpPose(a, b, ease(t));
+    drawMotionPose(svg, ctx.q, spec, force);
+    if(t >= 1) { if(++li >= legs.length) return; start = now; }
+    ctx.raf = requestAnimationFrame(step);
   };
-  formGuideCtx.raf = requestAnimationFrame(step);
+  ctx.raf = requestAnimationFrame(step);
 }
 
 const FG_ICON = (() => {
   const s = (body, cls = '') => `<svg class="fg-ic ${cls}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
   return {
-    target: s('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/>'),
-    setup: s('<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'),
+    target: formTargetIcon(),
+    setup: s('<path d="M12 9a3 3 0 1 0 0.01 0"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>'),
     down: s('<path d="M12 4v14M6 12l6 6 6-6"/>'), up: s('<path d="M12 20V6M6 12l6-6 6 6"/>'),
     bulb: s('<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.8.8 1 1.5 1 2.5h6c0-1 .2-1.7 1-2.5A6 6 0 0 0 12 3z"/>'),
     warn: s('<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/>'), trend: s('<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>'),
     x: s('<path d="M6 6l12 12M18 6L6 18"/>', 'fg-ic-bad'), check: s('<path d="M5 12l5 5L19 7"/>', 'fg-ic-good'),
     play: s('<path d="M7 5l12 7-12 7z" fill="currentColor"/>'), pause: s('<path d="M8 5v14M16 5v14"/>'),
+    close: s('<path d="M6 6l12 12M18 6L6 18"/>'), arrow: s('<path d="M4 12h15M13 6l6 6-6 6"/>', 'fg-ic-arrow'),
   };
 })();
 
@@ -360,6 +498,7 @@ let formGuideCtx = null;
 function openFormGuide(ex) {
   if(!ex || !ex.name) return;
   const g = buildFormGuide(ex);
+  const mkey = motionKeyFor(g.key, ex.name);
   let modal = document.getElementById('form-guide-modal');
   if(!modal) {
     modal = document.createElement('div');
@@ -373,11 +512,11 @@ function openFormGuide(ex) {
   ];
   modal.innerHTML = `
     <div class="swap-dialog form-dialog" role="dialog" aria-modal="true" aria-labelledby="fg-title">
-      <button class="swap-close" onclick="closeFormGuide()" aria-label="Close">✕</button>
+      <button class="swap-close" onclick="closeFormGuide()" aria-label="Close">${FG_ICON.close}</button>
       <div class="fg-kicker">${FG_ICON.target} Form &amp; Biomechanics Studio · ${escapeHtml(g.label)}</div>
       <h3 id="fg-title" style="margin:2px 0 6px">${escapeHtml(ex.name)}</h3>
       ${ex.muscle ? `<div style="font-size:12px;color:var(--muted);margin-bottom:8px">${FG_ICON.target} ${escapeHtml(String(ex.muscle).replace(/^[^A-Za-z]+/, ''))}</div>` : ''}
-      <div class="fg-visual"><div class="fg-panel"><div class="fg-panel-title">Live motion</div>${motionSvg(g.key)}</div><div class="fg-panel"><div class="fg-panel-title">Muscles</div><div class="fg-map">${muscleMapSvg(g.primary, g.secondary)}</div></div></div>
+      <div class="fg-visual"><div class="fg-panel"><div class="fg-panel-title"><span>Live biomechanics</span><span class="fg-phase-now" id="fg-phase-now">1 · Setup</span></div>${motionSvg(mkey, g.primary, g.secondary, ex.name)}</div><div class="fg-panel"><div class="fg-panel-title"><span>Muscle activation</span><span>Anterior · Posterior</span></div><div class="fg-map">${muscleMapSvg(g.primary, g.secondary)}</div></div></div>
       <div class="fg-legend">
         <span><i class="fg-dot fg-dot-primary"></i>Primary: ${g.primary.map(m => escapeHtml(MUSCLE_NAMES[m])).join(', ')}</span>
         ${g.secondary.length ? `<span><i class="fg-dot fg-dot-secondary"></i>Secondary / stabilisers: ${g.secondary.map(m => escapeHtml(MUSCLE_NAMES[m])).join(', ')}</span>` : ''}
@@ -394,14 +533,14 @@ function openFormGuide(ex) {
         </div>`).join('')}
       ${ex.tips ? `<div class="fg-cue">${FG_ICON.bulb} <strong>Coach cue:</strong> ${escapeHtml(ex.tips)}</div>` : ''}
       <div class="fg-section-title"><span>${FG_ICON.warn} Common Mistakes vs. Pro Fixes</span></div>
-      <ul class="fg-mistakes">${g.mistakes.map(([bad, fix]) => `<li><span class="fg-bad">${FG_ICON.x} ${escapeHtml(bad)}</span> → <span class="fg-fix">${FG_ICON.check} ${escapeHtml(fix)}</span></li>`).join('')}</ul>
+      <ul class="fg-mistakes">${g.mistakes.map(([bad, fix]) => `<li><span class="fg-bad">${FG_ICON.x} ${escapeHtml(bad)}</span> ${FG_ICON.arrow} <span class="fg-fix">${FG_ICON.check} ${escapeHtml(fix)}</span></li>`).join('')}</ul>
       <div class="fg-section-title"><span>${FG_ICON.trend} Progressive Effort Cue</span></div>
       <div class="fg-progress">${escapeHtml(g.cue)}</div>
     </div>`;
   modal.style.display = 'flex';
-  formGuideCtx = { phase: 0, timer: null, playing: false, key: g.key, motionPose: null, raf: 0 };
-  drawMotionPose(modal.querySelector('.fg-motion'), motionSpec(g.key).poses[0], null);
-  formGuideCtx.motionPose = motionSpec(g.key).poses[0];
+  if(formGuideCtx) { clearTimeout(formGuideCtx.timer); cancelAnimationFrame(formGuideCtx.raf); }
+  formGuideCtx = { phase: 0, timer: null, playing: false, key: g.key, motionKey: mkey, q: motionSpec(mkey).poses[0], raf: 0 };
+  drawMotionPose(modal.querySelector('.fg-motion'), formGuideCtx.q, motionSpec(mkey), null);
   modal.querySelector('.swap-close').focus();
 }
 
@@ -409,14 +548,17 @@ function selectFormPhase(i) {
   const modal = document.getElementById('form-guide-modal');
   if(!modal || !formGuideCtx) return;
   formGuideCtx.phase = i;
-  animateMotionTo(i);
+  const panel = modal.querySelector(`.fg-phase[data-phase="${i}"]`);
+  playMotionPhase(i, Number(panel?.dataset.secs) || 2);
+  const now = document.getElementById('fg-phase-now');
+  if(now) now.textContent = `${i + 1} · ${['Setup', 'Eccentric', 'Concentric'][i]} · ${panel?.dataset.secs || 2}s`;
   modal.querySelectorAll('.fg-phase-tab').forEach((t, j) => { t.classList.toggle('active', j === i); t.setAttribute('aria-selected', String(j === i)); });
   modal.querySelectorAll('.fg-phase').forEach((p, j) => {
     p.classList.toggle('active', j === i);
     const fill = p.querySelector('.fg-tempo-fill');
     if(!fill) return;
     fill.style.transition = 'none'; fill.style.width = '0%';
-    if(j === i && formGuideCtx.playing) {
+    if(j === i) {
       void fill.offsetWidth;
       fill.style.transition = `width ${p.dataset.secs}s linear`;
       fill.style.width = '100%';
@@ -446,7 +588,6 @@ function stopFormGuidePlay() {
   formGuideCtx.playing = false;
   const btn = document.getElementById('fg-play');
   if(btn) { btn.innerHTML = `${FG_ICON.play} Play tempo`; btn.setAttribute('aria-pressed', 'false'); }
-  selectFormPhase(formGuideCtx.phase);
 }
 
 function closeFormGuide() {
