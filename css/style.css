@@ -1284,11 +1284,11 @@ input, select, textarea { min-width:0; max-width:100%; }
 [data-theme="light"] .fg-angle { stroke:#ffffff; fill:#92400e; }
 
 /* ── Thin dark scrollbars (modals + page) ── */
-* { scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.16) transparent; }
+* { scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.18) transparent; }
 ::-webkit-scrollbar { width:5px; height:5px; }
 ::-webkit-scrollbar-track { background:transparent; }
-::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.16); border-radius:5px; }
+::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.18); border-radius:5px; }
 ::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,0.28); }
-.modal, .modal-content, .swap-dialog, .form-dialog { scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.16) transparent; overscroll-behavior:contain; }
+.modal, .modal-content, .swap-dialog, .form-dialog { scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.18) transparent; overscroll-behavior:contain; }
 [data-theme="light"] * { scrollbar-color:rgba(0,0,0,0.2) transparent; }
 [data-theme="light"] ::-webkit-scrollbar-thumb { background:rgba(0,0,0,0.2); }
