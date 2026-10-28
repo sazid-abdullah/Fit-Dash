@@ -5,10 +5,10 @@ const WORKOUT_PLAN = [
     info:'A1 → rest → A2 → rest. 3 full rounds before Block B.',
     exercises:[
       { code:'A1', equip:['dumbbells'], name:'Dumbbell Goblet Squat',
-        muscle:'🎯 Quads · Glutes · Core',
+        muscle:'Quads · Glutes · Core',
         tips:'Keep chest tall, elbows inside knees at bottom. Drive through heels.' },
       { code:'A2', equip:['dumbbells'], name:'Standing Calf Raises',
-        muscle:'🎯 Gastrocnemius · Soleus',
+        muscle:'Gastrocnemius · Soleus',
         tips:'Full range — heel below platform on stretch, full rise on toes. Pause at top.' },
     ]
   },
@@ -16,13 +16,13 @@ const WORKOUT_PLAN = [
     info:'B1 → B2 → B3 back-to-back. Long rest only after B3.',
     exercises:[
       { code:'B1', equip:['dumbbells'], name:'DB Pullover',
-        muscle:'🎯 Lats · Serratus · Long-head Tricep',
+        muscle:'Lats · Serratus · Long-head Tricep',
         tips:'Slight elbow bend. Feel the stretch at bottom, squeeze lats at top. Do NOT flare ribs.' },
       { code:'B2', equip:['barbell'], name:'Barbell Floor Press',
-        muscle:'🎯 Chest · Triceps · Front Delt',
+        muscle:'Chest · Triceps · Front Delt',
         tips:'Touch triceps to floor each rep — full stop removes stretch reflex. Tuck elbows slightly.' },
       { code:'B3', equip:['dumbbells'], name:'DB Bent-Over Row',
-        muscle:'🎯 Mid Back · Rhomboids · Biceps',
+        muscle:'Mid Back · Rhomboids · Biceps',
         tips:'Hinge to ~45°. Drive elbows back — not up. Squeeze for 1s at top. Neutral spine.' },
     ]
   },
@@ -30,22 +30,22 @@ const WORKOUT_PLAN = [
     info:'C1→C2→C3→C4→C5→C6 minimal rest between moves. 3 rounds.',
     exercises:[
       { code:'C1', equip:['barbell'], name:'BB Overhead Press',
-        muscle:'🎯 Shoulders · Triceps · Upper Traps',
+        muscle:'Shoulders · Triceps · Upper Traps',
         tips:'Bar path slightly back over skull at top. Don\'t lean back. Lock out fully overhead.' },
       { code:'C2', equip:['dumbbells'], name:'DB Lateral Raises',
-        muscle:'🎯 Lateral Deltoid',
+        muscle:'Lateral Deltoid',
         tips:'Lead with elbows, not wrists. Slight forward lean. Stop at shoulder height — don\'t shrug.' },
       { code:'C3', equip:['barbell'], name:'BB Glute Bridges',
-        muscle:'🎯 Glutes · Hamstrings',
+        muscle:'Glutes · Hamstrings',
         tips:'Drive hips to ceiling. Squeeze glutes HARD at top for 1 sec. Bar across hip crease.' },
       { code:'C4', equip:['barbell|dumbbells'], name:'BB / DB Bicep Curls',
-        muscle:'🎯 Biceps · Brachialis',
+        muscle:'Biceps · Brachialis',
         tips:'Elbows pinned to sides. Supinate wrist at top. Full extension at bottom — no cheating.' },
       { code:'C5', equip:['dumbbells'], name:'DB Floor Skullcrushers',
-        muscle:'🎯 Long Head Tricep',
+        muscle:'Long Head Tricep',
         tips:'Upper arms vertical, only forearms move. Lower until DBs touch temples — full stretch.' },
       { code:'C6', equip:['dumbbells'], name:'DB Reverse Flyes',
-        muscle:'🎯 Rear Delts · Mid Traps · Rhomboids',
+        muscle:'Rear Delts · Mid Traps · Rhomboids',
         tips:'Hinge forward, slight elbow bend. Arc arms out to sides — feel rear delt squeeze at top.' },
     ]
   }
@@ -55,33 +55,37 @@ const GYM_WORKOUT_PLAN = [
   { id:'A', name:'Legs & Calves', type:'Superset',
     info:'Choose leg press, V-squat, hack squat, belt squat, or alternating leg extension/curl. Train calves between leg sets.',
     exercises:[
-      { code:'GA1', equip:['machines'], name:'Leg Press', muscle:'🎯 Quads · Glutes', tips:'Use a machine that fits you. Start easy, then progress from 20–25 reps to hard 5–10 rep sets. Keep the range controlled.' },
-      { code:'GA2', equip:['machines'], name:'Seated Calf Press', muscle:'🎯 Gastrocnemius · Soleus', tips:'Perform between leg sets with little rest. Use a full stretch and full contraction. Skip the first warmup set if experienced.' },
+      { code:'GA1', equip:['machines'], name:'Leg Press', muscle:'Quads · Glutes', tips:'Use a machine that fits you. Start easy, then progress from 20–25 reps to hard 5–10 rep sets. Keep the range controlled.' },
+      { code:'GA2', equip:['machines'], name:'Seated Calf Press', muscle:'Gastrocnemius · Soleus', tips:'Perform between leg sets with little rest. Use a full stretch and full contraction. Skip the first warmup set if experienced.' },
     ]
   },
   { id:'B', name:'Back · Chest · Back', type:'Giant Set',
     info:'Lat pulldown → chest press → machine row. Move between exercises with minimal rest and rest fully after the row.',
     exercises:[
-      { code:'GB1', equip:['machines'], name:'Lat Pulldown', muscle:'🎯 Vertical Back · Lats', tips:'Choose a pulldown or chin-up option. Use 20–25 reps for the easy warmup, then progress toward hard 5–10 rep sets.' },
-      { code:'GB2', equip:['machines'], name:'Machine Chest Press', muscle:'🎯 Chest · Triceps', tips:'Prefer a machine. If occupied, use an incline or another chest press that lets you control the full range.' },
-      { code:'GB3', equip:['machines'], name:'Machine Row', muscle:'🎯 Horizontal Back · Rhomboids', tips:'Use a machine or cable row. Complete the full giant set before taking the longer 1–2 minute rest.' },
+      { code:'GB1', equip:['machines'], name:'Lat Pulldown', muscle:'Vertical Back · Lats', tips:'Choose a pulldown or chin-up option. Use 20–25 reps for the easy warmup, then progress toward hard 5–10 rep sets.' },
+      { code:'GB2', equip:['machines'], name:'Machine Chest Press', muscle:'Chest · Triceps', tips:'Prefer a machine. If occupied, use an incline or another chest press that lets you control the full range.' },
+      { code:'GB3', equip:['machines'], name:'Machine Row', muscle:'Horizontal Back · Rhomboids', tips:'Use a machine or cable row. Complete the full giant set before taking the longer 1–2 minute rest.' },
     ]
   },
   { id:'C', name:'Finishing Circuit', type:'Circuit',
     info:'Shoulders → adductors → abductors → arms → rear delts. Rest briefly between exercises and fully after each round.',
     exercises:[
-      { code:'GC1', equip:['machines'], name:'Machine Shoulder Press', muscle:'🎯 Shoulders · Triceps', tips:'Use 15–20 reps for the hard warmup, then 10–15 and 8–10 reps for working rounds.' },
-      { code:'GC2', equip:['dumbbells'], name:'Dumbbell Lateral Raise', muscle:'🎯 Lateral Delts', tips:'Keep the movement controlled and stop around shoulder height. Use 10–15 reps in the first three rounds.' },
-      { code:'GC3', equip:['machines'], name:'Adductor Machine', muscle:'🎯 Inner Thighs', tips:'Use at least 8 reps on hard rounds. Choose a load that stays controlled through the full range.' },
-      { code:'GC4', equip:['machines'], name:'Abductor Machine', muscle:'🎯 Glutes · Outer Hips', tips:'Use at least 8 reps on hard rounds. Avoid bouncing or rushing the range of motion.' },
-      { code:'GC5', equip:['dumbbells'], name:'Dumbbell Curls', muscle:'🎯 Biceps', tips:'Keep elbows stable. Use 15–20 reps for the warmup, then 10–15 and 5–10 reps.' },
-      { code:'GC6', equip:['machines'], name:'Cable Extensions', muscle:'🎯 Triceps', tips:'Use any safe cable triceps variation. Keep the upper arm controlled and use the target rep ranges.' },
-      { code:'GC7', equip:['machines'], name:'Reverse Pec-Deck Rear Delts', muscle:'🎯 Rear Delts · Upper Back', tips:'This is the preference exercise. Substitute another rear-delt or glute exercise if needed.' },
+      { code:'GC1', equip:['machines'], name:'Machine Shoulder Press', muscle:'Shoulders · Triceps', tips:'Use 15–20 reps for the hard warmup, then 10–15 and 8–10 reps for working rounds.' },
+      { code:'GC2', equip:['dumbbells'], name:'Dumbbell Lateral Raise', muscle:'Lateral Delts', tips:'Keep the movement controlled and stop around shoulder height. Use 10–15 reps in the first three rounds.' },
+      { code:'GC3', equip:['machines'], name:'Adductor Machine', muscle:'Inner Thighs', tips:'Use at least 8 reps on hard rounds. Choose a load that stays controlled through the full range.' },
+      { code:'GC4', equip:['machines'], name:'Abductor Machine', muscle:'Glutes · Outer Hips', tips:'Use at least 8 reps on hard rounds. Avoid bouncing or rushing the range of motion.' },
+      { code:'GC5', equip:['dumbbells'], name:'Dumbbell Curls', muscle:'Biceps', tips:'Keep elbows stable. Use 15–20 reps for the warmup, then 10–15 and 5–10 reps.' },
+      { code:'GC6', equip:['machines'], name:'Cable Extensions', muscle:'Triceps', tips:'Use any safe cable triceps variation. Keep the upper arm controlled and use the target rep ranges.' },
+      { code:'GC7', equip:['machines'], name:'Reverse Pec-Deck Rear Delts', muscle:'Rear Delts · Upper Back', tips:'This is the preference exercise. Substitute another rear-delt or glute exercise if needed.' },
     ]
   }
 ];
 
 let trainingCategory = getActiveRoutine().category;
+
+function formTargetIcon() {
+  return '<svg class="fg-ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0.01 0M12 7a5 5 0 1 0 0.01 0"/><path d="M12 10.5a1.5 1.5 0 1 0 0.01 0Z" fill="currentColor"/></svg>';
+}
 
 function switchTrainingCategory(category) {
   const target = category === 'gym' ? 'gym' : 'home';
@@ -640,7 +644,7 @@ function renderWorkoutStep() {
     // exercise card
     document.getElementById('wo-ex-code').textContent   = ex.code;
     document.getElementById('wo-ex-name').textContent   = ex.name;
-    document.getElementById('wo-ex-muscle').textContent = ex.muscle;
+    document.getElementById('wo-ex-muscle').innerHTML = `${formTargetIcon()} ${escapeHtml(String(ex.muscle || '').replace(/^[^A-Za-z]+/, ''))}`;
 
     // tips pill — add/update below muscle line
     let tipsEl = document.getElementById('wo-tips-pill');
@@ -678,7 +682,7 @@ function renderWorkoutStep() {
       suggestEl.innerHTML = suggestion
         ? `📈 Last (${escapeHtml(suggestion.lastDate)}): <strong>${formatSet(suggestion.last.weight, suggestion.last.reps)}</strong>` +
           (suggestion.lastE1RM ? ` · e1RM ${suggestion.lastE1RM} kg` : '') +
-          `<br>🎯 Suggested: <strong style="color:var(--green)">${formatSet(suggestion.weight, suggestion.reps)}</strong> — ${escapeHtml(suggestion.reason)}`
+          `<br>${formTargetIcon()} Suggested: <strong style="color:var(--green)">${formatSet(suggestion.weight, suggestion.reps)}</strong> — ${escapeHtml(suggestion.reason)}`
         : '';
     }
 
@@ -1223,7 +1227,7 @@ function renderTrainingBlocks(cfg) {
               </div>
             </div>
             <div class="ex-actions">
-              <button class="form-chip-btn" onclick="openFormGuideByCode(this.dataset.code)" data-code="${escapeHtml(ex.code)}" aria-label="Form and muscles for ${escapeHtml(ex.name)}">🎯 Form &amp; Muscles</button>
+              <button class="form-chip-btn" onclick="openFormGuideByCode(this.dataset.code)" data-code="${escapeHtml(ex.code)}" aria-label="Form and muscles for ${escapeHtml(ex.name)}">${formTargetIcon()} Form &amp; Muscles</button>
               <button class="btn-ghost" style="padding:4px 8px;font-size:12px;border:1px solid var(--border);color:${isFavoriteExercise(ex.name) ? 'var(--yellow)' : 'var(--muted)'}" onclick="toggleFavoriteExercise(this.dataset.ex)" data-ex="${escapeHtml(ex.name)}" title="Pin to dashboard Quick Log" aria-label="Pin ${escapeHtml(ex.name)} to Quick Log">${isFavoriteExercise(ex.name) ? '★' : '☆'}</button>
               ${ex._isCustom ? '' : `<button class="btn-ghost" style="padding:4px 8px;font-size:12px;color:var(--text);border:1px solid var(--border);" onclick="openSwapModal('${ex.code}')" title="Swap for an alternative (e.g. equipment unavailable)" aria-label="Swap ${escapeHtml(ex.name)}">🔁 Swap</button>`}
               <button class="btn-ghost" style="padding:4px 8px;font-size:12px;color:var(--text);border:1px solid var(--border);" onclick="promptMoveExercise('${ex.code}')">⇄ Move</button>
@@ -1317,7 +1321,7 @@ function renderCustomExercises() {
         </div>
         <div style="font-size:12px;color:var(--muted);margin-top:4px">${escapeHtml(cx.muscle)}</div>
       </div>
-      <div style="display:flex;gap:6px;align-items:center"><button class="form-chip-btn" onclick="openFormGuideByCode('${escapeHtml(cx.code)}')">🎯 Form</button><button class="del-btn" onclick="deleteCustomExercise(${cx.id})">×</button></div>
+      <div style="display:flex;gap:6px;align-items:center"><button class="form-chip-btn" onclick="openFormGuideByCode('${escapeHtml(cx.code)}')">${formTargetIcon()} Form</button><button class="del-btn" onclick="deleteCustomExercise(${cx.id})">×</button></div>
     </div>
   `).join('');
 }

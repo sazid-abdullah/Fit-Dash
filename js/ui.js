@@ -95,7 +95,7 @@ function getTodayCalorieTarget() {
 function renderDashboard() {
   const now = new Date();
   const h = now.getHours();
-  const greeting = h<12 ? 'Good morning \uD83C\uDF04' : h<17 ? 'Good afternoon \u2600\uFE0F' : 'Good evening \uD83C\uDF19';
+  const greeting = h<12 ? 'Good morning 🌄' : h<17 ? 'Good afternoon ☀️' : 'Good evening 🌙';
   document.getElementById('greeting').textContent = greeting;
   document.getElementById('today-date').textContent = now.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 
