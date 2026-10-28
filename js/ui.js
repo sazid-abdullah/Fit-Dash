@@ -30,6 +30,63 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeLeftDrawer();
 });
 
+// ══ ANDROID HARDWARE BACK ══════════════════════════════════════
+function _isShown(el) {
+  if (!el) return false;
+  if (el.classList.contains('open')) return true;
+  return el.style.display === 'flex' || el.style.display === 'block';
+}
+const _backModals = [
+  ['form-guide-modal', () => closeFormGuide()],
+  ['swap-modal',       () => closeSwapModal()],
+  ['share-modal',      () => closeShareCard()],
+  ['auth-modal',       () => closeAuthModal()],
+  ['privacy-modal',    () => closePrivacyModal()],
+  ['recovery-modal',   () => closeRecoveryModal()],
+  ['preworkout-modal', () => closePreWorkout()],
+  ['modal',            () => closeModal()],
+  ['guide-modal',      el => { el.style.display = 'none'; }],
+];
+function handleAppBack() {
+  const drawer = document.getElementById('left-nav-drawer');
+  if (drawer && drawer.classList.contains('open')) { closeLeftDrawer(); return true; }
+  for (const [id, close] of _backModals) {
+    const el = document.getElementById(id);
+    if (_isShown(el)) { try { close(el); } catch (e) { el.classList.remove('open'); el.style.display = 'none'; } return true; }
+  }
+  const chat = document.getElementById('ai-chat-panel');
+  if (chat && chat.classList.contains('open') && typeof toggleChat === 'function') { toggleChat(); return true; }
+  const woOverlay = document.getElementById('workout-overlay');
+  if (woOverlay && woOverlay.style.display === 'block' && typeof toggleExitPanel === 'function') {
+    toggleExitPanel(); // opens the Save / Discard confirmation, or cancels it on a second press
+    return true;
+  }
+  if (activePageId !== 'dashboard') { showPage('dashboard'); return true; }
+  return false;
+}
+
+const _capApp = window.Capacitor?.Plugins?.App;
+if (_capApp && typeof _capApp.addListener === 'function') {
+  _capApp.addListener('backButton', () => { if (!handleAppBack()) _capApp.exitApp(); });
+} else {
+  document.addEventListener('backbutton', (e) => {
+    e.preventDefault();
+    if (!handleAppBack() && navigator.app && navigator.app.exitApp) navigator.app.exitApp();
+  }, false);
+  // Keep one dummy history entry on top so Back fires popstate instead of leaving the app.
+  const _armBackTrap = () => {
+    if (!(history.state && history.state.fdBackTrap)) {
+      try { history.pushState({ fdBackTrap: true }, ''); } catch (e) { /* ignore */ }
+    }
+  };
+  window.addEventListener('popstate', () => {
+    if (handleAppBack()) _armBackTrap();
+    else history.back();
+  });
+  _armBackTrap();
+  ['pointerdown', 'keydown'].forEach(t => document.addEventListener(t, _armBackTrap, { once: true, capture: true }));
+}
+
 // Cache static NodeLists once — avoids repeated querySelectorAll on every navigation.
 const _cachedPages = document.querySelectorAll('.page');
 const _cachedTabs  = document.querySelectorAll('.nav-tab');

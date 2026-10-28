@@ -580,7 +580,7 @@ function beginWorkout() {
 // ── Start session ─────────────────────────────────────────
 function startWorkoutSession() {
   clearSessionSwaps();
-  wo = { ...wo, active:true, startTime:Date.now(), totalSecs:0,
+  wo = { ...wo, active:true, sessionBest:{}, startTime:Date.now(), totalSecs:0,
     blockIdx:0, exIdx:0, setIdx:0, log:{}, finishedData:null,
     totalInterval:null, restInterval:null, restSecsLeft:0 };
   document.getElementById('workout-overlay').style.display = 'block';
@@ -715,11 +715,16 @@ function completeSet() {
   const key   = logKey(block.id, ex.code, wo.setIdx);
   wo.log[key] = { weight:wt, reps, exName:ex.name, setLabel:getSetConfig()[wo.setIdx].label };
 
+  const exKey = PR_KEY_MAP[ex.name] || ex.name;
+  const best = Math.max(prs[exKey]?.weight || 0, wo.sessionBest?.[exKey] || 0);
+  const isNewPR = wt > 0 && reps > 0 && prs[exKey] && wt > best;
+  if (wt > 0 && reps > 0) wo.sessionBest = { ...(wo.sessionBest || {}), [exKey]: Math.max(best, wt) };
+
   document.getElementById('wo-done-btn').disabled = true;
-  document.getElementById('wo-done-btn').textContent = '✓ Logged';
+  document.getElementById('wo-done-btn').textContent = isNewPR ? '🏆 New PR' : '✓ Logged';
   
   if (soundEnabled) playSound();
-  if (hapticsEnabled) playHaptic();
+  woVibrate(isNewPR ? [120, 60, 120] : [40]);
 
   const baseRest = getSetConfig()[wo.setIdx].restSec;
   const restCap = getActiveRoutine().restCap;
@@ -727,6 +732,11 @@ function completeSet() {
 }
 
 // ── Rest timer ────────────────────────────────────────────
+function woVibrate(pattern) {
+  if (!hapticsEnabled || !navigator.vibrate) return;
+  try { navigator.vibrate(pattern); } catch(e) { /* ignore */ }
+}
+
 function beginRest(secs) {
   wo.restSecsLeft = secs;
   document.getElementById('wo-set-card').style.display  = 'none';
@@ -738,8 +748,10 @@ function beginRest(secs) {
   wo.restInterval = setInterval(() => {
     wo.restSecsLeft--;
     if(wo.restSecsLeft <= 0) { 
+      wo.restSecsLeft = 0;
+      updateRestDisplay();
       if (soundEnabled) playSound();
-      if (hapticsEnabled) playHaptic();
+      woVibrate([250, 100, 250, 100, 400]);
       skipRest(); 
       return; 
     }
