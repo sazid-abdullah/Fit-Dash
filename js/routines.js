@@ -152,6 +152,7 @@ function normalizeRoutine(r) {
     swaps: (r.swaps && typeof r.swaps === 'object') ? r.swaps : {},
     skip: Array.isArray(r.skip) ? r.skip.map(String) : [],
     ...(r.blockMeta && typeof r.blockMeta === 'object' ? { blockMeta: r.blockMeta } : {}),
+    ...(Number(r.restCap) > 0 ? { restCap: Number(r.restCap) } : {}),
   };
 }
 
@@ -204,6 +205,7 @@ function swappedExercise(ex, alt) {
     muscle: alt.muscle || ex.muscle,
     tips: alt.tips || ex.tips,
     equip: alt.equip || ex.equip,
+    ...(alt.reps ? { reps: String(alt.reps).slice(0, 30) } : {}),
     _swappedFrom: ex.name,
   };
 }
@@ -315,13 +317,14 @@ function deleteActiveRoutine() {
 
 function resetActiveRoutine() {
   const r = getActiveRoutine();
-  if(!Object.keys(r.swaps).length && !r.skip.length) return;
-  const prev = { swaps: r.swaps, skip: r.skip };
-  r.swaps = {}; r.skip = [];
+  if(!Object.keys(r.swaps).length && !r.skip.length && !r.blockMeta) return;
+  const prev = { swaps: r.swaps, skip: r.skip, blockMeta: r.blockMeta };
+  r.swaps = {}; r.skip = []; delete r.blockMeta;
   saveRoutines();
   refreshRoutineViews();
   showUndoToast(`Reset ${r.name} to the original exercises`, () => {
     r.swaps = prev.swaps; r.skip = prev.skip;
+    if(prev.blockMeta) r.blockMeta = prev.blockMeta;
     saveRoutines();
     refreshRoutineViews();
   });
@@ -365,7 +368,7 @@ function renderRoutinePickers() {
   if(card) {
     const plan = r.category === 'gym' ? GYM_WORKOUT_PLAN : WORKOUT_PLAN;
     const skipped = plan.flatMap(b => b.exercises).filter(ex => r.skip.includes(ex.code));
-    const hasChanges = Object.keys(r.swaps).length || r.skip.length;
+    const hasChanges = Object.keys(r.swaps).length || r.skip.length || r.blockMeta;
     card.innerHTML = `
       <div class="routine-meta" style="margin-top:0">${escapeHtml(routineSummary(r))}</div>
       ${skipped.length ? `<div class="routine-skipped">Skipped: ${skipped.map(ex => `<button class="pill-btn routine-skip-pill" onclick="unskipExercise('${ex.code}')" title="Add back" aria-label="Add ${escapeHtml(ex.name)} back">${escapeHtml(ex.name)} ↩</button>`).join('')}</div>` : ''}

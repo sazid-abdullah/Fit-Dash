@@ -851,6 +851,8 @@ function saveTrainingPreferences() {
   const equipment = [...document.querySelectorAll('#equipment-options input:checked')].map(input => input.value);
   if(equipment.includes('machines')) equipment.push('cables');
   userProfile.equipment = equipment;
+  // An offline Express preview was built for the old gear; keep an AI one until the user replaces it.
+  if(typeof currentGenerated !== 'undefined' && currentGenerated && currentGenerated.source !== 'ai') currentGenerated = null;
   _cachedFullPlanDeps = '';
   refreshRoutineViews();
   userProfile.limitations = document.getElementById('s-limitations').value.trim();

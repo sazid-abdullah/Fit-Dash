@@ -10,9 +10,9 @@ const EQUIPMENT_CHIPS = [
 ];
 const SESSION_MODES = {
   '15': { label: '⚡ 15-Min Busy Day Express (Superset / High-Density)', short: '15-Min Express', blocks: [2, 2], level: 'beginner',
-          types: ['Superset', 'Superset'], info: 'Back-to-back pair, 30–45 s rest after each round. 2 rounds.' },
+          types: ['Superset', 'Superset'], restCap: 30, info: 'Back-to-back pair, 30 s rest between sets. 2 rounds.' },
   '30': { label: '🔥 30-Min Time-Saver', short: '30-Min Time-Saver', blocks: [2, 2, 2], level: 'amateur',
-          types: ['Superset', 'Superset', 'Superset'], info: 'Alternate the pair with 60 s rest. 3 rounds.' },
+          types: ['Superset', 'Superset', 'Superset'], restCap: 45, info: 'Alternate the pair, 45 s rest between sets. 3 rounds.' },
   '60': { label: '💪 45–60 Min Full Session', short: '45–60 Min Session', blocks: [2, 3, 4], level: null,
           types: ['Superset', 'Giant Set', 'Circuit'], info: 'Move through the block, then rest 1–2 min.' },
 };
@@ -232,12 +232,12 @@ function routineFromGenerated(w, id, name) {
       if(!g) { skip.push(ex.code); return; }
       if(g.name === ex.name) return;
       swaps[ex.code] = { name: String(g.name).slice(0, 60), muscle: String(g.muscle || ex.muscle || '').slice(0, 100),
-        tips: `${g.reps ? g.reps + ' · ' : ''}${g.tips || ''}`.slice(0, 240), ...(g.equip && g.equip.length ? { equip: g.equip } : {}) };
+        tips: String(g.tips || '').slice(0, 240), ...(g.reps ? { reps: String(g.reps).slice(0, 30) } : {}), ...(g.equip && g.equip.length ? { equip: g.equip } : {}) };
     });
   });
   const mode = SESSION_MODES[w.mode] ? w.mode : currentSessionMode();
   const level = SESSION_MODES[mode].level || trainingLevel;
-  return normalizeRoutine({ id, name: String(name || w.name).slice(0, 40), category, level, swaps, skip, blockMeta });
+  return normalizeRoutine({ id, name: String(name || w.name).slice(0, 40), category, level, swaps, skip, blockMeta, restCap: SESSION_MODES[mode].restCap || null });
 }
 
 function startGeneratedWorkout(w) {

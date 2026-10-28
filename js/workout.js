@@ -566,7 +566,9 @@ function beginWorkout() {
   }
 
   wo.setup = { height, age, gender, activity, weightKg };
-  save('fitdash_profile', { height, age, gender, activity, weight: weightKg });
+  // Merge, don't replace: the profile also holds gear, limitations and session preferences.
+  userProfile = { ...(userProfile || {}), ...safeLoad('fitdash_profile', {}), height, age, gender, activity, weight: weightKg || (userProfile && userProfile.weight) || null };
+  save('fitdash_profile', userProfile);
   closePreWorkout();
   startWorkoutSession();
 }
@@ -657,7 +659,11 @@ function renderWorkoutStep() {
     badge.textContent  = set.label;
     badge.className    = `wo-set-badge ${set.badge}`;
     document.getElementById('wo-set-tip').textContent  = set.tip;
-    document.getElementById('wo-set-reps').textContent = set.reps;
+    // Generated workouts carry their own per-exercise target (e.g. "30 s" holds for core work).
+    const timed = /\d\s*s\b|sec/i.test(ex.reps || '');
+    document.getElementById('wo-set-reps').textContent = ex.reps ? (timed ? `${ex.reps} hold` : ex.reps) : set.reps;
+    const repsLabel = document.getElementById('wo-reps-label');
+    if(repsLabel) repsLabel.textContent = timed ? 'Seconds Held' : 'Reps Done';
 
     // pre-fill this session's entry if revisiting, otherwise the progression suggestion
     const prevKey = logKey(block.id, ex.code, wo.setIdx);
@@ -711,8 +717,9 @@ function completeSet() {
   if (soundEnabled) playSound();
   if (hapticsEnabled) playHaptic();
 
-  const restSecs = getSetConfig()[wo.setIdx].restSec;
-  beginRest(restSecs);
+  const baseRest = getSetConfig()[wo.setIdx].restSec;
+  const restCap = getActiveRoutine().restCap;
+  beginRest(restCap ? Math.min(restCap, baseRest) : baseRest);
 }
 
 // ── Rest timer ────────────────────────────────────────────
