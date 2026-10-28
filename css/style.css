@@ -33,6 +33,87 @@ body {
   padding-top: var(--nav-h);
 }
 
+/* ── LEFT DRAWER ─────────────────────────────────────────── */
+#left-nav-backdrop {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(3px);
+  z-index: 9998;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+#left-nav-backdrop.open { display: block; opacity: 1; }
+
+#left-nav-drawer {
+  position: fixed; top: 0; left: 0; width: min(290px, 82vw); height: 100dvh;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  z-index: 9999;
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+}
+#left-nav-drawer.open { transform: translateX(0); }
+
+.drawer-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 20px 16px; border-bottom: 1px solid var(--border);
+}
+.drawer-profile { display: flex; align-items: center; gap: 12px; cursor: pointer; flex: 1; }
+.drawer-avatar {
+  width: 40px; height: 40px; border-radius: 50%; background: var(--card2);
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+}
+.drawer-user-info { display: flex; flex-direction: column; }
+.drawer-user-name { font-size: 14px; font-weight: 700; color: var(--text); }
+.drawer-user-sub { font-size: 11px; color: var(--muted); }
+.drawer-badges { margin-top: 4px; }
+.drawer-badge {
+  font-size: 10px; background: var(--card2); color: var(--muted);
+  padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border);
+}
+#sidebar-close-btn {
+  background: none; border: none; color: var(--muted); font-size: 18px;
+  width: 40px; height: 40px; border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background 0.15s; margin-top: -6px; margin-right: -6px;
+}
+#sidebar-close-btn:hover { background: var(--card); color: var(--text); }
+
+.drawer-nav { display: flex; flex-direction: column; padding: 12px; gap: 4px; }
+.drawer-nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: var(--radius-sm);
+  background: none; border: none; color: var(--muted);
+  font-size: 14px; font-weight: 600; cursor: pointer; text-align: left;
+  transition: all 0.15s;
+}
+.drawer-nav-item:hover { background: var(--card); color: var(--text); }
+.drawer-nav-item.active { background: var(--red-dim); color: var(--red); }
+.drawer-icon { font-size: 18px; width: 24px; text-align: center; }
+
+.drawer-divider { height: 1px; background: var(--border); margin: 8px 16px; }
+
+.drawer-actions { display: flex; flex-direction: column; padding: 12px; gap: 4px; margin-bottom: 20px; }
+.drawer-action-btn {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: var(--radius-sm);
+  background: none; border: none; color: var(--muted);
+  font-size: 13px; font-weight: 500; cursor: pointer; text-align: left;
+}
+.drawer-action-btn:hover { background: var(--card); color: var(--text); }
+
+#sidebar-toggle-btn {
+  display: none; background: none; border: none; color: var(--text);
+  font-size: 24px; padding: 8px; cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+#sidebar-toggle-btn:hover { background: var(--card); }
+.mobile-page-title { display: none; font-size: 14px; font-weight: 600; color: var(--muted); margin-left: 8px; padding-left: 8px; border-left: 1px solid var(--border); }
+
+
 /* ── NAV ─────────────────────────────────────────────────── */
 #nav {
   position: fixed; top:0; left:0; right:0; z-index:100;
@@ -641,9 +722,14 @@ input, select, textarea { min-width:0; max-width:100%; }
   .food-entry-row { flex-wrap:wrap; }
   .food-entry-row #food-name-input { flex:1 1 100%; }
   .food-entry-row #food-grams-input { flex:1 1 0; width:auto; }
-  .nav-brand { margin-right: 8px; }
-  .nav-tabs { flex: 1 1 auto; }
+
+  #sidebar-toggle-btn { display: block; margin-right: 4px; }
+  .mobile-page-title { display: inline; }
+  .nav-tabs { display: none; }
+  .nav-brand { margin-right: auto; }
+
   #nav { padding: 0 10px; }
+  .page { padding-top: 40px; } /* Increase padding to fix clipping under sticky topbar */
   .dash-grid-3 { grid-template-columns:repeat(3,1fr); }
   .sets-grid { grid-template-columns:repeat(3,1fr); }
   .snack-grid { grid-template-columns:1fr; }
