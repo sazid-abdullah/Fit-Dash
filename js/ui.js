@@ -15,19 +15,48 @@ function showUndoToast(msg, onUndo) {
   clearTimeout(undoTimeout);
   undoTimeout = setTimeout(() => { toast.style.bottom = '-100px'; }, 5000);
 }
+// ══ LEFT DRAWER ════════════════════════════════════════════════
+function openLeftDrawer() {
+  document.getElementById('left-nav-backdrop').classList.add('open');
+  document.getElementById('left-nav-drawer').classList.add('open');
+}
+
+function closeLeftDrawer() {
+  document.getElementById('left-nav-backdrop').classList.remove('open');
+  document.getElementById('left-nav-drawer').classList.remove('open');
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeLeftDrawer();
+});
+
 // Cache static NodeLists once — avoids repeated querySelectorAll on every navigation.
 const _cachedPages = document.querySelectorAll('.page');
 const _cachedTabs  = document.querySelectorAll('.nav-tab');
+const _cachedDrawerTabs = document.querySelectorAll('.drawer-nav-item');
 const _tabMap = { dashboard:0, training:1, nutrition:2, progress:3, settings:4 };
+const _titleMap = { dashboard:'Dashboard', training:'Training', nutrition:'Nutrition', progress:'Progress', settings:'Settings' };
 let activePageId = 'dashboard'; // tracks current page without DOM queries
 function showPage(id) {
   _cachedPages.forEach(p => p.classList.remove('active'));
   _cachedTabs.forEach(t => t.classList.remove('active'));
+  _cachedDrawerTabs.forEach(t => t.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
+
   if(_cachedTabs[_tabMap[id]]) {
     _cachedTabs[_tabMap[id]].classList.add('active');
     _cachedTabs[_tabMap[id]].scrollIntoView({ block:'nearest', inline:'nearest' });
   }
+
+  if(_cachedDrawerTabs[_tabMap[id]]) {
+    _cachedDrawerTabs[_tabMap[id]].classList.add('active');
+  }
+
+  const titleEl = document.getElementById('mobile-page-title');
+  if(titleEl && _titleMap[id]) {
+    titleEl.textContent = _titleMap[id];
+  }
+
   // update aria-selected on tabs for screen readers
   _cachedTabs.forEach((t, idx) => {
     const sel = (idx === _tabMap[id]);

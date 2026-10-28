@@ -17,9 +17,54 @@
   <a href="#page-dashboard" class="sr-only-focusable">Skip to main content</a>
 <noscript><div style="background:#e63946;color:#fff;text-align:center;padding:20px;font-family:sans-serif;font-weight:700">FitDash requires JavaScript to run. Please enable it in your browser settings.</div></noscript>
 
+<!-- ══ LEFT NAVIGATION DRAWER ═════════════════════════════════ -->
+<div id="left-nav-backdrop" onclick="closeLeftDrawer()"></div>
+<div id="left-nav-drawer">
+  <div class="drawer-header">
+    <div class="drawer-profile" onclick="openAuthModal(); closeLeftDrawer();">
+      <div class="drawer-avatar">👤</div>
+      <div class="drawer-user-info">
+        <div class="drawer-user-name">Guest Athlete</div>
+        <div class="drawer-user-sub">Tap to Sign In</div>
+      </div>
+      <div class="drawer-badges">
+        <span class="drawer-badge" id="drawer-sync-badge">⚡ Local</span>
+      </div>
+    </div>
+    <button id="sidebar-close-btn" onclick="closeLeftDrawer()" aria-label="Close menu">✕</button>
+  </div>
+  <div class="drawer-nav">
+    <button class="drawer-nav-item active" data-tab="dashboard" onclick="showPage('dashboard'); closeLeftDrawer();">
+      <span class="drawer-icon">📊</span> Dashboard
+    </button>
+    <button class="drawer-nav-item" data-tab="training" onclick="showPage('training'); closeLeftDrawer();">
+      <span class="drawer-icon">🏋️</span> Training
+    </button>
+    <button class="drawer-nav-item" data-tab="nutrition" onclick="showPage('nutrition'); closeLeftDrawer();">
+      <span class="drawer-icon">🥗</span> Nutrition
+    </button>
+    <button class="drawer-nav-item" data-tab="progress" onclick="showPage('progress'); closeLeftDrawer();">
+      <span class="drawer-icon">📈</span> Progress
+    </button>
+    <button class="drawer-nav-item" data-tab="settings" onclick="showPage('settings'); closeLeftDrawer();">
+      <span class="drawer-icon">⚙️</span> Settings
+    </button>
+  </div>
+  <div class="drawer-divider"></div>
+  <div class="drawer-actions">
+    <button class="drawer-action-btn" onclick="toggleChat(); closeLeftDrawer();">
+      🤖 AI Coach
+    </button>
+    <button class="drawer-action-btn" onclick="openAuthModal(); closeLeftDrawer();">
+      ☁️ Account & Cloud Sync
+    </button>
+  </div>
+</div>
+
 <!-- ══ NAV ════════════════════════════════════════════════════ -->
 <nav id="nav" role="navigation" aria-label="Main navigation">
-  <div class="nav-brand"><img class="nav-logo" src="icons/favicon.svg" alt="" width="24" height="24">FIT<span>DASH</span></div>
+  <button id="sidebar-toggle-btn" aria-label="Open Navigation Menu" onclick="openLeftDrawer()">☰</button>
+  <div class="nav-brand"><img class="nav-logo" src="icons/favicon.svg" alt="" width="24" height="24">FIT<span>DASH</span><span id="mobile-page-title" class="mobile-page-title">Dashboard</span></div>
   <div class="nav-tabs" role="tablist">
     <button class="nav-tab active" role="tab" aria-selected="true" onclick="showPage('dashboard')">Dashboard</button>
     <button class="nav-tab" role="tab" aria-selected="false" onclick="showPage('training')">Training</button>
