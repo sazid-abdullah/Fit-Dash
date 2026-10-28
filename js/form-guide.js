@@ -302,6 +302,10 @@ const MOTION_SPECS = {
     poses:[ { P:[122,174], tr:-90, arm:180, fore:180, thigh:180, shin:90, foot:180 }, { P:[122,174], tr:-90, arm:262, fore:264, thigh:102, shin:98, foot:110 },
       { P:[122,174], tr:-90, arm:180, fore:180, thigh:180, shin:90, foot:180 } ],
     arcs:[['S','P','K','hip']], guide:'line', track:'A', fo:[0,-10] },
+  hollow: { label:'Core · hollow hold', note:'Low back pressed down, legs and arms long', load:'none',
+    poses:[ { P:[122,174], tr:-90, fx:14, arm:250, fore:252, thigh:112, shin:110, foot:120 }, { P:[122,174], tr:-90, fx:12, arm:254, fore:256, thigh:108, shin:106, foot:116 },
+      { P:[122,174], tr:-90, fx:16, arm:248, fore:250, thigh:114, shin:112, foot:122 } ],
+    arcs:[['S','P','K','hip']], guide:'line', track:'A', fo:[0,-10] },
   bridge: { label:'Hip extension · bridge', note:'Finish with the glutes, not the low back', load:'none',
     poses:[ mpose({ P:[104,175], tr:-90, A:[140,180], arm:90, fore:90 }), mpose({ P:[104,175], tr:-90, A:[140,180], arm:90, fore:90 }),
       mpose({ P:[106,146], tr:-117.6, A:[140,180], arm:80, fore:80 }) ],
@@ -326,7 +330,8 @@ function motionKeyFor(key, name) {
   const n = String(name || '').toLowerCase();
   if(key === 'hpush') return /push-?up|press-?up/.test(n) ? 'pushup' : /incline/.test(n) ? 'incline' : 'bench';
   if(key === 'vpush') return /incline/.test(n) ? 'incline' : 'ohp';
-  if(key === 'core' && /dead ?bug|leg raise|hollow|flutter|scissor/.test(n)) return 'deadbug';
+  if(key === 'core' && /hollow/.test(n)) return 'hollow';
+  if(key === 'core' && /dead ?bug|leg raise|flutter|scissor/.test(n)) return 'deadbug';
   if(key === 'core') return /crunch|sit-?up|v-?up|jackknife/.test(n) ? 'crunch' : 'plank';
   if(key === 'triceps') return /pushdown|press-?down/.test(n) ? 'pushdown' : 'overhead';
   if(key === 'legmachine') return /curl/.test(n) ? 'legcurl' : 'legext';
