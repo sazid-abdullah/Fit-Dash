@@ -1193,8 +1193,8 @@ input, select, textarea { min-width:0; max-width:100%; }
 .fg-body { fill:url(#anat-skin); stroke:#3b4558; stroke-width:1; stroke-linejoin:round; }
 .fg-muscle { fill:#2b3446; stroke:#0d1119; stroke-width:.9; stroke-linejoin:round; transition:fill .3s, filter .3s; }
 .fg-muscle:hover { fill:#3a4560; }
-.fg-muscle.fg-primary { fill:url(#anat-primary); stroke:#a7f3d0; stroke-width:.7; filter:drop-shadow(0 0 8px rgba(16,185,129,0.55)); animation:fgPulse 1.8s ease-in-out infinite; }
-.fg-muscle.fg-secondary { fill:url(#anat-secondary); stroke:#fde68a; stroke-width:.7; filter:drop-shadow(0 0 6px rgba(245,158,11,0.45)); }
+.fg-muscle.fg-primary { fill:url(#anat-primary); color:#10b981; stroke:#a7f3d0; stroke-width:.7; filter:drop-shadow(0 0 6px currentColor); animation:fgPulse 1.8s ease-in-out infinite; }
+.fg-muscle.fg-secondary { fill:url(#anat-secondary); color:#f59e0b; stroke:#fde68a; stroke-width:.7; filter:drop-shadow(0 0 6px currentColor); }
 .fg-fiber { fill:none; stroke:rgba(255,255,255,0.12); stroke-width:.6; stroke-linecap:round; pointer-events:none; }
 .fg-fiber-on { stroke:rgba(255,255,255,0.32); }
 .fg-detail { fill:none; stroke:rgba(255,255,255,0.10); stroke-width:.7; stroke-linecap:round; pointer-events:none; }
