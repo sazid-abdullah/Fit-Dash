@@ -26,7 +26,9 @@ jobs:
           java-version: 21
 
       - name: Install Capacitor
-        run: npm install --no-audit --no-fund
+        run: |
+          npm install --no-audit --no-fund
+          npm install @capacitor/assets sharp --save-dev
 
       - name: Check for broken glyphs
         run: npm run check:glyphs
@@ -38,6 +40,21 @@ jobs:
         run: |
           if [ ! -d android ]; then npx cap add android; fi
           npx cap sync android
+
+      - name: Generate App Icons
+        run: |
+          node dev-tools/generate-icons.js
+          mkdir -p assets
+          cp icons/logo.svg assets/icon.svg
+          npx @capacitor/assets generate --android
+
+      - name: Set Android Adaptive Icon Background
+        run: |
+          mkdir -p android/app/src/main/res/values
+          echo '<?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="ic_launcher_background">#0b0d13</color>
+          </resources>' > android/app/src/main/res/values/ic_launcher_background.xml
 
       - name: Build debug APK + release AAB
         working-directory: android
