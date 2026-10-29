@@ -7,5 +7,14 @@
   },
   "android": {
     "allowMixedContent": false
+  },
+  "plugins": {
+    "StatusBar": {
+      "backgroundColor": "#0b0d13",
+      "style": "DARK"
+    },
+    "Keyboard": {
+      "resizeOnFullScreen": true
+    }
   }
 }
