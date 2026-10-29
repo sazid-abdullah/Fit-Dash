@@ -584,6 +584,8 @@ function startWorkoutSession() {
     blockIdx:0, exIdx:0, setIdx:0, log:{}, finishedData:null,
     totalInterval:null, restInterval:null, restSecsLeft:0 };
   document.getElementById('workout-overlay').style.display = 'block';
+  const aiBubble = document.getElementById('ai-chat-bubble');
+  if (aiBubble) aiBubble.style.display = 'none';
   document.getElementById('wo-exit-panel').classList.remove('open');
   document.getElementById('wo-end-btn').textContent  = 'End ✕';
   document.getElementById('wo-end-btn').style.color  = '';
@@ -898,6 +900,10 @@ function discardAndExit() {
   if(wo.restInterval)  { clearInterval(wo.restInterval);  wo.restInterval=null; }
   document.getElementById('wo-exit-panel').classList.remove('open');
   document.getElementById('workout-overlay').style.display = 'none';
+  if (typeof activePageId !== 'undefined' && ['dashboard', 'nutrition', 'progress'].includes(activePageId)) {
+    const aiBubble = document.getElementById('ai-chat-bubble');
+    if (aiBubble) aiBubble.style.display = 'flex';
+  }
   document.body.style.overflow = '';
   wo.active = false;
   releaseWorkoutWakeLock();
@@ -915,6 +921,10 @@ function finishWorkout() {
   if(wo.totalInterval) { clearInterval(wo.totalInterval); wo.totalInterval=null; }
   if(wo.restInterval)  { clearInterval(wo.restInterval);  wo.restInterval=null; }
   document.getElementById('workout-overlay').style.display = 'none';
+  if (typeof activePageId !== 'undefined' && ['dashboard', 'nutrition', 'progress'].includes(activePageId)) {
+    const aiBubble = document.getElementById('ai-chat-bubble');
+    if (aiBubble) aiBubble.style.display = 'flex';
+  }
   releaseWorkoutWakeLock();
   // NOTE: body.overflow stays 'hidden' here — the post-workout modal is about to open
   // and needs the background locked. It is released in closePostWorkout() instead.
@@ -1092,14 +1102,23 @@ document.addEventListener('keydown', e => {
   if(exitPanel && exitPanel.classList.contains('open')) { toggleExitPanel(); return; }
   const woOverlay = document.getElementById('workout-overlay');
   if(woOverlay && woOverlay.style.display === 'block') { toggleExitPanel(); return; }
+
+  let didClose = false;
   const postModal = document.getElementById('postworkout-modal');
-  if(postModal && postModal.classList.contains('open')) { closePostWorkout(); return; }
+  if(postModal && postModal.classList.contains('open')) { closePostWorkout(); didClose = true; }
   const preModal = document.getElementById('preworkout-modal');
-  if(preModal && preModal.classList.contains('open')) { closePreWorkout(); return; }
+  if(preModal && preModal.classList.contains('open')) { closePreWorkout(); didClose = true; }
   const recoveryModal = document.getElementById('recovery-modal');
-  if(recoveryModal && recoveryModal.classList.contains('open')) { closeRecoveryModal(); return; }
+  if(recoveryModal && recoveryModal.classList.contains('open')) { closeRecoveryModal(); didClose = true; }
   const logModal = document.getElementById('modal');
-  if(logModal && logModal.classList.contains('open')) { closeModal(); return; }
+  if(logModal && logModal.classList.contains('open')) { closeModal(); didClose = true; }
+
+  if (didClose) {
+    if (typeof activePageId !== 'undefined' && ['dashboard', 'nutrition', 'progress'].includes(activePageId)) {
+      const aiBubble = document.getElementById('ai-chat-bubble');
+      if (aiBubble) aiBubble.style.display = 'flex';
+    }
+  }
 });
 
 // ── Total calories burned across all sessions (Progress page) ──

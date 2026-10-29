@@ -6,7 +6,11 @@ function toggleChat() {
   const panel = document.getElementById('ai-chat-panel');
   const bubble = document.getElementById('ai-chat-bubble');
   const isOpen = panel.classList.toggle('open');
-  bubble.classList.toggle('hidden', isOpen);
+  if (isOpen) {
+    bubble.classList.add('hidden');
+  } else {
+    bubble.classList.remove('hidden');
+  }
   // hide mobile action bar when chat is open to avoid overlap on small screens
   const mobileBar = document.getElementById('mobile-action-bar');
   if(mobileBar) mobileBar.style.display = isOpen ? 'none' : '';

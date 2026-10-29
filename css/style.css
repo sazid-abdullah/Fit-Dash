@@ -1032,7 +1032,7 @@ input, select, textarea { min-width:0; max-width:100%; }
 .label-form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
 
 @media(max-width:520px) {
-  #ai-chat-panel { width:100%; height:100vh; max-height:none; border-radius:0; }
+  #ai-chat-panel { width:100%; height:100dvh; max-height:100dvh; border-radius:0; }
   .recomp-inputs, .recomp-inputs.has-hip { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .recomp-stat { padding:10px 6px; }
   .settings-row { grid-template-columns:1fr; }

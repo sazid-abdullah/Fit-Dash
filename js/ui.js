@@ -19,11 +19,17 @@ function showUndoToast(msg, onUndo) {
 function openLeftDrawer() {
   document.getElementById('left-nav-backdrop').classList.add('open');
   document.getElementById('left-nav-drawer').classList.add('open');
+  const aiBubble = document.getElementById('ai-chat-bubble');
+  if (aiBubble) aiBubble.style.display = 'none';
 }
 
 function closeLeftDrawer() {
   document.getElementById('left-nav-backdrop').classList.remove('open');
   document.getElementById('left-nav-drawer').classList.remove('open');
+  if (typeof activePageId !== 'undefined' && ['dashboard', 'nutrition', 'progress'].includes(activePageId)) {
+    const aiBubble = document.getElementById('ai-chat-bubble');
+    if (aiBubble) aiBubble.style.display = 'flex';
+  }
 }
 
 document.addEventListener('keydown', (e) => {
@@ -53,7 +59,16 @@ function handleAppBack() {
   if (drawer && drawer.classList.contains('open')) { closeLeftDrawer(); return true; }
   for (const [id, close] of _backModals) {
     const el = document.getElementById(id);
-    if (_isShown(el)) { try { close(el); } catch (e) { el.classList.remove('open'); el.style.display = 'none'; } return true; }
+    if (_isShown(el)) {
+      try { close(el); } catch (e) { el.classList.remove('open'); el.style.display = 'none'; }
+
+      // Ensure AI bubble gets correctly shown when a modal is closed by a back button (or generic loop).
+      if (typeof activePageId !== 'undefined' && ['dashboard', 'nutrition', 'progress'].includes(activePageId)) {
+        const aiBubble = document.getElementById('ai-chat-bubble');
+        if (aiBubble) aiBubble.style.display = 'flex';
+      }
+      return true;
+    }
   }
   if (_isShown(document.getElementById('postworkout-modal')) && typeof discardWorkout === 'function') {
     discardWorkout(); // confirms before dropping unsaved results
