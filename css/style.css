@@ -723,8 +723,8 @@ input, select, textarea { min-width:0; max-width:100%; }
   .food-entry-row #food-name-input { flex:1 1 100%; }
   .food-entry-row #food-grams-input { flex:1 1 0; width:auto; }
 
-  #sidebar-toggle-btn { display: block; margin-right: 4px; }
-  .mobile-page-title { display: inline; }
+  #sidebar-toggle-btn { display: block; margin-right: 12px; }
+  .mobile-page-title { display: none; }
   .nav-tabs { display: none; }
   .nav-brand { margin-right: auto; }
 
@@ -757,7 +757,9 @@ input, select, textarea { min-width:0; max-width:100%; }
   #mobile-action-bar { display:flex; gap:8px; position:fixed; left:12px; right:12px; bottom:12px; z-index:1200; justify-content:space-between; background:var(--surface); border-radius:12px; padding:8px; box-shadow:0 6px 20px rgba(0,0,0,0.12); }
   #mobile-action-bar .pill-btn { flex:1; text-align:center; }
   /* ensure content above the sticky bar is reachable */
-  body { padding-bottom: 88px; }
+  body { padding-bottom: 110px; }
+
+  #ai-chat-bubble { bottom: 100px !important; z-index: 9999 !important; }
 }
 /* ── LIGHT THEME ─────────────────────────────────────────── */
 [data-theme="light"] {
