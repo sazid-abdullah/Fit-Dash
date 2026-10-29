@@ -717,7 +717,7 @@ function completeSet() {
 
   const exKey = PR_KEY_MAP[ex.name] || ex.name;
   const best = Math.max(prs[exKey]?.weight || 0, wo.sessionBest?.[exKey] || 0);
-  const isNewPR = wt > 0 && reps > 0 && prs[exKey] && wt > best;
+  const isNewPR = wt > 0 && reps > 0 && wt > best;
   if (wt > 0 && reps > 0) wo.sessionBest = { ...(wo.sessionBest || {}), [exKey]: Math.max(best, wt) };
 
   document.getElementById('wo-done-btn').disabled = true;

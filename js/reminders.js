@@ -488,7 +488,7 @@ function consumeReminderLaunchParams() {
   if(!id) return;
   params.delete('reminder'); params.delete('kind');
   const qs = params.toString();
-  history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
+  history.replaceState(history.state, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
   if(REMINDER_ACTIONS[kind]) setTimeout(() => runReminderAction(id, kind), 300);
 }
 

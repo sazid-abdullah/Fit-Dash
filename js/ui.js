@@ -48,11 +48,16 @@ const _backModals = [
   ['guide-modal',      el => { el.style.display = 'none'; }],
 ];
 function handleAppBack() {
+  if (_isShown(document.getElementById('onboarding-modal'))) return true; // required setup: swallow Back
   const drawer = document.getElementById('left-nav-drawer');
   if (drawer && drawer.classList.contains('open')) { closeLeftDrawer(); return true; }
   for (const [id, close] of _backModals) {
     const el = document.getElementById(id);
     if (_isShown(el)) { try { close(el); } catch (e) { el.classList.remove('open'); el.style.display = 'none'; } return true; }
+  }
+  if (_isShown(document.getElementById('postworkout-modal')) && typeof discardWorkout === 'function') {
+    discardWorkout(); // confirms before dropping unsaved results
+    return true;
   }
   const chat = document.getElementById('ai-chat-panel');
   if (chat && chat.classList.contains('open') && typeof toggleChat === 'function') { toggleChat(); return true; }
